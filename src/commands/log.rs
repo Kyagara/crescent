@@ -23,7 +23,7 @@ impl LogArgs {
 
         let mut log = vec![];
 
-        for (index, line) in log_file.lines().enumerate() {
+        for (index, line) in log_file.lines().rev().enumerate() {
             if index >= read_lines {
                 break;
             }
