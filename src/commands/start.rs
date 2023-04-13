@@ -14,11 +14,22 @@ pub struct StartArgs {
         help = "Example: node, python, java (will add a -jar argument automatically)."
     )]
     pub command: Option<String>,
+    #[arg(
+        short = 'a',
+        long = "arguments",
+        help = "Arguments for the application. Example: -a \"-Xms10G -Xmx10G\""
+    )]
+    pub arguments: Option<String>,
 }
 
 impl StartArgs {
-    pub fn run(file_path: String, name: Option<String>, command: Option<String>) {
-        let application = Application::new(file_path, name, command);
+    pub fn run(
+        file_path: String,
+        name: Option<String>,
+        command: Option<String>,
+        arguments: Option<String>,
+    ) {
+        let application = Application::new(file_path, name, command, arguments);
 
         if app_already_exist(application.name.clone()) {
             eprintln!("An application with the same name is already running.");
