@@ -122,7 +122,6 @@ impl Application {
                 Ok((mut stream, _)) => {
                     let mut message = String::new();
                     stream.read_to_string(&mut message).unwrap();
-
                     sender.send(message).unwrap();
                 }
                 Err(e) => {
@@ -197,4 +196,23 @@ pub fn application_temp_dir_by_name(name: String) -> PathBuf {
     crescent_dir.push(name);
 
     crescent_dir
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn crescent_dir() {
+        assert_eq!(crescent_temp_dir(), PathBuf::from("/tmp/crescent"));
+    }
+
+    #[test]
+    fn temp_dir_by_name() {
+        assert_eq!(
+            application_temp_dir_by_name(String::from("app")),
+            PathBuf::from("/tmp/crescent/app")
+        );
+    }
 }
