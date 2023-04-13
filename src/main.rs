@@ -20,16 +20,12 @@ enum Commands {
 fn main() {
     let cli = App::parse();
 
-    match &cli.commands {
-        Commands::Start(args) => commands::start::StartArgs::run(
-            args.file_path.clone(),
-            args.name.clone(),
-            args.command.clone(),
-        ),
-        Commands::List(_) => commands::list::ListArgs::run(),
-        Commands::Send(args) => {
-            commands::send::SendArgs::run(args.name.clone(), args.command.clone())
+    match cli.commands {
+        Commands::Start(args) => {
+            commands::start::StartArgs::run(args.file_path, args.name, args.command, args.arguments)
         }
-        Commands::Log(args) => commands::log::LogArgs::run(args.name.clone()),
+        Commands::List(_) => commands::list::ListArgs::run(),
+        Commands::Send(args) => commands::send::SendArgs::run(args.name, args.command),
+        Commands::Log(args) => commands::log::LogArgs::run(args.name, args.lines),
     }
 }

@@ -23,9 +23,14 @@ pub struct Application {
 }
 
 impl Application {
-    pub fn new(file_path: String, app_name: Option<String>, command: Option<String>) -> Self {
+    pub fn new(
+        file_path: String,
+        app_name: Option<String>,
+        command: Option<String>,
+        arguments: Option<String>,
+    ) -> Self {
         let file_path_buf = PathBuf::from(file_path.clone());
-        let work_dir = file_path_buf.parent().unwrap();
+        let work_dir = file_path_buf.parent().unwrap().to_path_buf();
 
         let name = match app_name {
             Some(name) => name,
@@ -58,19 +63,21 @@ impl Application {
             _ => args.push(file_path_str),
         }
 
+        if let Some(arguments) = arguments {
+            args.push(arguments);
+        }
+
         Application {
             file_path,
             name,
             temp_dir,
-            work_dir: work_dir.to_path_buf(),
+            work_dir,
             command,
             args,
         }
     }
 
     pub fn start(self) {
-        println!("Running '{}'", self.name);
-
         daemonize(
             self.temp_dir.clone(),
             self.name.clone(),
@@ -164,9 +171,9 @@ pub fn process_pid_by_name(name: String) -> Option<Pid> {
 }
 
 fn daemonize(process_temp_dir: PathBuf, app_name: String, work_dir: PathBuf) {
-    println!("Starting daemon");
-
     let log = File::create(process_temp_dir.join(app_name.clone() + ".log")).unwrap();
+
+    println!("Starting daemon");
 
     let daemonize = Daemonize::new()
         .pid_file(process_temp_dir.join(app_name + ".pid"))
