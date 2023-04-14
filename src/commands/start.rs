@@ -17,7 +17,8 @@ pub struct StartArgs {
     #[arg(
         short = 'a',
         long = "arguments",
-        help = "Arguments for the application. Example: -a \"-Xms10G -Xmx10G\""
+        help = "Arguments for the application. Example: -a \"-Xms10G -Xmx10G\"",
+        allow_hyphen_values = true
     )]
     pub arguments: Option<String>,
 }
