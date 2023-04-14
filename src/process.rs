@@ -84,18 +84,18 @@ impl Application {
             self.work_dir.clone(),
         );
 
-        let exec = Exec::cmd(&self.command)
-            .args(&self.args)
-            .stdout(Redirection::Merge)
-            .stdin(Redirection::Pipe);
-
-        self.start_subprocess(exec)
+        self.start_subprocess()
     }
 
-    fn start_subprocess(self, exec: Exec) {
-        let mut process = exec.popen().unwrap();
+    fn start_subprocess(self) {
+        let mut process = Exec::cmd(&self.command)
+            .args(&self.args)
+            .stdout(Redirection::Merge)
+            .stdin(Redirection::Pipe)
+            .popen()
+            .unwrap();
 
-        let mut child_stdin = process.stdin.take().unwrap();
+        let mut stdin = process.stdin.take().unwrap();
 
         thread::spawn(move || {
             process.wait().unwrap();
@@ -106,8 +106,8 @@ impl Application {
 
         thread::spawn(move || {
             for received in receiver {
-                child_stdin.write_all(received.as_bytes()).unwrap();
-                child_stdin.flush().unwrap();
+                stdin.write_all(received.as_bytes()).unwrap();
+                stdin.flush().unwrap();
             }
         });
 
@@ -122,6 +122,8 @@ impl Application {
                 Ok((mut stream, _)) => {
                     let mut message = String::new();
                     stream.read_to_string(&mut message).unwrap();
+
+                    // Sending command to stdin
                     sender.send(message).unwrap();
                 }
                 Err(e) => {

@@ -22,5 +22,6 @@ impl SendArgs {
         let message = format!("{}\n", command);
 
         stream.write_all(message.as_bytes()).unwrap();
+        stream.flush().unwrap();
     }
 }
