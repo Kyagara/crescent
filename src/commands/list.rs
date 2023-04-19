@@ -23,28 +23,36 @@ struct Application {
 
 impl ListArgs {
     pub fn run() {
-        let temp_dir = process::crescent_temp_dir();
+        let crescent_dir = process::crescent_temp_dir()
+            .read_dir()
+            .expect("should have the crescent's home directory");
 
         let mut system = System::new();
         system.refresh_all();
 
         let mut apps = vec![];
 
-        for app_dir in temp_dir.read_dir().unwrap().flatten() {
-            let name = app_dir.file_name().to_str().unwrap().to_string();
+        for app_dir in crescent_dir.flatten() {
+            let name = app_dir
+                .file_name()
+                .into_string()
+                .expect("should be a string containing the file name");
 
             let pid = process_pid_by_name(name.clone());
 
-            if pid.is_none() {
-                continue;
-            }
+            let pid = match pid {
+                Some(pid) => pid,
+                None => continue,
+            };
 
-            if let Some(process) = system.process(pid.unwrap()) {
+            if let Some(process) = system.process(pid) {
+                let (_, cmd) = process.cmd().split_at(2);
+
                 let app = Application {
                     name,
-                    pid: pid.unwrap().to_string(),
-                    command: process.cmd().join(" "),
-                    cwd: process.cwd().join(" ").to_str().unwrap().to_string(),
+                    pid: pid.to_string(),
+                    command: cmd.join(" "),
+                    cwd: process.cwd().display().to_string(),
                     uptime: process.run_time().to_string() + "s",
                 };
 
@@ -55,7 +63,12 @@ impl ListArgs {
         if !apps.is_empty() {
             let mut table = Table::new(apps);
             table.with(Style::modern());
+
             println!("{table}");
+
+            return;
         }
+
+        println!("No application running.");
     }
 }
