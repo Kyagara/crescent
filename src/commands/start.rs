@@ -1,6 +1,9 @@
-use crate::process::{app_already_exist, Application};
+use crate::{
+    directory::{app_already_exist, application_dir_by_name},
+    process::Application,
+};
+use anyhow::{anyhow, Result};
 use clap::Args;
-use std::{fs, process::exit};
 
 #[derive(Args)]
 #[command(about = "Starts an application from the file path provided.")]
@@ -29,21 +32,19 @@ impl StartArgs {
         name: Option<String>,
         command: Option<String>,
         arguments: Option<String>,
-    ) {
-        let application = Application::new(file_path, name, command, arguments);
+    ) -> Result<()> {
+        let application = Application::new(file_path, name, command, arguments)?;
 
         if app_already_exist(application.name.clone()) {
-            eprintln!("An application with the same name is already running.");
-            exit(1)
+            return Err(anyhow!(
+                "An application with the same name is already running."
+            ));
         }
 
-        match application.temp_dir.is_dir() {
-            true => fs::remove_dir_all(&application.temp_dir).unwrap(),
-            false => fs::create_dir_all(&application.temp_dir).unwrap(),
-        }
+        application_dir_by_name(application.name.clone())?;
 
-        fs::create_dir_all(&application.temp_dir).unwrap();
+        application.start()?;
 
-        application.start();
+        Ok(())
     }
 }

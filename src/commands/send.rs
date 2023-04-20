@@ -1,4 +1,5 @@
-use crate::process;
+use crate::directory;
+use anyhow::{Context, Result};
 use clap::Args;
 use std::{io::Write, os::unix::net::UnixStream};
 
@@ -7,21 +8,26 @@ use std::{io::Write, os::unix::net::UnixStream};
 pub struct SendArgs {
     #[arg(help = "The application name")]
     pub name: String,
-    #[arg(help = "The command you want to send")]
+    #[arg(help = "The command you want to send", allow_hyphen_values = true)]
     pub command: String,
 }
 
 impl SendArgs {
-    pub fn run(name: String, command: String) {
-        let mut work_dir = process::application_temp_dir_by_name(name.clone());
+    pub fn run(name: String, command: String) -> Result<()> {
+        let mut app_dir = directory::application_dir_by_name(name.clone())?;
 
-        work_dir.push(name + ".sock");
+        app_dir.push(name.clone() + ".sock");
 
-        let mut stream = UnixStream::connect(work_dir).unwrap();
+        let mut socket =
+            UnixStream::connect(app_dir).context(format!("Couldn't connect to '{name}'."))?;
 
-        let message = format!("{}\n", command);
+        let message = format!("{command}\n");
 
-        stream.write_all(message.as_bytes()).unwrap();
-        stream.flush().unwrap();
+        socket.write_all(message.as_bytes())?;
+        socket.flush()?;
+
+        println!("Command sent.");
+
+        Ok(())
     }
 }

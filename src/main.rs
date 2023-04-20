@@ -1,10 +1,12 @@
 use clap::{Parser, Subcommand};
 mod commands;
+mod directory;
 mod process;
+use anyhow::Result;
 
 #[derive(Parser)]
 #[command(author, version, about = "Process manager written in Rust.")]
-struct App {
+struct Crescent {
     #[command(subcommand)]
     commands: Commands,
 }
@@ -17,8 +19,8 @@ enum Commands {
     Log(commands::log::LogArgs),
 }
 
-fn main() {
-    let cli = App::parse();
+fn main() -> Result<()> {
+    let cli = Crescent::parse();
 
     match cli.commands {
         Commands::Start(args) => {
@@ -27,5 +29,7 @@ fn main() {
         Commands::List(_) => commands::list::ListArgs::run(),
         Commands::Send(args) => commands::send::SendArgs::run(args.name, args.command),
         Commands::Log(args) => commands::log::LogArgs::run(args.name, args.lines),
-    }
+    }?;
+
+    Ok(())
 }
