@@ -1,6 +1,6 @@
+use anyhow::{anyhow, Context, Result};
 use daemonize::Daemonize;
 use std::{
-    env,
     fs::{self, File},
     io::{Read, Write},
     os::unix::net::UnixListener,
@@ -11,14 +11,16 @@ use std::{
     thread,
 };
 use subprocess::{Exec, Redirection};
-use sysinfo::{Pid, System, SystemExt};
+use sysinfo::Pid;
+
+use crate::directory::{self};
 
 pub struct Application {
     pub name: String,
     pub command: String,
     pub args: Vec<String>,
     pub file_path: String,
-    pub temp_dir: PathBuf,
+    pub app_dir: PathBuf,
     pub work_dir: PathBuf,
 }
 
@@ -28,7 +30,7 @@ impl Application {
         app_name: Option<String>,
         command: Option<String>,
         arguments: Option<String>,
-    ) -> Self {
+    ) -> Result<Application> {
         let file_path_buf = PathBuf::from(file_path.clone());
         let work_dir = file_path_buf.parent().unwrap().to_path_buf();
 
@@ -42,7 +44,7 @@ impl Application {
                 .to_string(),
         };
 
-        let temp_dir = application_temp_dir_by_name(name.clone());
+        let app_dir = directory::application_dir_by_name(name.clone())?;
 
         let mut command = match command {
             Some(command) => command,
@@ -67,33 +69,40 @@ impl Application {
             args.push(arguments);
         }
 
-        Application {
+        Ok(Application {
             file_path,
             name,
-            temp_dir,
+            app_dir,
             work_dir,
             command,
             args,
-        }
+        })
     }
 
-    pub fn start(self) {
+    pub fn start(self) -> Result<()> {
+        if self.app_dir.is_dir() {
+            fs::remove_dir_all(&self.app_dir).context("Couldn't reset directory.")?;
+        }
+
+        fs::create_dir_all(&self.app_dir).context("Couldn't create app directory.")?;
+
         daemonize(
-            self.temp_dir.clone(),
+            self.app_dir.clone(),
             self.name.clone(),
             self.work_dir.clone(),
-        );
+        )?;
 
-        self.start_subprocess()
+        self.start_subprocess()?;
+
+        Ok(())
     }
 
-    fn start_subprocess(self) {
+    fn start_subprocess(self) -> Result<()> {
         let mut process = Exec::cmd(&self.command)
             .args(&self.args)
             .stdout(Redirection::Merge)
             .stdin(Redirection::Pipe)
-            .popen()
-            .unwrap();
+            .popen()?;
 
         let mut stdin = process.stdin.take().unwrap();
 
@@ -111,11 +120,16 @@ impl Application {
             }
         });
 
-        let process_path = application_temp_dir_by_name(self.name.clone());
+        let process_path = match directory::application_dir_by_name(self.name.clone()) {
+            Ok(dir) => dir,
+            Err(err) => {
+                return Err(anyhow!("Error getting directory path: {err}"));
+            }
+        };
 
         let address = process_path.join(self.name + ".sock");
 
-        let socket = UnixListener::bind(&address).unwrap();
+        let socket = UnixListener::bind(&address)?;
 
         loop {
             match socket.accept() {
@@ -134,87 +148,37 @@ impl Application {
     }
 }
 
-pub fn app_already_exist(name: String) -> bool {
-    let pid = process_pid_by_name(name);
+pub fn process_pid_by_name(name: String) -> Result<Pid> {
+    let application_path = directory::application_dir_by_name(name)?;
 
-    match pid {
-        Some(pid) => {
-            let mut system = System::new();
-            system.refresh_all();
-
-            match system.process(pid).is_some() {
-                true => true,
-                false => false,
-            }
-        }
-        None => false,
-    }
-}
-
-pub fn process_pid_by_name(name: String) -> Option<Pid> {
-    let application_path = application_temp_dir_by_name(name);
     let app_name = application_path
         .file_name()
-        .unwrap()
+        .context("Should contain the directory name as string")?
         .to_str()
-        .unwrap()
+        .context("Should be a valid string")?
         .to_string();
 
     let mut pid_path = application_path;
     pid_path.push(app_name + ".pid");
 
-    let pid = match fs::read_to_string(pid_path) {
-        Ok(pid) => Some(Pid::from_str(pid.trim()).unwrap()),
-        Err(_) => None,
-    };
+    let pid_file = fs::read_to_string(pid_path).context("Error reading PID file")?;
 
-    pid
+    let pid = Pid::from_str(pid_file.trim()).context("Error trimming PID file")?;
+
+    Ok(pid)
 }
 
-fn daemonize(process_temp_dir: PathBuf, app_name: String, work_dir: PathBuf) {
-    let log = File::create(process_temp_dir.join(app_name.clone() + ".log")).unwrap();
+fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()> {
+    let log = File::create(app_dir.join(app_name.clone() + ".log"))?;
 
     println!("Starting daemon");
 
     let daemonize = Daemonize::new()
-        .pid_file(process_temp_dir.join(app_name + ".pid"))
+        .pid_file(app_dir.join(app_name + ".pid"))
         .working_directory(work_dir)
         .stderr(log);
 
-    daemonize.start().unwrap();
-}
+    daemonize.start()?;
 
-pub fn crescent_temp_dir() -> PathBuf {
-    let mut crescent_dir = env::temp_dir();
-
-    crescent_dir.push("crescent");
-
-    crescent_dir
-}
-
-pub fn application_temp_dir_by_name(name: String) -> PathBuf {
-    let mut crescent_dir = crescent_temp_dir();
-
-    crescent_dir.push(name);
-
-    crescent_dir
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    #[test]
-    fn crescent_dir() {
-        assert_eq!(crescent_temp_dir(), PathBuf::from("/tmp/crescent"));
-    }
-
-    #[test]
-    fn temp_dir_by_name() {
-        assert_eq!(
-            application_temp_dir_by_name(String::from("app")),
-            PathBuf::from("/tmp/crescent/app")
-        );
-    }
+    Ok(())
 }

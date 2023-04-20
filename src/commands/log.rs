@@ -1,4 +1,5 @@
-use crate::process;
+use crate::directory;
+use anyhow::Result;
 use clap::Args;
 use std::fs;
 
@@ -12,12 +13,12 @@ pub struct LogArgs {
 }
 
 impl LogArgs {
-    pub fn run(name: String, lines: Option<usize>) {
-        let mut temp_dir = process::application_temp_dir_by_name(name.clone());
+    pub fn run(name: String, lines: Option<usize>) -> Result<()> {
+        let mut app_dir = directory::application_dir_by_name(name.clone())?;
 
-        temp_dir.push(name + ".log");
+        app_dir.push(name + ".log");
 
-        let log_file = fs::read_to_string(temp_dir).unwrap();
+        let log_file = fs::read_to_string(app_dir)?;
 
         let read_lines = lines.unwrap_or(200);
 
@@ -34,5 +35,7 @@ impl LogArgs {
         for line in log {
             println!("{line}");
         }
+
+        Ok(())
     }
 }

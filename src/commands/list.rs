@@ -1,6 +1,9 @@
-use crate::process::{self, process_pid_by_name};
+use std::{fs::File, io::Read};
+
+use crate::directory;
+use anyhow::{Context, Result};
 use clap::Args;
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tabled::{settings::Style, Table, Tabled};
 
 #[derive(Args)]
@@ -22,34 +25,48 @@ struct Application {
 }
 
 impl ListArgs {
-    pub fn run() {
-        let crescent_dir = process::crescent_temp_dir()
+    pub fn run() -> Result<()> {
+        let crescent_pathbuf = directory::crescent_dir()?;
+
+        let crescent_dir = crescent_pathbuf
             .read_dir()
-            .expect("should have the crescent's home directory");
+            .context("Should have the crescent's home directory");
 
         let mut system = System::new();
         system.refresh_all();
 
         let mut apps = vec![];
 
-        for app_dir in crescent_dir.flatten() {
-            let name = app_dir
+        for app_dir in crescent_dir?.flatten() {
+            let path = app_dir.path();
+
+            let name = path
                 .file_name()
-                .into_string()
-                .expect("should be a string containing the file name");
+                .context("Should contain the directory name as string")?
+                .to_str()
+                .context("Should be a valid string")?;
 
-            let pid = process_pid_by_name(name.clone());
+            let mut dir = path.clone();
 
-            let pid = match pid {
-                Some(pid) => pid,
-                None => continue,
-            };
+            dir.push(name.to_owned() + ".pid");
 
-            if let Some(process) = system.process(pid) {
+            let mut pid_file = File::open(dir).context("Error opening PID file")?;
+
+            let mut pid_str = String::new();
+
+            pid_file
+                .read_to_string(&mut pid_str)
+                .context("Should have pid inside file")?;
+
+            pid_str = pid_str.trim().to_string();
+
+            let pid: usize = pid_str.parse().context("Should be a valid i32")?;
+
+            if let Some(process) = system.process(Pid::from(pid)) {
                 let (_, cmd) = process.cmd().split_at(2);
 
                 let app = Application {
-                    name,
+                    name: name.to_string(),
                     pid: pid.to_string(),
                     command: cmd.join(" "),
                     cwd: process.cwd().display().to_string(),
@@ -66,9 +83,11 @@ impl ListArgs {
 
             println!("{table}");
 
-            return;
+            return Ok(());
         }
 
         println!("No application running.");
+
+        Ok(())
     }
 }
