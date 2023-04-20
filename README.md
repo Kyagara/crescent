@@ -1,6 +1,6 @@
 # Crescent
 
-A process manager written in Rust.
+A WIP process manager written in Rust.
 
 ## Why?
 
@@ -16,7 +16,7 @@ You can `log` an application `.log` file, this will simply output the file in th
 
 You can `send` a command to the provided application.
 
-Log, PID and the application's socket are located in `/tmp/crescent/<process>`.
+Log, PID and the application's socket are located in `/home/<user>/.crescent/<app>`.
 
 ## Should I use Cres-
 
