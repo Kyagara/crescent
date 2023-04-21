@@ -1,4 +1,6 @@
-use anyhow::{anyhow, Context, Result};
+use crate::directory::{self};
+use anyhow::{Context, Result};
+use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
 use std::{
     fs::{self, File},
@@ -7,13 +9,10 @@ use std::{
     path::PathBuf,
     process::exit,
     str::FromStr,
-    sync::mpsc::{Receiver, Sender},
     thread,
 };
 use subprocess::{Exec, Redirection};
 use sysinfo::Pid;
-
-use crate::directory::{self};
 
 pub struct Application {
     pub name: String,
@@ -111,7 +110,7 @@ impl Application {
             exit(0)
         });
 
-        let (sender, receiver): (Sender<String>, Receiver<String>) = std::sync::mpsc::channel();
+        let (sender, receiver): (Sender<String>, Receiver<String>) = unbounded();
 
         thread::spawn(move || {
             for received in receiver {
@@ -120,16 +119,11 @@ impl Application {
             }
         });
 
-        let process_path = match directory::application_dir_by_name(self.name.clone()) {
-            Ok(dir) => dir,
-            Err(err) => {
-                return Err(anyhow!("Error getting directory path: {err}"));
-            }
-        };
+        let process_path = directory::application_dir_by_name(self.name.clone())?;
 
         let address = process_path.join(self.name + ".sock");
 
-        let socket = UnixListener::bind(&address)?;
+        let socket = UnixListener::bind(address)?;
 
         loop {
             match socket.accept() {
