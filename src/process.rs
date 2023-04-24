@@ -79,12 +79,6 @@ impl Application {
     }
 
     pub fn start(self) -> Result<()> {
-        if self.app_dir.is_dir() {
-            fs::remove_dir_all(&self.app_dir).context("Couldn't reset directory.")?;
-        }
-
-        fs::create_dir_all(&self.app_dir).context("Couldn't create app directory.")?;
-
         daemonize(
             self.app_dir.clone(),
             self.name.clone(),
