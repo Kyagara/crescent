@@ -1,8 +1,10 @@
+use std::fs;
+
 use crate::{
     directory::{app_already_exist, application_dir_by_name},
     process::Application,
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 
 #[derive(Args)]
@@ -42,6 +44,12 @@ impl StartArgs {
         }
 
         application_dir_by_name(application.name.clone())?;
+
+        if application.app_dir.is_dir() {
+            fs::remove_dir_all(&application.app_dir).context("Couldn't reset directory.")?;
+        }
+
+        fs::create_dir_all(&application.app_dir).context("Couldn't create app directory.")?;
 
         application.start()?;
 

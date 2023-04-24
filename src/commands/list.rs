@@ -26,7 +26,9 @@ struct Application {
 
 impl ListArgs {
     pub fn run() -> Result<()> {
-        let crescent_pathbuf = directory::crescent_dir()?;
+        let mut crescent_pathbuf = directory::crescent_dir()?;
+
+        crescent_pathbuf.push("apps");
 
         let crescent_dir = crescent_pathbuf
             .read_dir()
@@ -41,7 +43,7 @@ impl ListArgs {
             let path = app_dir.path();
 
             let name = path
-                .file_name()
+                .file_stem()
                 .context("Should contain the directory name as string")?
                 .to_str()
                 .context("Should be a valid string")?;

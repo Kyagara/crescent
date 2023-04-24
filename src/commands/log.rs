@@ -20,6 +20,11 @@ impl LogArgs {
 
         let log_file = fs::read_to_string(app_dir)?;
 
+        if log_file.is_empty() {
+            println!("Log is empty.");
+            return Ok(());
+        }
+
         let read_lines = lines.unwrap_or(200);
 
         let mut log = vec![];
