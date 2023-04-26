@@ -1,7 +1,6 @@
-use crate::directory;
+use crate::{directory, tail::Tail};
 use anyhow::Result;
 use clap::Args;
-use std::fs;
 
 #[derive(Args)]
 #[command(about = "Outputs the `.log` file from an application.")]
@@ -18,28 +17,21 @@ impl LogArgs {
 
         app_dir.push(name + ".log");
 
-        let log_file = fs::read_to_string(app_dir)?;
-
-        if log_file.is_empty() {
-            println!("Log is empty.");
-            return Ok(());
-        }
-
         let read_lines = lines.unwrap_or(200);
 
-        let mut log = vec![];
+        let mut log = Tail::new(app_dir)?;
 
-        for (index, line) in log_file.lines().rev().enumerate() {
-            if index >= read_lines {
-                break;
+        if log.length == 0 {
+            println!("Log is empty at the moment.")
+        } else {
+            for line in log.read_lines(read_lines)? {
+                println!("{line}")
             }
-
-            log.insert(0, line);
         }
 
-        for line in log {
-            println!("{line}");
-        }
+        println!("Watching log");
+
+        log.watch()?;
 
         Ok(())
     }

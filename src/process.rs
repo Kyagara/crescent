@@ -1,5 +1,5 @@
 use crate::directory::{self};
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
 use std::{
@@ -31,6 +31,11 @@ impl Application {
         arguments: Option<String>,
     ) -> Result<Application> {
         let file_path_buf = PathBuf::from(file_path.clone());
+
+        if !file_path_buf.exists() {
+            return Err(anyhow!("File '{}' not found", file_path));
+        }
+
         let work_dir = file_path_buf.parent().unwrap().to_path_buf();
 
         let name = match app_name {
