@@ -16,7 +16,7 @@ use sysinfo::Pid;
 
 pub struct Application {
     pub name: String,
-    pub command: String,
+    pub interpreter: String,
     pub args: Vec<String>,
     pub file_path: String,
     pub app_dir: PathBuf,
@@ -27,7 +27,7 @@ impl Application {
     pub fn new(
         file_path: String,
         app_name: Option<String>,
-        command: Option<String>,
+        interpreter: Option<String>,
         arguments: Option<String>,
     ) -> Result<Application> {
         let file_path_buf = PathBuf::from(file_path.clone());
@@ -45,8 +45,8 @@ impl Application {
 
         let app_dir = directory::application_dir_by_name(name.clone())?;
 
-        let mut command = match command {
-            Some(command) => command,
+        let mut interpreter = match interpreter {
+            Some(interpreter) => interpreter,
             None => String::new(),
         };
 
@@ -54,13 +54,13 @@ impl Application {
 
         let mut args = vec![];
 
-        match command.as_str() {
+        match interpreter.as_str() {
             "java" => {
-                command = "java".to_string();
+                interpreter = "java".to_string();
                 args.push(String::from("-jar"));
                 args.push(file_path_str)
             }
-            "" => command = file_path_str,
+            "" => interpreter = file_path_str,
             _ => args.push(file_path_str),
         }
 
@@ -73,7 +73,7 @@ impl Application {
             name,
             app_dir,
             work_dir,
-            command,
+            interpreter,
             args,
         })
     }
@@ -91,7 +91,7 @@ impl Application {
     }
 
     fn start_subprocess(self) -> Result<()> {
-        let mut process = Exec::cmd(&self.command)
+        let mut process = Exec::cmd(&self.interpreter)
             .args(&self.args)
             .stdout(Redirection::Merge)
             .stdin(Redirection::Pipe)

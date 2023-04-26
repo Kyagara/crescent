@@ -23,9 +23,12 @@ fn main() -> Result<()> {
     let cli = Crescent::parse();
 
     match cli.commands {
-        Commands::Start(args) => {
-            commands::start::StartArgs::run(args.file_path, args.name, args.command, args.arguments)
-        }
+        Commands::Start(args) => commands::start::StartArgs::run(
+            args.file_path,
+            args.name,
+            args.interpreter,
+            args.arguments,
+        ),
         Commands::List(_) => commands::list::ListArgs::run(),
         Commands::Send(args) => commands::send::SendArgs::run(args.name, args.command),
         Commands::Log(args) => commands::log::LogArgs::run(args.name, args.lines),

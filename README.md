@@ -4,11 +4,11 @@ A WIP process manager written in Rust.
 
 ## Why?
 
-I wish to learn Rust so I decided to create a tool similar to [PM2](https://pm2.keymetrics.io/) and [mark2](https://github.com/mark2devel/mark2/blob/master/INSTALL.md) that very much saved me from a lot of headache when spinning up services.
+I wanted to learn some Rust so I decided to create a tool similar to [PM2](https://pm2.keymetrics.io/) and [mark2](https://github.com/mark2devel/mark2), these tools saved me from a lot of headache when spinning up background services for apps and in the case of mark2 Minecraft servers.
 
 ## What 'works' right now:
 
-You can `start` an application by passing the file path and optionally flags such as `-n` for a custom application name (defaults to the file name) and `-c` for a `command`, running a python application? Add a `-c` `python`, `python2`, `python3` and so on. If you provide a java command it will add a `-jar` argument. Arguments can be added using `-a`, if your arguments have spaces make sure to use quotes after `-a` like `-a "-Xms10G -Xmx10G"`.
+With `start` you can launch an application by passing the file path to your app, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. If you provide a `java` interpreter it will add a `-jar` argument automatically. Arguments can be added using `-a`, if your arguments have spaces make sure to use quotes after `-a` like `-a "-Xms10G -Xmx10G"`.
 
 You can `list` the running applications.
 
@@ -16,7 +16,7 @@ You can `log` an application `.log` file, this will simply output the file in th
 
 You can `send` a command to the provided application.
 
-Log, PID and the application's socket are located in `/home/<user>/.crescent/<app>`.
+Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 
 ## Should I use Cres-
 
@@ -26,12 +26,10 @@ This project is constantly changing and there's a lot of things that need to be 
 
 ## Todo
 
--   Error checking, literally any error checking whatsoever
 -   Tests
--   Github Actions for testing, linting and publishing
 -   TUI for an attach command
 -   Profiles (add a `-p` argument to the `start` comand to pass a config file)
--   Probably redesign the entire thing when I acquire [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
+-   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
 
 ## License
 
