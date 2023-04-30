@@ -2,13 +2,14 @@ use crate::directory::{self};
 use anyhow::{anyhow, Context, Result};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
+use log::{error, info};
 use std::{
     fs::{self, File},
     io::{Read, Write},
-    os::unix::net::UnixListener,
+    os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
     process::exit,
-    str::FromStr,
+    str::{from_utf8, FromStr},
     thread,
 };
 use subprocess::{Exec, Redirection};
@@ -48,7 +49,7 @@ impl Application {
                 .to_string(),
         };
 
-        let app_dir = directory::application_dir_by_name(name.clone())?;
+        let app_dir = directory::application_dir_by_name(&name)?;
 
         let mut interpreter = match interpreter {
             Some(interpreter) => interpreter,
@@ -104,8 +105,15 @@ impl Application {
 
         let mut stdin = process.stdin.take().unwrap();
 
+        let process_path = directory::application_dir_by_name(&self.name)?;
+
+        let address = process_path.join(self.name + ".sock");
+
+        let socket_path = address.clone();
+
         thread::spawn(move || {
             process.wait().unwrap();
+            fs::remove_file(socket_path).unwrap();
             exit(0)
         });
 
@@ -118,30 +126,40 @@ impl Application {
             }
         });
 
-        let process_path = directory::application_dir_by_name(self.name.clone())?;
-
-        let address = process_path.join(self.name + ".sock");
-
         let socket = UnixListener::bind(address)?;
 
-        loop {
-            match socket.accept() {
-                Ok((mut stream, _)) => {
-                    let mut message = String::new();
-                    stream.read_to_string(&mut message).unwrap();
+        for stream in socket.incoming() {
+            match stream {
+                Ok(mut stream) => {
+                    let sender_clone = sender.clone();
 
-                    // Sending command to stdin
-                    sender.send(message).unwrap();
+                    thread::spawn(move || {
+                        let mut recv_buf = vec![0u8; 1024];
+                        let mut bytes_read: usize = 0;
+
+                        // https://codereview.stackexchange.com/questions/243693/rust-multi-cliented-tcp-server-library
+                        while read_stream(&mut stream, &mut recv_buf, &mut bytes_read) > 0 {
+                            let str = from_utf8(&recv_buf[..bytes_read]).unwrap();
+                            sender_clone.send(str.to_string()).unwrap();
+                        }
+                    });
                 }
-                Err(e) => {
-                    eprintln!("Socket error: {}", e)
+                Err(err) => {
+                    error!("Socket error: {err}")
                 }
             }
         }
+
+        Ok(())
     }
 }
 
-pub fn process_pid_by_name(name: String) -> Result<Pid> {
+fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut usize) -> usize {
+    *read_bytes = stream.read(recv_buf).unwrap_or(0);
+    *read_bytes
+}
+
+pub fn process_pid_by_name(name: &String) -> Result<Pid> {
     let application_path = directory::application_dir_by_name(name)?;
 
     let app_name = application_path
@@ -164,7 +182,7 @@ pub fn process_pid_by_name(name: String) -> Result<Pid> {
 fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()> {
     let log = File::create(app_dir.join(app_name.clone() + ".log"))?;
 
-    println!("Starting daemon");
+    info!("Starting daemon");
 
     let daemonize = Daemonize::new()
         .pid_file(app_dir.join(app_name + ".pid"))

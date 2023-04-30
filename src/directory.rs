@@ -10,20 +10,20 @@ use sysinfo::{System, SystemExt};
 use crate::process::process_pid_by_name;
 
 pub fn crescent_dir() -> Result<PathBuf> {
-    let home = env::var("HOME").context("Error getting directory path")?;
+    let home = env::var("HOME").context("Error getting HOME env")?;
 
     let mut crescent_dir = PathBuf::from(home);
 
     crescent_dir.push(".crescent");
 
-    if !crescent_dir.is_dir() {
+    if !crescent_dir.exists() {
         fs::create_dir_all(&crescent_dir).context("Couldn't create crescent directory.")?;
     }
 
     Ok(crescent_dir)
 }
 
-pub fn application_dir_by_name(name: String) -> Result<PathBuf> {
+pub fn application_dir_by_name(name: &String) -> Result<PathBuf> {
     let mut crescent_dir = crescent_dir()?;
 
     crescent_dir.push("apps");
@@ -33,7 +33,7 @@ pub fn application_dir_by_name(name: String) -> Result<PathBuf> {
     Ok(crescent_dir)
 }
 
-pub fn app_already_exist(name: String) -> bool {
+pub fn app_already_exist(name: &String) -> bool {
     if let Ok(pid) = process_pid_by_name(name) {
         let mut system = System::new();
         system.refresh_all();
@@ -63,10 +63,10 @@ mod tests {
         let mut home_path = crescent_dir().unwrap();
         home_path.push("apps");
         home_path.push("app");
+        let app_name = String::from("app");
 
-        assert_eq!(
-            application_dir_by_name(String::from("app")).unwrap(),
-            home_path
-        );
+        fs::create_dir_all(home_path.clone()).unwrap();
+
+        assert_eq!(application_dir_by_name(&app_name).unwrap(), home_path);
     }
 }

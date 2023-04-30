@@ -1,5 +1,5 @@
 use crate::directory;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use std::{io::Write, os::unix::net::UnixStream};
 
@@ -14,9 +14,13 @@ pub struct SendArgs {
 
 impl SendArgs {
     pub fn run(name: String, command: String) -> Result<()> {
-        let mut app_dir = directory::application_dir_by_name(name.clone())?;
+        let mut app_dir = directory::application_dir_by_name(&name)?;
 
         app_dir.push(name.clone() + ".sock");
+
+        if !app_dir.exists() {
+            return Err(anyhow!("Application path does not exist."));
+        }
 
         let mut socket =
             UnixStream::connect(app_dir).context(format!("Couldn't connect to '{name}'."))?;

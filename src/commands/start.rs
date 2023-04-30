@@ -37,19 +37,19 @@ impl StartArgs {
     ) -> Result<()> {
         let application = Application::new(file_path, name, interpreter, arguments)?;
 
-        if app_already_exist(application.name.clone()) {
+        if app_already_exist(&application.name) {
             return Err(anyhow!(
                 "An application with the same name is already running."
             ));
         }
 
-        application_dir_by_name(application.name.clone())?;
+        let app_path = application_dir_by_name(&application.name)?;
 
-        if application.app_dir.is_dir() {
-            fs::remove_dir_all(&application.app_dir).context("Couldn't reset directory.")?;
+        if app_path.exists() {
+            fs::remove_dir_all(&app_path).context("Couldn't reset directory.")?;
         }
 
-        fs::create_dir_all(&application.app_dir).context("Couldn't create app directory.")?;
+        fs::create_dir_all(&app_path).context("Couldn't create app directory.")?;
 
         application.start()?;
 

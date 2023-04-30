@@ -16,6 +16,8 @@ You can `log` an application `.log` file, this will simply output the file in th
 
 You can `send` a command to the provided application.
 
+You can `attach` to an application, you can watch logs in realtime and send commands.
+
 Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 
 ## Should I use Cres-
@@ -27,8 +29,9 @@ This project is constantly changing and there's a lot of things that need to be 
 ## Todo
 
 -   Tests
--   TUI for an attach command
+-   Attach command uses tail for watching the log, should use the application socket
 -   Profiles (add a `-p` argument to the `start` comand to pass a config file)
+-   There should be more logs for the daemonized crescent process, maybe a separate log file/socket for it
 -   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
 
 ## License

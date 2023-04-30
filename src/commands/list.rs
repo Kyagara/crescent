@@ -52,6 +52,10 @@ impl ListArgs {
 
             dir.push(name.to_owned() + ".pid");
 
+            if !dir.exists() {
+                continue;
+            }
+
             let mut pid_file = File::open(dir).context("Error opening PID file")?;
 
             let mut pid_str = String::new();
