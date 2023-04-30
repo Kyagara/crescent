@@ -1,6 +1,9 @@
+use std::thread;
+
 use crate::{directory, tail::Tail};
 use anyhow::Result;
 use clap::Args;
+use crossbeam::channel::unbounded;
 
 #[derive(Args)]
 #[command(about = "Outputs the `.log` file from an application.")]
@@ -13,7 +16,7 @@ pub struct LogArgs {
 
 impl LogArgs {
     pub fn run(name: String, lines: Option<usize>) -> Result<()> {
-        let mut app_dir = directory::application_dir_by_name(name.clone())?;
+        let mut app_dir = directory::application_dir_by_name(&name)?;
 
         app_dir.push(name + ".log");
 
@@ -27,11 +30,21 @@ impl LogArgs {
             for line in log.read_lines(read_lines)? {
                 println!("{line}")
             }
+
+            println!(">> Printed {read_lines} lines")
         }
 
-        println!("Watching log");
+        println!(">> Watching log");
 
-        log.watch()?;
+        let (sender, receiver) = unbounded();
+
+        thread::spawn(move || {
+            log.watch(&sender).unwrap();
+        });
+
+        for content in receiver {
+            print!("{content}")
+        }
 
         Ok(())
     }

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use crossbeam::channel::unbounded;
+use crossbeam::channel::{unbounded, Sender};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     fs::File,
@@ -51,7 +51,7 @@ impl Tail {
         Ok(content)
     }
 
-    pub fn watch(self) -> Result<()> {
+    pub fn watch(self, event_sender: &Sender<String>) -> Result<()> {
         let (sender, receiver) = unbounded();
 
         let mut watcher = RecommendedWatcher::new(sender, Config::default())?;
@@ -73,8 +73,7 @@ impl Tail {
 
                             content.clear();
                             file.read_to_string(&mut content)?;
-
-                            print!("{content}");
+                            event_sender.send(content.clone())?;
                         }
                     }
                 }

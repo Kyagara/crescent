@@ -18,6 +18,7 @@ enum Commands {
     List(commands::list::ListArgs),
     Send(commands::send::SendArgs),
     Log(commands::log::LogArgs),
+    Attach(commands::attach::AttachArgs),
 }
 
 fn main() -> Result<()> {
@@ -33,6 +34,7 @@ fn main() -> Result<()> {
         Commands::List(_) => commands::list::ListArgs::run(),
         Commands::Send(args) => commands::send::SendArgs::run(args.name, args.command),
         Commands::Log(args) => commands::log::LogArgs::run(args.name, args.lines),
+        Commands::Attach(args) => commands::attach::AttachArgs::run(args.name),
     }?;
 
     Ok(())
