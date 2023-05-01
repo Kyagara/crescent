@@ -8,7 +8,7 @@ use std::{io::Write, os::unix::net::UnixStream};
 pub struct SendArgs {
     #[arg(help = "The application name")]
     pub name: String,
-    #[arg(help = "The command you want to send", allow_hyphen_values = true)]
+    #[arg(help = "The command to send", allow_hyphen_values = true)]
     pub command: String,
 }
 
@@ -22,8 +22,8 @@ impl SendArgs {
             return Err(anyhow!("Application path does not exist."));
         }
 
-        let mut socket =
-            UnixStream::connect(app_dir).context(format!("Couldn't connect to '{name}'."))?;
+        let mut socket = UnixStream::connect(app_dir)
+            .context(format!("Error connecting to '{name}' socket."))?;
 
         let message = format!("{command}\n");
 

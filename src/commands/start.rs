@@ -11,7 +11,7 @@ use clap::Args;
 #[command(about = "Starts an application from the file path provided.")]
 pub struct StartArgs {
     pub file_path: String,
-    #[arg(short = 'n', long = "name", help = "Application name")]
+    #[arg(short = 'n', long = "name", help = "The application name")]
     pub name: Option<String>,
     #[arg(
         short = 'i',
@@ -46,10 +46,10 @@ impl StartArgs {
         let app_path = application_dir_by_name(&application.name)?;
 
         if app_path.exists() {
-            fs::remove_dir_all(&app_path).context("Couldn't reset directory.")?;
+            fs::remove_dir_all(&app_path).context("Error reseting application directory.")?;
         }
 
-        fs::create_dir_all(&app_path).context("Couldn't create app directory.")?;
+        fs::create_dir_all(&app_path).context("Error creating application directory.")?;
 
         application.start()?;
 
