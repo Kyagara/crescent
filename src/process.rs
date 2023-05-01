@@ -31,10 +31,10 @@ impl Application {
         interpreter: Option<String>,
         arguments: Option<String>,
     ) -> Result<Application> {
-        let file_path_buf = PathBuf::from(file_path.clone());
+        let file_path_buf = PathBuf::from(&file_path);
 
         if !file_path_buf.exists() {
-            return Err(anyhow!("File '{}' not found", file_path));
+            return Err(anyhow!(format!("File '{}' not found", &file_path)));
         }
 
         let work_dir = file_path_buf.parent().unwrap().to_path_buf();
@@ -51,10 +51,7 @@ impl Application {
 
         let app_dir = directory::application_dir_by_name(&name)?;
 
-        let mut interpreter = match interpreter {
-            Some(interpreter) => interpreter,
-            None => String::new(),
-        };
+        let mut interpreter = interpreter.unwrap_or(String::new());
 
         let file_path_str = file_path.clone();
 

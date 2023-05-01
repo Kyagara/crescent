@@ -8,15 +8,15 @@ I wanted to learn some Rust so I decided to create a tool similar to [PM2](https
 
 ## What 'works' right now:
 
-With `start` you can launch an application by passing the file path to your app, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. If you provide a `java` interpreter it will add a `-jar` argument automatically. Arguments can be added using `-a`, if your arguments have spaces make sure to use quotes after `-a` like `-a "-Xms10G -Xmx10G"`.
+With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. If you provide a `java` interpreter it will add a `-jar` argument automatically. Arguments can be added using `-a`, if your arguments have spaces make sure to use quotes after `-a` like `-a "-Xms10G -Xmx10G"`.
 
 You can `list` the running applications.
 
-You can `log` an application `.log` file, this will simply output the file in the terminal.
+You can `log` an application's `.log` file, you can specify the amount of `lines` with `-l` (defaults to 200). After printing the log, it will watch the file for any new lines added to it.
 
 You can `send` a command to the provided application.
 
-You can `attach` to an application, you can watch logs in realtime and send commands.
+You can `attach` to an application, which let's you watch logs in realtime and send commands.
 
 Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 

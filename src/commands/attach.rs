@@ -125,7 +125,7 @@ impl AttachArgs {
                                 KeyCode::Enter => {
                                     let input = app.input.value().to_string();
 
-                                    debug!(">> Sent: {}", input.clone());
+                                    debug!(">> Sent: {}", &input);
 
                                     app.input.reset();
 
