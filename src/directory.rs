@@ -1,23 +1,18 @@
-use std::{
-    env::{self},
-    fs,
-    path::PathBuf,
-};
-
 use anyhow::{Context, Result};
+use std::{env, fs, path::PathBuf};
 use sysinfo::{System, SystemExt};
 
 use crate::process::process_pid_by_name;
 
 pub fn crescent_dir() -> Result<PathBuf> {
-    let home = env::var("HOME").context("Error getting HOME env")?;
+    let home = env::var("HOME").context("Error getting HOME env.")?;
 
     let mut crescent_dir = PathBuf::from(home);
 
     crescent_dir.push(".crescent");
 
     if !crescent_dir.exists() {
-        fs::create_dir_all(&crescent_dir).context("Couldn't create crescent directory.")?;
+        fs::create_dir_all(&crescent_dir).context("Error creating crescent directory.")?;
     }
 
     Ok(crescent_dir)

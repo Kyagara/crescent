@@ -32,21 +32,21 @@ impl ListArgs {
 
         let crescent_dir = crescent_pathbuf
             .read_dir()
-            .context("Should have the crescent's home directory");
+            .context("Error reading crescent directory.")?;
 
         let mut system = System::new();
         system.refresh_all();
 
         let mut apps = vec![];
 
-        for app_dir in crescent_dir?.flatten() {
+        for app_dir in crescent_dir.flatten() {
             let path = app_dir.path();
 
             let name = path
                 .file_stem()
-                .context("Should contain the directory name as string")?
+                .context("Error extracting file name.")?
                 .to_str()
-                .context("Should be a valid string")?;
+                .context("Error converting OsStr to str.")?;
 
             let mut dir = path.clone();
 
@@ -56,17 +56,17 @@ impl ListArgs {
                 continue;
             }
 
-            let mut pid_file = File::open(dir).context("Error opening PID file")?;
+            let mut pid_file = File::open(dir).context("Error opening PID file.")?;
 
             let mut pid_str = String::new();
 
             pid_file
                 .read_to_string(&mut pid_str)
-                .context("Should have pid inside file")?;
+                .context("Error reading PID file to string.")?;
 
             pid_str = pid_str.trim().to_string();
 
-            let pid: usize = pid_str.parse().context("Should be a valid i32")?;
+            let pid: usize = pid_str.parse().context("Error parsing PID str to usize.")?;
 
             if let Some(process) = system.process(Pid::from(pid)) {
                 let (_, cmd) = process.cmd().split_at(2);

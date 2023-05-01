@@ -6,7 +6,7 @@ use clap::Args;
 use crossbeam::channel::unbounded;
 
 #[derive(Args)]
-#[command(about = "Outputs the `.log` file from an application.")]
+#[command(about = "Outputs the '.log' file from an application.")]
 pub struct LogArgs {
     #[arg(help = "The application name")]
     pub name: String,

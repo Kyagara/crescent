@@ -2,7 +2,6 @@ use crate::directory::{self};
 use anyhow::{anyhow, Context, Result};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
-use log::{error, info};
 use std::{
     fs::{self, File},
     io::{Read, Write},
@@ -142,7 +141,7 @@ impl Application {
                     });
                 }
                 Err(err) => {
-                    error!("Socket error: {err}")
+                    eprintln!("Socket error: {err}")
                 }
             }
         }
@@ -161,17 +160,17 @@ pub fn process_pid_by_name(name: &String) -> Result<Pid> {
 
     let app_name = application_path
         .file_name()
-        .context("Should contain the directory name as string")?
+        .context("Error extracting file name.")?
         .to_str()
-        .context("Should be a valid string")?
+        .context("Error converting OsStr to str.")?
         .to_string();
 
     let mut pid_path = application_path;
     pid_path.push(app_name + ".pid");
 
-    let pid_file = fs::read_to_string(pid_path).context("Error reading PID file")?;
+    let pid_file = fs::read_to_string(pid_path).context("Error reading PID file.")?;
 
-    let pid = Pid::from_str(pid_file.trim()).context("Error trimming PID file")?;
+    let pid = Pid::from_str(pid_file.trim()).context("Error trimming PID file.")?;
 
     Ok(pid)
 }
@@ -179,7 +178,7 @@ pub fn process_pid_by_name(name: &String) -> Result<Pid> {
 fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()> {
     let log = File::create(app_dir.join(app_name.clone() + ".log"))?;
 
-    info!("Starting daemon");
+    println!("Starting daemon");
 
     let daemonize = Daemonize::new()
         .pid_file(app_dir.join(app_name + ".pid"))
