@@ -59,7 +59,7 @@ impl AttachedTerminal {
 }
 
 impl AttachArgs {
-    pub fn run(name: String) -> Result<()> {
+    pub fn run(self) -> Result<()> {
         init_logger(LevelFilter::Debug).unwrap();
         set_default_level(LevelFilter::Debug);
 
@@ -73,12 +73,12 @@ impl AttachArgs {
 
         let mut terminal = Terminal::new(backend)?;
 
-        let mut app = AttachedTerminal::new(name.clone());
+        let mut app = AttachedTerminal::new(self.name.clone());
 
         let ticker = tick(Duration::from_millis(30));
         let ui_events = ui_events()?;
 
-        let log_events = match log_tail_events(&name) {
+        let log_events = match log_tail_events(&self.name) {
             Ok(log_events) => log_events,
             Err(err) => {
                 close_terminal(&mut terminal)?;
@@ -86,7 +86,7 @@ impl AttachArgs {
             }
         };
 
-        let application_socket = match application_socket(&name) {
+        let application_socket = match application_socket(&self.name) {
             Ok(application_socket) => application_socket,
             Err(err) => {
                 close_terminal(&mut terminal)?;
@@ -175,11 +175,11 @@ fn close_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<(
 fn application_socket(name: &String) -> Result<Sender<String>> {
     let mut socket_dir = directory::application_dir_by_name(name)?;
 
-    socket_dir.push(name.clone() + ".sock");
-
     if !socket_dir.exists() {
-        return Err(anyhow!("Application path does not exist."));
+        return Err(anyhow!("Application does not exist."));
     }
+
+    socket_dir.push(name.clone() + ".sock");
 
     let (sender, receiver): (Sender<String>, Receiver<String>) = unbounded();
 
@@ -198,11 +198,11 @@ fn application_socket(name: &String) -> Result<Sender<String>> {
 fn log_tail_events(name: &String) -> Result<Receiver<String>> {
     let mut log_dir = directory::application_dir_by_name(name)?;
 
-    log_dir.push(name.clone() + ".log");
-
     if !log_dir.exists() {
-        return Err(anyhow!("Application path does not exist."));
+        return Err(anyhow!("Application does not exist."));
     }
+
+    log_dir.push(name.clone() + ".log");
 
     let mut log = Tail::new(log_dir)?;
 

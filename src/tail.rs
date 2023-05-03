@@ -84,3 +84,29 @@ impl Tail {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{env::temp_dir, fs::remove_file, io::Write};
+
+    #[test]
+    fn tail_read_lines() -> Result<()> {
+        let mut file_path = temp_dir();
+        file_path.push("crescent_temp_log_file_test.txt");
+        let mut log_file = File::create(&file_path)?;
+        log_file.write_all(b"LOG")?;
+
+        let mut file = Tail::new(file_path.clone())?;
+
+        let lines_read = file.read_lines(1)?;
+
+        assert_eq!(lines_read.len(), 1);
+
+        assert_eq!(lines_read.first().unwrap(), "LOG");
+
+        remove_file(file_path)?;
+
+        Ok(())
+    }
+}

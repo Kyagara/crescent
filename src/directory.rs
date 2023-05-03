@@ -1,8 +1,7 @@
+use crate::process::process_pid_by_name;
 use anyhow::{Context, Result};
 use std::{env, fs, path::PathBuf};
 use sysinfo::{System, SystemExt};
-
-use crate::process::process_pid_by_name;
 
 pub fn crescent_dir() -> Result<PathBuf> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
@@ -45,23 +44,27 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn test_crescent_dir() {
-        let home = env::var("HOME").unwrap();
+    fn crescent_dir_created() -> Result<()> {
+        let home = env::var("HOME")?;
         let mut home_path = PathBuf::from(home);
         home_path.push(".crescent");
 
-        assert_eq!(crescent_dir().unwrap(), home_path);
+        assert_eq!(crescent_dir()?, home_path);
+
+        Ok(())
     }
 
     #[test]
-    fn test_application_dir_by_name() {
-        let mut home_path = crescent_dir().unwrap();
+    fn application_dir_created() -> Result<()> {
+        let mut home_path = crescent_dir()?;
         home_path.push("apps");
-        home_path.push("app");
-        let app_name = String::from("app");
+        home_path.push("test_app");
+        let app_name = String::from("test_app");
 
-        fs::create_dir_all(home_path.clone()).unwrap();
+        fs::create_dir_all(home_path.clone())?;
 
-        assert_eq!(application_dir_by_name(&app_name).unwrap(), home_path);
+        assert_eq!(application_dir_by_name(&app_name)?, home_path);
+
+        Ok(())
     }
 }

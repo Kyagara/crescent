@@ -13,19 +13,19 @@ pub struct SendArgs {
 }
 
 impl SendArgs {
-    pub fn run(name: String, command: String) -> Result<()> {
-        let mut app_dir = directory::application_dir_by_name(&name)?;
-
-        app_dir.push(name.clone() + ".sock");
+    pub fn run(self) -> Result<()> {
+        let mut app_dir = directory::application_dir_by_name(&self.name)?;
 
         if !app_dir.exists() {
-            return Err(anyhow!("Application path does not exist."));
+            return Err(anyhow!("Application does not exist."));
         }
 
-        let mut socket = UnixStream::connect(app_dir)
-            .context(format!("Error connecting to '{name}' socket."))?;
+        app_dir.push(self.name.clone() + ".sock");
 
-        let message = format!("{command}\n");
+        let mut socket = UnixStream::connect(app_dir)
+            .context(format!("Error connecting to '{}' socket.", self.name))?;
+
+        let message = format!("{}\n", self.command);
 
         socket.write_all(message.as_bytes())?;
         socket.flush()?;

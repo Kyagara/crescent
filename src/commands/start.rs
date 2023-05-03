@@ -1,11 +1,10 @@
-use std::fs;
-
 use crate::{
     directory::{app_already_exist, application_dir_by_name},
     process::Application,
 };
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
+use std::fs;
 
 #[derive(Args)]
 #[command(about = "Starts an application from the file path provided.")]
@@ -29,13 +28,9 @@ pub struct StartArgs {
 }
 
 impl StartArgs {
-    pub fn run(
-        file_path: String,
-        name: Option<String>,
-        interpreter: Option<String>,
-        arguments: Option<String>,
-    ) -> Result<()> {
-        let application = Application::new(file_path, name, interpreter, arguments)?;
+    pub fn run(self) -> Result<()> {
+        let application =
+            Application::new(self.file_path, self.name, self.interpreter, self.arguments)?;
 
         if app_already_exist(&application.name) {
             return Err(anyhow!(
