@@ -1,8 +1,7 @@
-use std::{fs::File, io::Read};
-
 use crate::directory;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
+use std::{fs::File, io::Read};
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tabled::{settings::Style, Table, Tabled};
 
@@ -92,8 +91,6 @@ impl ListArgs {
             return Ok(());
         }
 
-        println!("No application running.");
-
-        Ok(())
+        Err(anyhow!("No application running."))
     }
 }

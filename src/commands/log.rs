@@ -1,26 +1,35 @@
-use std::thread;
-
 use crate::{directory, tail::Tail};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::unbounded;
+use std::thread;
 
 #[derive(Args)]
-#[command(about = "Outputs the '.log' file from an application.")]
+#[command(about = "Print or watch the '.log' file from an application.")]
 pub struct LogArgs {
     #[arg(help = "The application name")]
     pub name: String,
     #[arg(short, long, help = "Lines to print. Defaults to 200")]
     pub lines: Option<usize>,
+    #[arg(
+        short,
+        long,
+        help = "Watches the file for any modification, printing new lines."
+    )]
+    pub follow: bool,
 }
 
 impl LogArgs {
-    pub fn run(name: String, lines: Option<usize>) -> Result<()> {
-        let mut app_dir = directory::application_dir_by_name(&name)?;
+    pub fn run(self) -> Result<()> {
+        let mut app_dir = directory::application_dir_by_name(&self.name)?;
 
-        app_dir.push(name + ".log");
+        if !app_dir.exists() {
+            return Err(anyhow!("Application does not exist."));
+        }
 
-        let read_lines = lines.unwrap_or(200);
+        app_dir.push(self.name + ".log");
+
+        let read_lines = self.lines.unwrap_or(200);
 
         let mut log = Tail::new(app_dir)?;
 
@@ -32,6 +41,10 @@ impl LogArgs {
             }
 
             println!(">> Printed {read_lines} lines")
+        }
+
+        if !self.follow {
+            return Ok(());
         }
 
         println!(">> Watching log");
