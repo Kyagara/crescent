@@ -63,6 +63,11 @@ impl AttachArgs {
         init_logger(LevelFilter::Debug).unwrap();
         set_default_level(LevelFilter::Debug);
 
+        let ticker = tick(Duration::from_millis(30));
+        let ui_events = ui_events()?;
+        let log_events = log_tail_events(&self.name)?;
+        let application_socket = application_socket(&self.name)?;
+
         terminal::enable_raw_mode()?;
 
         let mut stdout = io::stdout();
@@ -73,26 +78,7 @@ impl AttachArgs {
 
         let mut terminal = Terminal::new(backend)?;
 
-        let mut app = AttachedTerminal::new(self.name.clone());
-
-        let ticker = tick(Duration::from_millis(30));
-        let ui_events = ui_events()?;
-
-        let log_events = match log_tail_events(&self.name) {
-            Ok(log_events) => log_events,
-            Err(err) => {
-                close_terminal(&mut terminal)?;
-                return Err(err);
-            }
-        };
-
-        let application_socket = match application_socket(&self.name) {
-            Ok(application_socket) => application_socket,
-            Err(err) => {
-                close_terminal(&mut terminal)?;
-                return Err(err);
-            }
-        };
+        let mut app = AttachedTerminal::new(self.name);
 
         terminal.draw(|f| ui(f, &mut app))?;
 
@@ -271,7 +257,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachedTerminal) {
 
     f.render_widget(help_message, chunks[0]);
 
-    let logger = TuiLoggerWidget::default()
+    let tui_logger = TuiLoggerWidget::default()
         .block(
             Block::default()
                 .title(app.name.as_str())
@@ -285,16 +271,16 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachedTerminal) {
         .output_line(false)
         .state(&app.logger_state);
 
-    f.render_widget(logger, chunks[1]);
+    f.render_widget(tui_logger, chunks[1]);
 
-    let input = Paragraph::new(app.input.value())
+    let tui_input = Paragraph::new(app.input.value())
         .style(match app.input_mode {
             InputMode::Normal => Style::default(),
             InputMode::Editing => Style::default().fg(Color::Yellow),
         })
         .block(Block::default().borders(Borders::ALL).title("Input"));
 
-    f.render_widget(input, chunks[2]);
+    f.render_widget(tui_input, chunks[2]);
 
     match app.input_mode {
         InputMode::Normal => {}
