@@ -1,27 +1,29 @@
-name: Cargo Build & Test
+name: Build & Test
 
-on:
-    push:
-        branches: ['main']
-    pull_request:
-        branches: ['main']
+on: [push, pull_request]
 
 env:
     CARGO_TERM_COLOR: always
     RUSTFLAGS: '-Dwarnings'
 
 jobs:
-    build_and_test:
+    cargo:
         runs-on: ubuntu-latest
-
         steps:
+            - name: Checkout
             - uses: actions/checkout@v3
+
+            - name: Cache setup
+            - uses: Swatinem/rust-cache@v2
 
             - name: Build
               run: cargo build --verbose
 
-            - name: Run tests
+            - name: Test
               run: cargo test --verbose
 
             - name: Run Clippy
               run: cargo clippy --verbose
+
+            - name: Format
+              run: cargo fmt --check
