@@ -3,7 +3,11 @@ name = "crescent"
 version = "0.1.0"
 edition = "2021"
 exclude = [".github", "tests"]
+categories = ["command-line-utilities"]
+description = "A process manager for game servers or services."
+keywords = ["process-manager", "minecraft", "socket", "tui"]
 repository = "https://github.com/Kyagara/crescent"
+homepage = "https://github.com/Kyagara/crescent"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
