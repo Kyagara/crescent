@@ -11,7 +11,11 @@ mod process;
 mod tail;
 
 #[derive(Parser)]
-#[command(author, version, about = "Process manager written in Rust.")]
+#[command(
+    author,
+    version,
+    about = "Process manager for game servers or services."
+)]
 struct Crescent {
     #[command(subcommand)]
     pub commands: Commands,

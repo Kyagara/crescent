@@ -3,7 +3,7 @@ use anyhow::{anyhow, Context, Result};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
 use std::{
-    fs::{self, File},
+    fs::{self, File, OpenOptions},
     io::{Read, Write},
     os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
@@ -103,9 +103,16 @@ impl Application {
 
         let process_path = directory::application_dir_by_name(&self.name)?;
 
-        let address = process_path.join(self.name + ".sock");
+        let address = process_path.join(self.name.clone() + ".sock");
 
         let socket_path = address.clone();
+
+        let pid_path = process_path.join(self.name + ".pid");
+        let mut pid_file = OpenOptions::new().read(true).append(true).open(&pid_path)?;
+
+        let pid = process.pid().unwrap().to_string();
+
+        pid_file.write_all(pid.as_bytes())?;
 
         thread::spawn(move || {
             process.wait().unwrap();
@@ -155,7 +162,7 @@ fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut us
     *read_bytes
 }
 
-pub fn process_pid_by_name(name: &String) -> Result<Pid> {
+pub fn process_pid_by_name(name: &String) -> Result<Vec<Pid>> {
     let application_path = directory::application_dir_by_name(name)?;
 
     let app_name = application_path
@@ -170,9 +177,12 @@ pub fn process_pid_by_name(name: &String) -> Result<Pid> {
 
     let pid_file = fs::read_to_string(pid_path).context("Error reading PID file.")?;
 
-    let pid = Pid::from_str(pid_file.trim()).context("Error trimming PID file.")?;
+    let pids: Vec<Pid> = pid_file
+        .split('\n')
+        .map(|x| Pid::from_str(x).context("Error parsing Pid.").unwrap())
+        .collect();
 
-    Ok(pid)
+    Ok(pids)
 }
 
 fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()> {
