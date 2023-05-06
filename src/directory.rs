@@ -32,7 +32,8 @@ pub fn app_already_exist(name: &String) -> bool {
         let mut system = System::new();
         system.refresh_all();
 
-        system.process(pid).is_some()
+        // First PID is always the crescent process.
+        system.process(pid[0]).is_some()
     } else {
         false
     }

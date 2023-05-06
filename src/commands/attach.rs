@@ -1,5 +1,5 @@
-use crate::{directory, tail::Tail};
-use anyhow::{anyhow, Result};
+use crate::{directory, process::process_pid_by_name, tail::Tail};
+use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use crossbeam::{
     channel::{tick, unbounded, Receiver, Sender},
@@ -17,15 +17,16 @@ use std::{
     thread,
     time::Duration,
 };
+use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
-    text::{Span, Spans, Text},
+    text::Span,
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
-use tui_input::{backend::crossterm as input_backend, Input};
+use tui_input::{backend::crossterm::EventHandler, Input};
 use tui_logger::{init_logger, set_default_level, TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
 
 #[derive(Args)]
@@ -63,10 +64,12 @@ impl AttachArgs {
         init_logger(LevelFilter::Debug).unwrap();
         set_default_level(LevelFilter::Debug);
 
-        let ticker = tick(Duration::from_millis(30));
+        let ticker = tick(Duration::from_millis(20));
         let ui_events = ui_events()?;
         let log_events = log_tail_events(&self.name)?;
         let application_socket = application_socket(&self.name)?;
+        let pids = process_pid_by_name(&self.name)?;
+        let stats_ticker = stats_update(pids[1])?;
 
         terminal::enable_raw_mode()?;
 
@@ -80,13 +83,27 @@ impl AttachArgs {
 
         let mut app = AttachedTerminal::new(self.name);
 
-        terminal.draw(|f| ui(f, &mut app))?;
+        let mut stats_list = String::from("Waiting for stats.");
+
+        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
 
         loop {
             select! {
+                recv(ticker) -> _ => {
+                    terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                },
                 recv(log_events)-> event => {
                     if let Ok(content) = event {
+                        if content.is_empty() {
+                            continue;
+                        }
+
                         debug!("{content}");
+                    }
+                },
+                recv(stats_ticker)-> event => {
+                    if let Ok(content) = event {
+                        stats_list = content;
                     }
                 },
                 recv(ui_events) -> event => {
@@ -111,6 +128,10 @@ impl AttachArgs {
                                 KeyCode::Enter => {
                                     let input = app.input.value().to_string();
 
+                                    if input.is_empty() {
+                                        continue;
+                                    }
+
                                     debug!(">> Sent: {}", &input);
 
                                     app.input.reset();
@@ -128,14 +149,11 @@ impl AttachArgs {
                                     app.input_mode = InputMode::Normal;
                                 }
                                 _ => {
-                                    input_backend::to_input_request(&Event::Key(key)).map(|req| app.input.handle(req));
+                                    app.input.handle_event(&Event::Key(key));
                                 }
                             },
                         }
                     }
-                },
-                recv(ticker) -> _ => {
-                    terminal.draw(|f| ui(f, &mut app))?;
                 }
             }
         }
@@ -205,6 +223,46 @@ fn log_tail_events(name: &String) -> Result<Receiver<String>> {
     Ok(receiver)
 }
 
+fn stats_update(pid: Pid) -> Result<Receiver<String>> {
+    let (sender, receiver) = unbounded();
+
+    let ticker = tick(Duration::from_secs(2));
+
+    let mut system = System::new();
+    system.refresh_all();
+
+    let cpu_count = system.physical_core_count().unwrap() as f32;
+
+    thread::spawn(move || {
+        while ticker.recv().is_ok() {
+            system.refresh_all();
+
+            let process = system
+                .process(pid)
+                .context("Error retrieving process information.")
+                .unwrap();
+
+            let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
+
+            let load = system.load_average();
+
+            sender
+                .send(format!(
+                    "cpu: {:.2}% | mem: {:.2}% ({} Mb) | system load: {}, {}, {}",
+                    process.cpu_usage() / cpu_count,
+                    memory,
+                    process.memory() / 1024 / 1024,
+                    load.one,
+                    load.five,
+                    load.fifteen,
+                ))
+                .unwrap();
+        }
+    });
+
+    Ok(receiver)
+}
+
 fn ui_events() -> Result<Receiver<Event>> {
     let (sender, receiver) = unbounded();
 
@@ -215,53 +273,42 @@ fn ui_events() -> Result<Receiver<Event>> {
     Ok(receiver)
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachedTerminal) {
+fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachedTerminal, stats_list: &String) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Length(1),
-                Constraint::Min(1),
-                Constraint::Length(3),
-            ]
-            .as_ref(),
-        )
+        .constraints([Constraint::Min(1), Constraint::Max(3), Constraint::Max(3)].as_ref())
         .split(f.size());
 
-    let (msg, style) = match app.input_mode {
-        InputMode::Normal => (
-            vec![
-                Span::raw("Press "),
-                Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to exit, "),
-                Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to start editing."),
-            ],
-            Style::default(),
-        ),
-        InputMode::Editing => (
-            vec![
-                Span::raw("Press "),
-                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to stop editing."),
-            ],
-            Style::default(),
-        ),
+    let help_message = match app.input_mode {
+        InputMode::Normal => vec![
+            Span::raw("Press "),
+            Span::styled(
+                "q",
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::ITALIC),
+            ),
+            Span::raw(" to exit, "),
+            Span::styled("e", Style::default().add_modifier(Modifier::BOLD)),
+            Span::raw(" to start editing."),
+        ],
+        InputMode::Editing => vec![
+            Span::raw("Press "),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .add_modifier(Modifier::ITALIC),
+            ),
+            Span::raw(" to stop editing."),
+        ],
     };
-
-    let mut text = Text::from(Spans::from(msg));
-
-    text.patch_style(style);
-
-    let help_message = Paragraph::new(text);
-
-    f.render_widget(help_message, chunks[0]);
 
     let tui_logger = TuiLoggerWidget::default()
         .block(
             Block::default()
                 .title(app.name.as_str())
-                .title_alignment(Alignment::Center)
+                .title_alignment(Alignment::Left)
                 .borders(Borders::ALL),
         )
         .output_level(None)
@@ -271,21 +318,27 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachedTerminal) {
         .output_line(false)
         .state(&app.logger_state);
 
-    f.render_widget(tui_logger, chunks[1]);
+    f.render_widget(tui_logger, chunks[0]);
+
+    let stats = Paragraph::new(stats_list.to_owned())
+        .block(Block::default().borders(Borders::ALL).title("Stats"));
+
+    f.render_widget(stats, chunks[1]);
 
     let tui_input = Paragraph::new(app.input.value())
         .style(match app.input_mode {
             InputMode::Normal => Style::default(),
             InputMode::Editing => Style::default().fg(Color::Yellow),
         })
-        .block(Block::default().borders(Borders::ALL).title("Input"));
+        .block(Block::default().borders(Borders::ALL).title(help_message));
 
     f.render_widget(tui_input, chunks[2]);
 
     match app.input_mode {
         InputMode::Normal => {}
-        InputMode::Editing => {
-            f.set_cursor(chunks[2].x + app.input.cursor() as u16 + 1, chunks[2].y + 1)
-        }
+        InputMode::Editing => f.set_cursor(
+            chunks[2].x + app.input.visual_cursor() as u16 + 1,
+            chunks[2].y + 1,
+        ),
     }
 }

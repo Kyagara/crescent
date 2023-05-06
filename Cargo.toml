@@ -20,12 +20,12 @@ crossterm = "0.26.1"
 daemonize = "0.5.0"
 log = "0.4.17"
 notify = "5.1.0"
+tui = { version = "0.20.1", package = "ratatui" }
 subprocess = "0.2.9"
 sysinfo = "0.28.4"
 tabled = "0.11.1"
-tui = "0.19.0"
 tui-input = "0.7.0"
-tui-logger = "0.9.1"
+tui-logger = { version = "0.9.1", features = ["ratatui-support"], default-features = false }
 
 [dev-dependencies]
 assert_cmd = "2.0.11"

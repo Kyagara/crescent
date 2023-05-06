@@ -1,7 +1,7 @@
 use crate::directory;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
-use std::{fs::File, io::Read};
+use std::{fs::File, io::Read, str::FromStr, time::Duration};
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tabled::{settings::Style, Table, Tabled};
 
@@ -10,7 +10,7 @@ use tabled::{settings::Style, Table, Tabled};
 pub struct ListArgs {}
 
 #[derive(Tabled)]
-struct Application {
+struct ApplicationInfo {
     #[tabled(rename = "Name")]
     name: String,
     #[tabled(rename = "PID")]
@@ -63,19 +63,20 @@ impl ListArgs {
                 .read_to_string(&mut pid_str)
                 .context("Error reading PID file to string.")?;
 
-            pid_str = pid_str.trim().to_string();
+            let pids: Vec<Pid> = pid_str
+                .split('\n')
+                .map(|x| Pid::from_str(x).context("Error parsing Pid.").unwrap())
+                .collect();
 
-            let pid: usize = pid_str.parse().context("Error parsing PID str to usize.")?;
-
-            if let Some(process) = system.process(Pid::from(pid)) {
+            if let Some(process) = system.process(pids[0]) {
                 let (_, cmd) = process.cmd().split_at(2);
 
-                let app = Application {
+                let app = ApplicationInfo {
                     name: name.to_string(),
-                    pid: pid.to_string(),
+                    pid: pids[0].to_string(),
                     command: cmd.join(" "),
                     cwd: process.cwd().display().to_string(),
-                    uptime: process.run_time().to_string() + "s",
+                    uptime: format!("{:?}", Duration::from_secs(process.run_time())),
                 };
 
                 apps.push(app);
