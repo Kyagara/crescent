@@ -233,6 +233,7 @@ dependencies = [
  "subprocess",
  "sysinfo",
  "tabled",
+ "temp-file",
  "tui-input",
  "tui-logger",
 ]
@@ -1025,6 +1026,12 @@ dependencies = [
  "quote",
  "syn 1.0.109",
 ]
+
+[[package]]
+name = "temp-file"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4479870ee948e4c5c3fc4774b46aa73eedf97d84503a9b90922c1bb19a73a8d"
 
 [[package]]
 name = "termcolor"

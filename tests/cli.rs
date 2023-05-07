@@ -2,6 +2,17 @@ use anyhow::Result;
 use assert_cmd::Command;
 
 #[test]
+fn start_command() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.arg("start").arg("/bin/ls");
+
+    cmd.assert().success().stdout("Starting daemon\n");
+
+    Ok(())
+}
+
+#[test]
 fn list_no_apps_running() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 

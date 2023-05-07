@@ -199,3 +199,41 @@ fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_application_struct() -> Result<()> {
+        let name = String::from("app_name");
+        let t = temp_file::empty();
+        let file_path = t.path().to_str().unwrap().to_string();
+        let interpreter = String::from("java");
+        let arguments = String::from("argument");
+
+        let mut application = Application::new(
+            file_path.clone(),
+            Some(name),
+            Some(interpreter),
+            Some(arguments),
+        )?;
+
+        assert_eq!(application.name, "app_name");
+        assert_eq!(application.file_path, file_path);
+        assert_eq!(application.interpreter, "java");
+        assert_eq!(application.args, vec!["-jar", &file_path, "argument"]);
+
+        application = Application::new(file_path.clone(), None, None, None)?;
+
+        assert_eq!(
+            application.name,
+            t.path().file_stem().unwrap().to_str().unwrap().to_string()
+        );
+        assert_eq!(application.file_path, file_path);
+        assert_eq!(application.interpreter, file_path);
+        assert_eq!(application.args, Vec::<String>::new());
+
+        Ok(())
+    }
+}
