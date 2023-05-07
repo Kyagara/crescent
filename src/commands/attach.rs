@@ -132,8 +132,6 @@ impl AttachArgs {
                                         continue;
                                     }
 
-                                    debug!(">> Sent: {}", &input);
-
                                     app.input.reset();
 
                                     let message = format!("{}\n", input);

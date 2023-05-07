@@ -3,7 +3,9 @@ use crate::{
     process::Application,
 };
 use anyhow::{anyhow, Context, Result};
+use chrono::Local;
 use clap::Args;
+use log::{Level, LevelFilter, Metadata, Record};
 use std::fs;
 
 #[derive(Args)]
@@ -27,6 +29,29 @@ pub struct StartArgs {
     pub arguments: Option<String>,
 }
 
+static LOGGER: Logger = Logger;
+
+struct Logger;
+
+impl log::Log for Logger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= Level::Info
+    }
+
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            eprintln!(
+                "[{}] [crescent] {} - {}",
+                Local::now().time().format("%H:%M:%S"),
+                record.level(),
+                record.args()
+            );
+        }
+    }
+
+    fn flush(&self) {}
+}
+
 impl StartArgs {
     pub fn run(self) -> Result<()> {
         let application =
@@ -45,6 +70,11 @@ impl StartArgs {
         }
 
         fs::create_dir_all(&app_path).context("Error creating application directory.")?;
+
+        log::set_logger(&LOGGER).unwrap();
+        log::set_max_level(LevelFilter::Info);
+
+        println!("Starting application.");
 
         application.start()?;
 

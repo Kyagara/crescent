@@ -7,7 +7,7 @@ use tabled::{settings::Style, Table, Tabled};
 
 #[derive(Args)]
 #[command(about = "List all running applications.")]
-pub struct ListArgs {}
+pub struct ListArgs;
 
 #[derive(Tabled)]
 struct ApplicationInfo {
