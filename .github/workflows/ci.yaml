@@ -32,3 +32,22 @@ jobs:
 
             - name: Format
               run: cargo fmt --check
+
+    coverage:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - uses: Swatinem/rust-cache@v2
+
+            - name: Install cargo-llvm-cov
+              uses: taiki-e/install-action@cargo-llvm-cov
+
+            - name: Generate code coverage
+              run: cargo llvm-cov --lcov --output-path lcov.info
+
+            - name: Upload to codecov.io
+              uses: codecov/codecov-action@v3
+              with:
+                  files: lcov.info
+                  fail_ci_if_error: true
