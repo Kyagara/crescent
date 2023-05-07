@@ -14,6 +14,7 @@ use log::{debug, LevelFilter};
 use std::{
     io::{self, Stdout, Write},
     os::unix::net::UnixStream,
+    path::Path,
     thread,
     time::Duration,
 };
@@ -65,11 +66,11 @@ impl AttachArgs {
         set_default_level(LevelFilter::Debug);
 
         let ticker = tick(Duration::from_millis(20));
-        let ui_events = ui_events()?;
         let log_events = log_tail_events(&self.name)?;
-        let application_socket = application_socket(&self.name)?;
         let pids = process_pid_by_name(&self.name)?;
         let stats_ticker = stats_update(pids[1])?;
+        let ui_events = ui_events()?;
+        let application_socket = application_socket(&self.name)?;
 
         terminal::enable_raw_mode()?;
 
@@ -182,6 +183,10 @@ fn application_socket(name: &String) -> Result<Sender<String>> {
     }
 
     socket_dir.push(name.clone() + ".sock");
+
+    if !Path::new(&socket_dir).exists() {
+        return Err(anyhow!("Socket file does not exist."));
+    }
 
     let (sender, receiver): (Sender<String>, Receiver<String>) = unbounded();
 

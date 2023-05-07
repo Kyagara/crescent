@@ -1,4 +1,4 @@
-use crate::directory::{self};
+use crate::directory;
 use anyhow::{anyhow, Context, Result};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
@@ -33,7 +33,9 @@ impl Application {
     ) -> Result<Application> {
         let file_path_buf = PathBuf::from(&file_path);
 
-        if !file_path_buf.exists() {
+        let file_full_path = fs::canonicalize(&file_path_buf)?;
+
+        if !file_full_path.exists() {
             return Err(anyhow!(format!("File '{}' not found", &file_path)));
         }
 
@@ -53,7 +55,7 @@ impl Application {
 
         let mut interpreter = interpreter.unwrap_or(String::new());
 
-        let file_path_str = file_path.clone();
+        let file_path_str = file_full_path.to_str().unwrap().to_string();
 
         let mut args = vec![];
 
@@ -61,10 +63,10 @@ impl Application {
             "java" => {
                 interpreter = "java".to_string();
                 args.push(String::from("-jar"));
-                args.push(file_path_str)
+                args.push(file_path_str.clone())
             }
-            "" => interpreter = file_path_str,
-            _ => args.push(file_path_str),
+            "" => interpreter = file_path_str.clone(),
+            _ => args.push(file_path_str.clone()),
         }
 
         if let Some(arguments) = arguments {
@@ -72,7 +74,7 @@ impl Application {
         }
 
         Ok(Application {
-            file_path,
+            file_path: file_path_str,
             name,
             app_dir,
             work_dir,
