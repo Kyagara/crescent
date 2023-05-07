@@ -42,10 +42,10 @@ pub fn app_already_exist(name: &String) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use std::{fs::remove_dir_all, path::PathBuf};
 
     #[test]
-    fn crescent_dir_created() -> Result<()> {
+    fn unit_crescent_dir_created() -> Result<()> {
         let home = env::var("HOME")?;
         let mut home_path = PathBuf::from(home);
         home_path.push(".crescent");
@@ -56,7 +56,7 @@ mod tests {
     }
 
     #[test]
-    fn application_dir_created() -> Result<()> {
+    fn unit_application_dir_created() -> Result<()> {
         let mut home_path = crescent_dir()?;
         home_path.push("apps");
         home_path.push("test_app");
@@ -65,6 +65,8 @@ mod tests {
         fs::create_dir_all(home_path.clone())?;
 
         assert_eq!(application_dir_by_name(&app_name)?, home_path);
+
+        remove_dir_all(home_path)?;
 
         Ok(())
     }

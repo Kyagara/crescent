@@ -3,32 +3,21 @@ use assert_cmd::Command;
 use predicates::prelude::predicate;
 use std::{env, fs, os::unix::net::UnixListener, path::PathBuf};
 
-fn reset_apps_folder() -> Result<()> {
+fn delete_app_folder(name: &str) -> Result<()> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
     let mut crescent_dir = PathBuf::from(home);
     crescent_dir.push(".crescent");
     crescent_dir.push("apps");
 
+    if !crescent_dir.exists() {
+        fs::create_dir_all(&crescent_dir)?;
+    }
+
+    crescent_dir.push(name);
+
     if crescent_dir.exists() {
         fs::remove_dir_all(&crescent_dir)?;
     }
-
-    fs::create_dir_all(crescent_dir)?;
-
-    Ok(())
-}
-
-#[test]
-fn start_command() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["start", "/bin/ls"]);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("Starting daemon."));
-
-    reset_apps_folder()?;
 
     Ok(())
 }
@@ -43,13 +32,118 @@ fn list_no_apps_running() -> Result<()> {
         .failure()
         .stderr("Error: No application running.\n");
 
-    reset_apps_folder()?;
+    Ok(())
+}
+
+#[test]
+fn log_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["log", "test_app_not_available"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
 
     Ok(())
 }
 
 #[test]
-fn list_app() -> Result<()> {
+fn send_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["send", "test_app_not_available", "command"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
+
+    Ok(())
+}
+
+#[test]
+fn attach_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["attach", "test_app_not_available"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
+
+    Ok(())
+}
+
+#[test]
+fn start_short_lived_command() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["start", "/bin/ls", "-n", "start_ls"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Starting daemon."));
+
+    delete_app_folder("start_ls")?;
+
+    Ok(())
+}
+
+#[test]
+fn log_short_lived_command() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["start", "/bin/echo", "-a", "command", "-n", "log_echo"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Starting daemon."));
+
+    cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["log", "log_echo"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("command"));
+
+    delete_app_folder("log_echo")?;
+
+    Ok(())
+}
+
+#[test]
+fn log_follow_short_lived_command() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args([
+        "start",
+        "/bin/echo",
+        "-a",
+        "command",
+        "-n",
+        "log_follow_echo",
+    ]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Starting daemon."));
+
+    cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["log", "log_follow_echo", "-f"])
+        .timeout(std::time::Duration::from_secs(1));
+
+    cmd.assert()
+        .stdout(predicate::str::contains(">> Watching log"));
+
+    delete_app_folder("log_follow_echo")?;
+
+    Ok(())
+}
+
+#[test]
+fn list_long_running_service() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     let args = [
@@ -81,66 +175,13 @@ fn list_app() -> Result<()> {
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    reset_apps_folder()?;
+    delete_app_folder("list_long_running")?;
 
     Ok(())
 }
 
 #[test]
-fn log_no_apps_running() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["log", "test_app_not_available"]);
-
-    cmd.assert()
-        .failure()
-        .stderr("Error: Application does not exist.\n");
-
-    reset_apps_folder()?;
-
-    Ok(())
-}
-
-#[test]
-fn log_echo() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["start", "/bin/echo", "-a", "command", "-n", "log_echo"]);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("Starting daemon."));
-
-    cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["log", "log_echo"]);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("command"));
-
-    reset_apps_folder()?;
-
-    Ok(())
-}
-
-#[test]
-fn send_no_apps_running() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["send", "test_app_not_available", "command"]);
-
-    cmd.assert()
-        .failure()
-        .stderr("Error: Application does not exist.\n");
-
-    reset_apps_folder()?;
-
-    Ok(())
-}
-
-#[test]
-fn send_command() -> Result<()> {
+fn send_command_socket() -> Result<()> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
 
     let mut crescent_dir = PathBuf::from(home);
@@ -161,28 +202,13 @@ fn send_command() -> Result<()> {
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    reset_apps_folder()?;
+    delete_app_folder("socket_test")?;
 
     Ok(())
 }
 
 #[test]
-fn attach_no_apps_running() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["attach", "test_app_not_available"]);
-
-    cmd.assert()
-        .failure()
-        .stderr("Error: Application does not exist.\n");
-
-    reset_apps_folder()?;
-
-    Ok(())
-}
-
-#[test]
-fn attach_echo_socket_not_found() -> Result<()> {
+fn attach_command_socket_not_found() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     cmd.args([
@@ -206,30 +232,7 @@ fn attach_echo_socket_not_found() -> Result<()> {
         .failure()
         .stderr("Error: Socket file does not exist.\n");
 
-    reset_apps_folder()?;
-
-    Ok(())
-}
-
-#[test]
-fn log_echo_follow() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["start", "/bin/echo", "-a", "command"]);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("Starting daemon."));
-
-    cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["log", "echo", "-f"])
-        .timeout(std::time::Duration::from_secs(1));
-
-    cmd.assert()
-        .stdout(predicate::str::contains(">> Watching log"));
-
-    reset_apps_folder()?;
+    delete_app_folder("socket_not_found")?;
 
     Ok(())
 }

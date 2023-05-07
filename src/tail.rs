@@ -91,7 +91,7 @@ mod tests {
     use std::{env::temp_dir, fs::remove_file, io::Write};
 
     #[test]
-    fn tail_read_lines() -> Result<()> {
+    fn unit_tail_read_lines() -> Result<()> {
         let mut file_path = temp_dir();
         file_path.push("crescent_temp_log_file_test.txt");
         let mut log_file = File::create(&file_path)?;
