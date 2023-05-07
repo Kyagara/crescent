@@ -188,21 +188,21 @@ fn send_command_socket() -> Result<()> {
 
     crescent_dir.push(".crescent");
     crescent_dir.push("apps");
-    crescent_dir.push("socket_test");
+    crescent_dir.push("send_socket_test");
 
     fs::create_dir_all(&crescent_dir).context("Error creating crescent directory.")?;
 
-    let address = crescent_dir.join("socket_test.sock");
+    let address = crescent_dir.join("send_socket_test.sock");
 
     let _socket = UnixListener::bind(address)?;
 
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.args(["send", "socket_test", "command"]);
+    cmd.args(["send", "send_socket_test", "command"]);
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    delete_app_folder("socket_test")?;
+    delete_app_folder("send_socket_test")?;
 
     Ok(())
 }
@@ -217,7 +217,7 @@ fn attach_command_socket_not_found() -> Result<()> {
         "-a",
         "command",
         "-n",
-        "socket_not_found",
+        "attach_socket_not_found",
     ]);
 
     cmd.assert()
@@ -226,13 +226,13 @@ fn attach_command_socket_not_found() -> Result<()> {
 
     cmd = Command::cargo_bin("cres")?;
 
-    cmd.args(["attach", "socket_not_found"]);
+    cmd.args(["attach", "attach_socket_not_found"]);
 
     cmd.assert()
         .failure()
         .stderr("Error: Socket file does not exist.\n");
 
-    delete_app_folder("socket_not_found")?;
+    delete_app_folder("attach_socket_not_found")?;
 
     Ok(())
 }

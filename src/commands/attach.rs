@@ -65,12 +65,12 @@ impl AttachArgs {
         init_logger(LevelFilter::Debug).unwrap();
         set_default_level(LevelFilter::Debug);
 
-        let ticker = tick(Duration::from_millis(20));
+        let application_socket = application_socket(&self.name)?;
         let log_events = log_tail_events(&self.name)?;
         let pids = process_pid_by_name(&self.name)?;
         let stats_ticker = stats_update(pids[1])?;
         let ui_events = ui_events()?;
-        let application_socket = application_socket(&self.name)?;
+        let ticker = tick(Duration::from_millis(20));
 
         terminal::enable_raw_mode()?;
 
