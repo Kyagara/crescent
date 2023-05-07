@@ -1,7 +1,12 @@
 use crate::directory;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
-use std::{fs::File, io::Read, str::FromStr, time::Duration};
+use std::{
+    fs::{create_dir_all, File},
+    io::Read,
+    str::FromStr,
+    time::Duration,
+};
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tabled::{settings::Style, Table, Tabled};
 
@@ -28,6 +33,10 @@ impl ListArgs {
         let mut crescent_pathbuf = directory::crescent_dir()?;
 
         crescent_pathbuf.push("apps");
+
+        if !crescent_pathbuf.exists() {
+            create_dir_all(&crescent_pathbuf)?;
+        }
 
         let crescent_dir = crescent_pathbuf
             .read_dir()

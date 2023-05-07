@@ -2,7 +2,7 @@
 name = "crescent"
 version = "0.1.0"
 edition = "2021"
-exclude = [".github", "tests"]
+exclude = [".github", "tests", "tools"]
 categories = ["command-line-utilities"]
 description = "A process manager for game servers or services."
 keywords = ["process-manager", "minecraft", "socket", "tui"]
