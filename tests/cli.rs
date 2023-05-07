@@ -93,7 +93,7 @@ fn start_short_lived_command() -> Result<()> {
 fn log_short_lived_command() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.args(["start", "/bin/echo", "-a", "command", "-n", "log_echo"]);
+    cmd.args(["start", "/bin/echo", "-n", "log_echo"]);
 
     cmd.assert()
         .success()
@@ -105,7 +105,7 @@ fn log_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("command"));
+        .stdout(predicate::str::contains(">> Printed 200 lines"));
 
     delete_app_folder("log_echo")?;
 
@@ -116,14 +116,7 @@ fn log_short_lived_command() -> Result<()> {
 fn log_follow_short_lived_command() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.args([
-        "start",
-        "/bin/echo",
-        "-a",
-        "command",
-        "-n",
-        "log_follow_echo",
-    ]);
+    cmd.args(["start", "/bin/echo", "-n", "log_follow_echo"]);
 
     cmd.assert()
         .success()
@@ -135,6 +128,7 @@ fn log_follow_short_lived_command() -> Result<()> {
         .timeout(std::time::Duration::from_secs(1));
 
     cmd.assert()
+        .interrupted()
         .stdout(predicate::str::contains(">> Watching log"));
 
     delete_app_folder("log_follow_echo")?;
@@ -211,14 +205,7 @@ fn send_command_socket() -> Result<()> {
 fn attach_command_socket_not_found() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.args([
-        "start",
-        "/bin/echo",
-        "-a",
-        "command",
-        "-n",
-        "attach_socket_not_found",
-    ]);
+    cmd.args(["start", "/bin/echo", "-n", "attach_socket_not_found"]);
 
     cmd.assert()
         .success()
