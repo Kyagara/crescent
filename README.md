@@ -1,10 +1,28 @@
-# Crescent
+<div align="center">
+	<h1>crescent</h1>
+    <p>Process manager for game servers or services.</p>
+	<p>
+		<a href="https://github.com/Kyagara/crescent/actions?query=workflow">
+			<img src="https://img.shields.io/github/actions/workflow/status/Kyagara/crescent/ci.yaml?label=CI&style=flat-square"/>
+		</a>
+        <a href="https://codecov.io/gh/Kyagara/crescent">
+			<img src="https://img.shields.io/codecov/c/github/Kyagara/crescent?style=flat-square"/>
+		</a>
+	</p>
+</div>
 
-A process manager for game servers or services.
+> **Warning**
+> WIP!
 
-## Why?
+## Installation:
 
-I wanted to learn some Rust so I decided to create a tool similar to [PM2](https://pm2.keymetrics.io/) and [mark2](https://github.com/mark2devel/mark2), these two tools saved me from a lot of headache when spinning up background services for apps and in the case of mark2, Minecraft servers.
+```bash
+cargo install --git https://github.com/Kyagara/crescent
+```
+
+## OS support:
+
+My main focus is Linux, crescent is built and tested on ubuntu amd64 and should work on aarch64. MacOs is not tested. Windows is not supported.
 
 ## What works right now:
 
@@ -24,14 +42,19 @@ You can `attach` to an application, which let's you watch logs in realtime and s
 
 Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 
+## Why?
+
+I wanted to learn some Rust so I decided to create a tool similar to [PM2](https://pm2.keymetrics.io/) and [mark2](https://github.com/mark2devel/mark2), these two tools saved me from a lot of headache when spinning up background services for apps and in the case of mark2, Minecraft servers.
+
 ## Should I use Cres-
 
-Not for anything in production, game servers for friends for example shouldn't be a problem. Crescent does not currently support auto restarts in case of a crash or something equivalent to `pm2 save` to start apps on system startup.
+Not for anything in production, game servers for friends for example shouldn't be a problem. crescent does not currently support auto restarts in case of a crash or something equivalent to `pm2 save` to start apps on system startup.
 
 ## Todo
 
 -   More tests
 -   Attach command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
+-   Lots of unwraps inside threads
 -   Profiles (add a `-p` argument to the `start` command to pass a config file)
 -   There should be more logs for the daemonized crescent process, maybe a separate log/socket for it
 -   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
