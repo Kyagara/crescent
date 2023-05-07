@@ -17,8 +17,17 @@ jobs:
             - name: Build
               run: cargo build
 
-            - name: Test
-              run: cargo test -- --test-threads 1
+            - name: Unit tests
+              run: cargo test unit_
+
+            - name: Test no apps running
+              run: cargo test _no_apps_running
+
+            - name: Test commands
+              run: cargo test _command
+
+            - name: Test long running service
+              run: cargo test _long_running_service
 
     lint:
         runs-on: ubuntu-latest

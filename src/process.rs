@@ -237,7 +237,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new_application_struct() -> Result<()> {
+    fn unit_new_application_struct() -> Result<()> {
         let name = String::from("app_name");
         let t = temp_file::empty();
         let file_path = t.path().to_str().unwrap().to_string();
