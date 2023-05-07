@@ -1,5 +1,5 @@
 <div align="center">
-	<h1>crescent</h1>
+	<h1>🌙crescent</h1>
     <p>Process manager for game servers or services.</p>
 	<p>
 		<a href="https://github.com/Kyagara/crescent/actions?query=workflow">
@@ -46,7 +46,7 @@ Log, PID and the application's socket are located in `/home/<user>/.crescent/app
 
 I wanted to learn some Rust so I decided to create a tool similar to [PM2](https://pm2.keymetrics.io/) and [mark2](https://github.com/mark2devel/mark2), these two tools saved me from a lot of headache when spinning up background services for apps and in the case of mark2, Minecraft servers.
 
-## Should I use Cres-
+## Should I use cres-
 
 Not for anything in production, game servers for friends for example shouldn't be a problem. crescent does not currently support auto restarts in case of a crash or something equivalent to `pm2 save` to start apps on system startup.
 

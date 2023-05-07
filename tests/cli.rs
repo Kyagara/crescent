@@ -2,6 +2,7 @@ use std::{env, fs, os::unix::net::UnixListener, path::PathBuf};
 
 use anyhow::{Context, Result};
 use assert_cmd::Command;
+use predicates::prelude::predicate;
 
 #[test]
 fn start_command() -> Result<()> {
@@ -9,7 +10,9 @@ fn start_command() -> Result<()> {
 
     cmd.arg("start").arg("/bin/ls");
 
-    cmd.assert().success().stdout("Starting daemon\n");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Starting daemon."));
 
     Ok(())
 }
@@ -46,7 +49,9 @@ fn log_echo() -> Result<()> {
 
     cmd.arg("start").arg("/bin/echo").arg("-a").arg("command");
 
-    cmd.assert().success().stdout("Starting daemon\n");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Starting daemon."));
 
     cmd = Command::cargo_bin("cres")?;
 
@@ -54,7 +59,7 @@ fn log_echo() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout("command\n>> Printed 200 lines\n");
+        .stdout(predicate::str::contains("command"));
 
     Ok(())
 }

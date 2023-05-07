@@ -2,6 +2,7 @@ use crate::directory::{self};
 use anyhow::{anyhow, Context, Result};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use daemonize::Daemonize;
+use log::{error, info};
 use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
@@ -93,6 +94,8 @@ impl Application {
     }
 
     fn start_subprocess(self) -> Result<()> {
+        info!("Starting subprocess.");
+
         let mut process = Exec::cmd(&self.interpreter)
             .args(&self.args)
             .stdout(Redirection::Merge)
@@ -115,8 +118,28 @@ impl Application {
         pid_file.write_all(pid.as_bytes())?;
 
         thread::spawn(move || {
-            process.wait().unwrap();
-            fs::remove_file(socket_path).unwrap();
+            info!("Subprocess started.");
+
+            match process.wait() {
+                Ok(status) => {
+                    info!("Process exited with status: {:?}.", status);
+                }
+                Err(err) => {
+                    error!("Error opening process: {err}.");
+                }
+            }
+
+            info!("Removing socket.");
+            match fs::remove_file(socket_path) {
+                Ok(_) => {
+                    info!("Socket file removed.");
+                }
+                Err(err) => {
+                    error!("Error removing socket file: {err}.");
+                }
+            }
+
+            info!("Shutting down crescent.");
             exit(0)
         });
 
@@ -124,6 +147,7 @@ impl Application {
 
         thread::spawn(move || {
             for received in receiver {
+                info!("Command sent: '{}'", received.trim());
                 stdin.write_all(received.as_bytes()).unwrap();
                 stdin.flush().unwrap();
             }
@@ -142,13 +166,17 @@ impl Application {
 
                         // https://codereview.stackexchange.com/questions/243693/rust-multi-cliented-tcp-server-library
                         while read_stream(&mut stream, &mut recv_buf, &mut bytes_read) > 0 {
-                            let str = from_utf8(&recv_buf[..bytes_read]).unwrap();
-                            sender_clone.send(str.to_string()).unwrap();
+                            match from_utf8(&recv_buf[..bytes_read]) {
+                                Ok(str) => sender_clone.send(str.to_string()).unwrap(),
+                                Err(err) => {
+                                    error!("Error converting message to a string slice: {err}")
+                                }
+                            };
                         }
                     });
                 }
                 Err(err) => {
-                    eprintln!("Socket error: {err}")
+                    error!("Socket error: {err}")
                 }
             }
         }
@@ -188,7 +216,7 @@ pub fn process_pid_by_name(name: &String) -> Result<Vec<Pid>> {
 fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()> {
     let log = File::create(app_dir.join(app_name.clone() + ".log"))?;
 
-    println!("Starting daemon");
+    println!("Starting daemon.");
 
     let daemonize = Daemonize::new()
         .pid_file(app_dir.join(app_name + ".pid"))
@@ -196,6 +224,8 @@ fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()
         .stderr(log);
 
     daemonize.start()?;
+
+    info!("Daemon started.");
 
     Ok(())
 }
