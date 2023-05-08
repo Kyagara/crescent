@@ -58,8 +58,7 @@ mod tests {
     #[test]
     fn unit_application_dir_created() -> Result<()> {
         let mut home_path = crescent_dir()?;
-        home_path.push("apps");
-        home_path.push("test_app");
+        home_path.push("apps/test_app");
         let app_name = String::from("test_app");
 
         fs::create_dir_all(home_path.clone())?;
