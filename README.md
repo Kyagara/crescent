@@ -17,6 +17,12 @@
 ## Installation:
 
 ```bash
+cargo install crescent-cli
+```
+
+or
+
+```bash
 cargo install --git https://github.com/Kyagara/crescent
 ```
 
