@@ -5,9 +5,11 @@ use crate::Commands::*;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
+mod application;
 mod commands;
-mod directory;
-mod process;
+mod crescent;
+mod logger;
+mod subprocess;
 mod tail;
 
 #[derive(Parser)]

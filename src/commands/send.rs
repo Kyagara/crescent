@@ -1,4 +1,4 @@
-use crate::directory;
+use crate::application;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use std::{io::Write, os::unix::net::UnixStream};
@@ -14,7 +14,7 @@ pub struct SendArgs {
 
 impl SendArgs {
     pub fn run(self) -> Result<()> {
-        let mut app_dir = directory::application_dir_by_name(&self.name)?;
+        let mut app_dir = application::app_dir_by_name(&self.name)?;
 
         if !app_dir.exists() {
             return Err(anyhow!("Application does not exist."));
