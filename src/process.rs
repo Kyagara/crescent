@@ -1,14 +1,13 @@
 use crate::directory;
 use anyhow::{anyhow, Context, Result};
-use crossbeam::channel::{unbounded, Receiver, Sender};
-use daemonize::Daemonize;
+use libc::pid_t;
 use log::{error, info};
 use std::{
-    fs::{self, File, OpenOptions},
-    io::{Read, Write},
+    ffi::c_int,
+    fs::{self, OpenOptions},
+    io::{ErrorKind, Read, Write},
     os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
-    process::exit,
     str::{from_utf8, FromStr},
     thread,
 };
@@ -84,18 +83,6 @@ impl Application {
     }
 
     pub fn start(self) -> Result<()> {
-        daemonize(
-            self.app_dir.clone(),
-            self.name.clone(),
-            self.work_dir.clone(),
-        )?;
-
-        self.start_subprocess()?;
-
-        Ok(())
-    }
-
-    fn start_subprocess(self) -> Result<()> {
         info!("Starting subprocess.");
 
         let mut process = Exec::cmd(&self.interpreter)
@@ -104,92 +91,155 @@ impl Application {
             .stdin(Redirection::Pipe)
             .popen()?;
 
-        let mut stdin = process.stdin.take().unwrap();
+        info!("Subprocess started.");
 
-        let process_path = directory::application_dir_by_name(&self.name)?;
-
-        let address = process_path.join(self.name.clone() + ".sock");
-
-        let socket_path = address.clone();
-
-        let pid_path = process_path.join(self.name + ".pid");
-        let mut pid_file = OpenOptions::new().read(true).append(true).open(&pid_path)?;
-
-        let pid = process.pid().unwrap().to_string();
-
-        pid_file.write_all(pid.as_bytes())?;
-
-        thread::spawn(move || {
-            info!("Subprocess started.");
-
-            match process.wait() {
-                Ok(status) => {
-                    info!("Process exited with status: {:?}.", status);
-                }
-                Err(err) => {
-                    error!("Error opening process: {err}.");
-                }
+        let stdin = match process.stdin.take() {
+            Some(stdin) => stdin,
+            None => {
+                error!("Subprocess stdin broken, terminating subprocess.");
+                process.terminate()?;
+                return Err(anyhow!("Shutting down."));
             }
+        };
 
-            info!("Removing socket.");
-            match fs::remove_file(socket_path) {
-                Ok(_) => {
-                    info!("Socket file removed.");
-                }
-                Err(err) => {
-                    error!("Error removing socket file: {err}.");
-                }
+        let application_path = match directory::application_dir_by_name(&self.name) {
+            Ok(path) => path,
+            Err(err) => {
+                error!("Error retrieving application path: {err}");
+                process.terminate()?;
+                return Err(anyhow!("Shutting down."));
             }
+        };
 
-            info!("Shutting down crescent.");
-            exit(0)
-        });
+        let socket_address = application_path.join(self.name.clone() + ".sock");
+        let pid_path = application_path.join(self.name.clone() + ".pid");
 
-        let (sender, receiver): (Sender<String>, Receiver<String>) = unbounded();
+        drop(application_path);
+        drop(self);
 
-        thread::spawn(move || {
-            for received in receiver {
-                info!("Command sent: '{}'", received.trim());
-                stdin.write_all(received.as_bytes()).unwrap();
-                stdin.flush().unwrap();
-            }
-        });
+        if let Some(status) = process.poll() {
+            error!(
+                "Checked if subprocess was running and it returned {:?}.",
+                status
+            );
 
-        let socket = UnixListener::bind(address)?;
+            return Err(anyhow!("Shutting down."));
+        }
 
-        for stream in socket.incoming() {
-            match stream {
-                Ok(mut stream) => {
-                    let sender_clone = sender.clone();
+        let pid = process.pid().unwrap();
 
-                    thread::spawn(move || {
-                        let mut recv_buf = vec![0u8; 1024];
-                        let mut bytes_read: usize = 0;
+        if let Err(err) = append_pid(pid_path, pid) {
+            error!("Error appending PID to file: {err}");
+            process.terminate()?;
+            return Err(anyhow!("Shutting down."));
+        };
 
-                        // https://codereview.stackexchange.com/questions/243693/rust-multi-cliented-tcp-server-library
-                        while read_stream(&mut stream, &mut recv_buf, &mut bytes_read) > 0 {
-                            match from_utf8(&recv_buf[..bytes_read]) {
-                                Ok(str) => sender_clone.send(str.to_string()).unwrap(),
-                                Err(err) => {
-                                    error!("Error converting message to a string slice: {err}")
+        let socket_addr = socket_address.clone();
+
+        thread::Builder::new()
+            .name(String::from("subprocess_socket"))
+            .spawn(move || {
+                let listener = UnixListener::bind(&socket_addr).unwrap();
+
+                for stream in listener.incoming() {
+                    match stream {
+                        Ok(mut stream) => {
+                            let mut stdin_clone = stdin.try_clone().unwrap();
+                            let socket = socket_addr.clone();
+
+                            thread::spawn(move || {
+                                let mut recv_buf = vec![0u8; 1024];
+                                let mut bytes_read: usize = 0;
+
+                                while read_stream(&mut stream, &mut recv_buf, &mut bytes_read) > 0 {
+                                    match from_utf8(&recv_buf[..bytes_read]) {
+                                        Ok(str) => {
+                                            info!("Command received: '{}'", str.trim());
+
+                                            if let Err(err) = stdin_clone.write_all(str.as_bytes())
+                                            {
+                                                error!("Error writing to subprocess stdin: {err}.");
+
+                                                // Should any error here shutdown and exit?
+                                                // Only exiting if the pipe is closed for now
+                                                if err.kind() == ErrorKind::BrokenPipe {
+                                                    terminate(pid, &socket);
+                                                    break;
+                                                }
+                                            }
+
+                                            if let Err(err) = stdin_clone.flush() {
+                                                error!("Error flushing subprocess stdin: {err}.");
+                                            }
+                                        }
+                                        Err(err) => {
+                                            error!(
+                                                "Error converting message to a string slice: {err}"
+                                            )
+                                        }
+                                    };
                                 }
-                            };
+                            });
                         }
-                    });
+                        Err(err) => {
+                            error!("Socket error: {err}")
+                        }
+                    }
                 }
-                Err(err) => {
-                    error!("Socket error: {err}")
-                }
+            })?;
+
+        match process.wait() {
+            Ok(status) => {
+                info!("Subrocess exited with status: {:?}.", status);
+            }
+            Err(err) => {
+                error!("Error waiting: {err}.");
             }
         }
+
+        terminate(pid, &socket_address);
+
+        info!("Shutting down.");
 
         Ok(())
     }
 }
 
+fn append_pid(pid_path: PathBuf, pid: u32) -> Result<()> {
+    let mut pid_file = OpenOptions::new().read(true).append(true).open(pid_path)?;
+    pid_file.write_all(pid.to_string().as_bytes())?;
+    pid_file.flush()?;
+    Ok(())
+}
+
+// https://codereview.stackexchange.com/questions/243693/rust-multi-cliented-tcp-server-library
 fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut usize) -> usize {
     *read_bytes = stream.read(recv_buf).unwrap_or(0);
     *read_bytes
+}
+
+// This might be called two times if the stdin pipe is broken
+fn terminate(subprocess_pid: u32, socket_path: &PathBuf) {
+    unsafe {
+        let process_exists = libc::kill(subprocess_pid as pid_t, 0 as c_int);
+
+        if process_exists == 0 {
+            info!("Sending SIGTERM to subprocess.");
+            libc::kill(subprocess_pid as pid_t, 15 as c_int);
+        }
+    };
+
+    if socket_path.exists() {
+        info!("Removing socket.");
+        match fs::remove_file(socket_path) {
+            Ok(_) => {
+                info!("Socket file removed.");
+            }
+            Err(err) => {
+                error!("Error removing socket file: {err}.");
+            }
+        };
+    }
 }
 
 pub fn process_pid_by_name(name: &String) -> Result<Vec<Pid>> {
@@ -205,31 +255,32 @@ pub fn process_pid_by_name(name: &String) -> Result<Vec<Pid>> {
     let mut pid_path = application_path;
     pid_path.push(app_name + ".pid");
 
-    let pid_file = fs::read_to_string(pid_path).context("Error reading PID file.")?;
+    if !pid_path.exists() {
+        return Ok(vec![]);
+    }
 
-    let pids: Vec<Pid> = pid_file
-        .split('\n')
-        .map(|x| Pid::from_str(x).context("Error parsing Pid.").unwrap())
-        .collect();
+    let pid_file = fs::read_to_string(pid_path).context("Error reading PID file to string.")?;
+
+    let mut pid_strs: Vec<&str> = pid_file.split('\n').collect();
+    pid_strs.retain(|&x| !x.is_empty());
+
+    if pid_strs.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let cres_pid =
+        Pid::from_str(pid_strs[0]).with_context(|| format!("Error parsing PID {}", pid_strs[0]))?;
+
+    if pid_strs.len() == 1 {
+        return Ok(vec![cres_pid]);
+    }
+
+    let app_pid =
+        Pid::from_str(pid_strs[1]).with_context(|| format!("Error parsing PID {}", pid_strs[1]))?;
+
+    let pids: Vec<Pid> = vec![cres_pid, app_pid];
 
     Ok(pids)
-}
-
-fn daemonize(app_dir: PathBuf, app_name: String, work_dir: PathBuf) -> Result<()> {
-    let log = File::create(app_dir.join(app_name.clone() + ".log"))?;
-
-    println!("Starting daemon.");
-
-    let daemonize = Daemonize::new()
-        .pid_file(app_dir.join(app_name + ".pid"))
-        .working_directory(work_dir)
-        .stderr(log);
-
-    daemonize.start()?;
-
-    info!("Daemon started.");
-
-    Ok(())
 }
 
 #[cfg(test)]

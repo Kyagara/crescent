@@ -27,15 +27,26 @@ pub fn application_dir_by_name(name: &String) -> Result<PathBuf> {
     Ok(crescent_dir)
 }
 
-pub fn app_already_exist(name: &String) -> bool {
-    if let Ok(pid) = process_pid_by_name(name) {
-        let mut system = System::new();
-        system.refresh_all();
+pub fn app_already_exist(name: &String) -> Result<bool> {
+    match process_pid_by_name(name) {
+        Ok(pids) => {
+            let mut system = System::new();
+            system.refresh_all();
 
-        // First PID is always the crescent process.
-        system.process(pid[0]).is_some()
-    } else {
-        false
+            if pids.is_empty() {
+                return Ok(false);
+            }
+
+            let cres_process = system.process(pids[0]).is_some();
+            let mut app_process = false;
+
+            if pids.len() == 2 {
+                app_process = system.process(pids[1]).is_some();
+            }
+
+            Ok(cres_process || app_process)
+        }
+        Err(err) => Err(err),
     }
 }
 
