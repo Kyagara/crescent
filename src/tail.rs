@@ -96,6 +96,7 @@ mod tests {
         file_path.push("crescent_temp_log_file_test.txt");
         let mut log_file = File::create(&file_path)?;
         log_file.write_all(b"LOG")?;
+        log_file.flush()?;
 
         let mut file = Tail::new(file_path.clone())?;
 

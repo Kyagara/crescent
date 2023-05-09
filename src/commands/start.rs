@@ -5,8 +5,9 @@ use crate::{
 use anyhow::{anyhow, Context, Result};
 use chrono::Local;
 use clap::Args;
-use log::{Level, LevelFilter, Metadata, Record};
-use std::fs;
+use daemonize::Daemonize;
+use log::{info, Level, LevelFilter, Metadata, Record};
+use std::fs::{self, File};
 
 #[derive(Args)]
 #[command(about = "Starts an application from the file path provided.")]
@@ -57,7 +58,7 @@ impl StartArgs {
         let application =
             Application::new(self.file_path, self.name, self.interpreter, self.arguments)?;
 
-        if app_already_exist(&application.name) {
+        if app_already_exist(&application.name)? {
             return Err(anyhow!(
                 "An application with the same name is already running."
             ));
@@ -71,10 +72,27 @@ impl StartArgs {
 
         fs::create_dir_all(&app_path).context("Error creating application directory.")?;
 
+        drop(app_path);
+
         log::set_logger(&LOGGER).unwrap();
         log::set_max_level(LevelFilter::Info);
 
         println!("Starting application.");
+
+        {
+            let log = File::create(application.app_dir.join(application.name.clone() + ".log"))?;
+
+            println!("Starting daemon.");
+
+            let daemonize = Daemonize::new()
+                .pid_file(application.app_dir.join(application.name.clone() + ".pid"))
+                .working_directory(&application.work_dir)
+                .stderr(log);
+
+            daemonize.start()?;
+
+            info!("Daemon started.");
+        }
 
         application.start()?;
 
