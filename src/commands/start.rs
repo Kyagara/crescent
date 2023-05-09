@@ -1,13 +1,12 @@
-use crate::{
-    directory::{app_already_exist, application_dir_by_name},
-    process::Application,
-};
+use crate::{application, logger::Logger, subprocess};
 use anyhow::{anyhow, Context, Result};
-use chrono::Local;
 use clap::Args;
 use daemonize::Daemonize;
-use log::{info, Level, LevelFilter, Metadata, Record};
-use std::fs::{self, File};
+use log::{info, LevelFilter};
+use std::{
+    fs::{self, File},
+    path::PathBuf,
+};
 
 #[derive(Args)]
 #[command(about = "Starts an application from the file path provided.")]
@@ -32,47 +31,35 @@ pub struct StartArgs {
 
 static LOGGER: Logger = Logger;
 
-struct Logger;
-
-impl log::Log for Logger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Info
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            eprintln!(
-                "[{}] [crescent] {} - {}",
-                Local::now().time().format("%H:%M:%S"),
-                record.level(),
-                record.args()
-            );
-        }
-    }
-
-    fn flush(&self) {}
-}
-
 impl StartArgs {
     pub fn run(self) -> Result<()> {
-        let application =
-            Application::new(self.file_path, self.name, self.interpreter, self.arguments)?;
+        let file_path = fs::canonicalize(&self.file_path)?;
 
-        if app_already_exist(&application.name)? {
+        if !file_path.exists() {
+            return Err(anyhow!(format!(
+                "File '{}' not found",
+                &file_path.to_string_lossy()
+            )));
+        }
+
+        let name = match self.name {
+            Some(name) => name,
+            None => file_path.file_stem().unwrap().to_str().unwrap().to_string(),
+        };
+
+        if application::app_already_running(&name)? {
             return Err(anyhow!(
                 "An application with the same name is already running."
             ));
         }
 
-        let app_path = application_dir_by_name(&application.name)?;
+        let app_dir = application::app_dir_by_name(&name)?;
 
-        if app_path.exists() {
-            fs::remove_dir_all(&app_path).context("Error reseting application directory.")?;
+        if app_dir.exists() {
+            fs::remove_dir_all(&app_dir).context("Error reseting application directory.")?;
         }
 
-        fs::create_dir_all(&app_path).context("Error creating application directory.")?;
-
-        drop(app_path);
+        fs::create_dir_all(&app_dir).context("Error creating application directory.")?;
 
         log::set_logger(&LOGGER).unwrap();
         log::set_max_level(LevelFilter::Info);
@@ -80,13 +67,15 @@ impl StartArgs {
         println!("Starting application.");
 
         {
-            let log = File::create(application.app_dir.join(application.name.clone() + ".log"))?;
+            let log = File::create(app_dir.join(name.clone() + ".log"))?;
+            let pid_path = app_dir.join(name.clone() + ".pid");
+            let work_dir = file_path.parent().unwrap().to_path_buf();
 
             println!("Starting daemon.");
 
             let daemonize = Daemonize::new()
-                .pid_file(application.app_dir.join(application.name.clone() + ".pid"))
-                .working_directory(&application.work_dir)
+                .pid_file(pid_path)
+                .working_directory(work_dir)
                 .stderr(log);
 
             daemonize.start()?;
@@ -94,8 +83,32 @@ impl StartArgs {
             info!("Daemon started.");
         }
 
-        application.start()?;
+        let mut interpreter = self.interpreter.unwrap_or(String::new());
+
+        let args = get_args(&mut interpreter, file_path);
+
+        drop(app_dir);
+
+        subprocess::start(&name, &interpreter, &args)?;
 
         Ok(())
     }
+}
+
+fn get_args(interpreter: &mut String, file_path: PathBuf) -> Vec<String> {
+    let file_path_str = file_path.to_str().unwrap().to_string();
+
+    let mut args = vec![];
+
+    match interpreter.as_str() {
+        "java" => {
+            *interpreter = "java".to_string();
+            args.push(String::from("-jar"));
+            args.push(file_path_str)
+        }
+        "" => *interpreter = file_path_str,
+        _ => args.push(file_path_str),
+    }
+
+    args
 }

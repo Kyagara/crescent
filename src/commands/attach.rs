@@ -1,4 +1,4 @@
-use crate::{directory, process::process_pid_by_name, tail::Tail};
+use crate::{application, tail::Tail};
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use crossbeam::{
@@ -67,7 +67,7 @@ impl AttachArgs {
 
         let application_socket = application_socket(&self.name)?;
         let log_events = log_tail_events(&self.name)?;
-        let pids = process_pid_by_name(&self.name)?;
+        let pids = application::app_pids_by_name(&self.name)?;
         let stats_ticker = stats_update(pids[1])?;
         let ui_events = ui_events()?;
         let ticker = tick(Duration::from_millis(20));
@@ -176,7 +176,7 @@ fn close_terminal(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Result<(
 }
 
 fn application_socket(name: &String) -> Result<Sender<String>> {
-    let mut socket_dir = directory::application_dir_by_name(name)?;
+    let mut socket_dir = application::app_dir_by_name(name)?;
 
     if !socket_dir.exists() {
         return Err(anyhow!("Application does not exist."));
@@ -203,7 +203,7 @@ fn application_socket(name: &String) -> Result<Sender<String>> {
 }
 
 fn log_tail_events(name: &String) -> Result<Receiver<String>> {
-    let mut log_dir = directory::application_dir_by_name(name)?;
+    let mut log_dir = application::app_dir_by_name(name)?;
 
     if !log_dir.exists() {
         return Err(anyhow!("Application does not exist."));

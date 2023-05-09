@@ -1,4 +1,4 @@
-use crate::directory;
+use crate::crescent;
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use std::{
@@ -30,7 +30,7 @@ struct ApplicationInfo {
 
 impl ListArgs {
     pub fn run() -> Result<()> {
-        let mut crescent_pathbuf = directory::crescent_dir()?;
+        let mut crescent_pathbuf = crescent::crescent_dir()?;
 
         crescent_pathbuf.push("apps");
 

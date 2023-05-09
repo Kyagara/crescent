@@ -1,4 +1,4 @@
-use crate::{directory, tail::Tail};
+use crate::{application, tail::Tail};
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::unbounded;
@@ -21,7 +21,7 @@ pub struct LogArgs {
 
 impl LogArgs {
     pub fn run(self) -> Result<()> {
-        let mut app_dir = directory::application_dir_by_name(&self.name)?;
+        let mut app_dir = application::app_dir_by_name(&self.name)?;
 
         if !app_dir.exists() {
             return Err(anyhow!("Application does not exist."));
