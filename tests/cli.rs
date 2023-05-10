@@ -21,15 +21,52 @@ fn delete_app_folder(name: &str) -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn list_no_apps_running() -> Result<()> {
+fn start_long_running_service() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    let args = [
+        "start",
+        "./tools/long_running_service.py",
+        "-i",
+        "python3",
+        "-n",
+        "long_running_service",
+    ];
+
+    cmd.args(args);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Starting daemon."));
+
+    Ok(())
+}
+
+fn list_has_no_apps() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.arg("list");
+
+    cmd.assert().success().stdout("No application running.\n");
+
+    Ok(())
+}
+
+fn check_list_contains_app_name(name: &str) -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     cmd.arg("list");
 
     cmd.assert()
-        .failure()
-        .stderr("Error: No application running.\n");
+        .success()
+        .stdout(predicate::str::contains(name));
+
+    Ok(())
+}
+
+#[test]
+fn list_no_apps_running() -> Result<()> {
+    list_has_no_apps()?;
 
     Ok(())
 }
@@ -52,6 +89,45 @@ fn send_no_apps_running() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     cmd.args(["send", "test_app_not_available", "command"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
+
+    Ok(())
+}
+
+#[test]
+fn signal_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["signal", "test_app_not_available", "0"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
+
+    Ok(())
+}
+
+#[test]
+fn stop_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["stop", "test_app_not_available"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
+
+    Ok(())
+}
+
+#[test]
+fn kill_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["kill", "test_app_not_available"]);
 
     cmd.assert()
         .failure()
@@ -146,38 +222,36 @@ fn log_follow_short_lived_command() -> Result<()> {
 
 #[test]
 fn list_long_running_service() -> Result<()> {
+    start_long_running_service()?;
+
+    check_list_contains_app_name("long_running_service")?;
+
     let mut cmd = Command::cargo_bin("cres")?;
 
-    let args = [
-        "start",
-        "./tools/long_running_service.py",
-        "-i",
-        "python3",
-        "-n",
-        "list_long_running",
-    ];
-
-    cmd.args(args);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("Starting daemon."));
-
-    cmd = Command::cargo_bin("cres")?;
-
-    cmd.arg("list");
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("list_long_running"));
-
-    cmd = Command::cargo_bin("cres")?;
-
-    cmd.args(["send", "list_long_running", "stop"]);
+    cmd.args(["send", "long_running_service", "stop"]);
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    delete_app_folder("list_long_running")?;
+    delete_app_folder("long_running_service")?;
+
+    Ok(())
+}
+
+#[test]
+fn signal_long_running_service() -> Result<()> {
+    start_long_running_service()?;
+
+    check_list_contains_app_name("long_running_service")?;
+
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["signal", "long_running_service", "15"]);
+
+    cmd.assert().success().stdout("Signal sent.\n");
+
+    list_has_no_apps()?;
+
+    delete_app_folder("long_running_service")?;
 
     Ok(())
 }

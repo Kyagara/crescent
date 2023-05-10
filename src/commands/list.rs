@@ -1,5 +1,5 @@
 use crate::crescent;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use clap::Args;
 use std::{
     fs::{create_dir_all, File},
@@ -101,6 +101,8 @@ impl ListArgs {
             return Ok(());
         }
 
-        Err(anyhow!("No application running."))
+        println!("No application running.");
+
+        Ok(())
     }
 }

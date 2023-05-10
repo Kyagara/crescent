@@ -1,5 +1,5 @@
 use crate::{application, tail::Tail};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::{
     channel::{tick, unbounded, Receiver, Sender},
@@ -103,8 +103,8 @@ impl AttachArgs {
                     }
                 },
                 recv(stats_ticker)-> event => {
-                    if let Ok(content) = event {
-                        stats_list = content;
+                    if let Ok(stats) = event {
+                        stats_list = stats;
                     }
                 },
                 recv(ui_events) -> event => {
@@ -240,26 +240,31 @@ fn stats_update(pid: Pid) -> Result<Receiver<String>> {
         while ticker.recv().is_ok() {
             system.refresh_all();
 
-            let process = system
-                .process(pid)
-                .context("Error retrieving process information.")
-                .unwrap();
+            let process = match system.process(pid) {
+                Some(process) => process,
+                None => {
+                    sender
+                        .send(String::from("Error retrieving process information."))
+                        .unwrap();
+                    break;
+                }
+            };
 
             let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
 
             let load = system.load_average();
 
-            sender
-                .send(format!(
-                    "cpu: {:.2}% | mem: {:.2}% ({} Mb) | system load: {}, {}, {}",
-                    process.cpu_usage() / cpu_count,
-                    memory,
-                    process.memory() / 1024 / 1024,
-                    load.one,
-                    load.five,
-                    load.fifteen,
-                ))
-                .unwrap();
+            let info = format!(
+                "cpu: {:.2}% | mem: {:.2}% ({} Mb) | system load: {}, {}, {}",
+                process.cpu_usage() / cpu_count,
+                memory,
+                process.memory() / 1024 / 1024,
+                load.one,
+                load.five,
+                load.fifteen,
+            );
+
+            sender.send(info).unwrap();
         }
     });
 
