@@ -12,6 +12,7 @@ use std::{
     thread,
 };
 use subprocess::{Exec, Redirection};
+use sysinfo::{Pid, ProcessExt, System, SystemExt};
 
 pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()> {
     info!("Starting subprocess.");
@@ -20,6 +21,7 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
         .args(args)
         .stdout(Redirection::Merge)
         .stdin(Redirection::Pipe)
+        .env("CRESCENT_APP_NAME", name)
         .popen()?;
 
     info!("Subprocess started.");
@@ -27,7 +29,7 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
     let stdin = match subprocess.stdin.take() {
         Some(stdin) => stdin,
         None => {
-            error!("Subprocess stdin broken, terminating subprocess.");
+            error!("Subprocess stdin was empty, terminating subprocess.");
             subprocess.terminate()?;
             return Err(anyhow!("Shutting down."));
         }
@@ -58,13 +60,15 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
 
     let pid = subprocess.pid().unwrap();
 
-    if let Err(err) = append_pid(pid_path, pid) {
+    if let Err(err) = append_pid(&pid_path, &pid) {
         error!("Error appending PID to file: {err}");
         subprocess.terminate()?;
         return Err(anyhow!("Shutting down."));
     };
 
     let socket_addr = socket_address.clone();
+    let app_name = name.clone();
+    let pid_parsed = Pid::from(pid as usize);
 
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
@@ -76,6 +80,7 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
                     Ok(mut stream) => {
                         let mut stdin_clone = stdin.try_clone().unwrap();
                         let socket = socket_addr.clone();
+                        let app_name_clone = app_name.clone();
 
                         thread::spawn(move || {
                             let mut recv_buf = vec![0u8; 1024];
@@ -92,7 +97,8 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
                                             // Should any error here shutdown and exit?
                                             // Only exiting if the pipe is closed for now
                                             if err.kind() == ErrorKind::BrokenPipe {
-                                                terminate(pid, &socket);
+                                                info!("Sending SIGTERM to subprocess.");
+                                                terminate(&app_name_clone, &pid_parsed, &socket);
                                                 break;
                                             }
                                         }
@@ -117,21 +123,21 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
 
     match subprocess.wait() {
         Ok(status) => {
-            info!("Subrocess exited with status: {:?}.", status);
+            info!("Subprocess exited with status: {:?}.", status);
         }
         Err(err) => {
             error!("Error waiting: {err}.");
         }
     }
 
-    terminate(pid, &socket_address);
+    terminate(name, &pid_parsed, &socket_address);
 
     info!("Shutting down.");
 
     Ok(())
 }
 
-fn append_pid(pid_path: PathBuf, pid: u32) -> Result<()> {
+fn append_pid(pid_path: &PathBuf, pid: &u32) -> Result<()> {
     let mut pid_file = OpenOptions::new().read(true).append(true).open(pid_path)?;
     pid_file.write_all(pid.to_string().as_bytes())?;
     pid_file.flush()?;
@@ -145,15 +151,12 @@ fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut us
 }
 
 // This might be called two times if the stdin pipe is broken
-fn terminate(subprocess_pid: u32, socket_path: &PathBuf) {
-    unsafe {
-        let process_exists = libc::kill(subprocess_pid as pid_t, 0 as c_int);
-
-        if process_exists == 0 {
-            info!("Sending SIGTERM to subprocess.");
-            libc::kill(subprocess_pid as pid_t, 15 as c_int);
+fn terminate(app_name: &String, subprocess_pid: &Pid, socket_path: &PathBuf) {
+    if let Err(err) = check_and_send_signal(app_name, subprocess_pid, &15) {
+        if err.to_string() != "Process does not exist." {
+            error!("{err}");
         }
-    };
+    }
 
     if socket_path.exists() {
         info!("Removing socket.");
@@ -165,5 +168,46 @@ fn terminate(subprocess_pid: u32, socket_path: &PathBuf) {
                 error!("Error removing socket file: {err}.");
             }
         };
+    }
+}
+
+pub fn check_and_send_signal(app_name: &String, pid: &Pid, signal: &u8) -> Result<()> {
+    let is_running = is_running(app_name, pid)?;
+
+    if is_running {
+        let subprocess_pid: usize = (*pid).into();
+        let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
+
+        if result == 0 {
+            return Ok(());
+        }
+
+        return Err(anyhow!("Error sending signal: errno {result}"));
+    }
+
+    Ok(())
+}
+
+fn is_running(name: &String, pid: &Pid) -> Result<bool> {
+    let mut system = System::new();
+    system.refresh_process(*pid);
+
+    match system.process(*pid) {
+        Some(subprocess) => {
+            let envs = subprocess.environ();
+
+            let env = envs.iter().find(|string| {
+                let env: Vec<&str> = string.split('=').collect();
+                env[0] == "CRESCENT_APP_NAME"
+            });
+
+            if let Some(file_name) = env {
+                let values: Vec<&str> = file_name.split('=').collect();
+                return Ok(name == values[1]);
+            };
+
+            Ok(false)
+        }
+        None => Err(anyhow!("Process does not exist.")),
     }
 }

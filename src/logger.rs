@@ -1,9 +1,9 @@
 use chrono::Local;
-use log::{Level, Metadata, Record};
+use log::{Level, Log, Metadata, Record};
 
 pub struct Logger;
 
-impl log::Log for Logger {
+impl Log for Logger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Info
     }

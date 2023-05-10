@@ -49,6 +49,8 @@ You can `send` a command to the provided application.
 
 You can `attach` to an application, which let's you watch logs in realtime and send commands.
 
+You can use `kill` (SIGKILL), `stop` (SIGTERM) or `signal <int>` to send a signal to an application.
+
 Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 
 ## Why?
@@ -62,10 +64,9 @@ Not for anything in production, game servers for friends for example shouldn't b
 ## Todo
 
 -   More tests
--   Attach command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
+-   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
 -   Lots of unwraps inside threads
 -   Profiles (add a `-p` argument to the `start` command to pass a config file)
--   There should be more logs for the daemonized crescent process, maybe a separate log/socket for it
 -   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
 
 ## License
