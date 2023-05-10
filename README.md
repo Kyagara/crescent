@@ -12,12 +12,26 @@
 			<img src="https://img.shields.io/codecov/c/github/Kyagara/crescent?style=flat-square"/>
 		</a>
 	</p>
+	<p>
+		<a href="#installation">Installation</a> •
+		<a href="#commands">Commands</a> •
+		<a href="#why">Why?</a> •
+		<a href="#should-i-use-cres">Should I use cres-</a> •
+		<a href="#todo">Todo</a> •
+		<a href="#license">License</a>
+	</p>
 </div>
 
 > **Warning**
 > WIP!
 
+## OS support:
+
+My main focus is Linux, crescent is built and tested on ubuntu `x86_64`, `aarch64`, `armv7` and `arm`. MacOs is not tested. Windows is not supported.
+
 ## Installation:
+
+You can either get artifacts from recent [workflows](https://github.com/Kyagara/crescent/actions) or install using cargo:
 
 ```bash
 cargo install crescent-cli
@@ -29,11 +43,7 @@ or
 cargo install --git https://github.com/Kyagara/crescent
 ```
 
-## OS support:
-
-My main focus is Linux, crescent is built and tested on ubuntu amd64 and should work on aarch64. MacOs is not tested. Windows is not supported.
-
-## What works right now:
+## Commands:
 
 With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. Arguments can be added using `-a`.
 
@@ -41,17 +51,17 @@ With `start` you can launch an application by passing the file path to your exec
 
 > If your arguments have spaces make sure to use quotes after `-a` like: `-a "-Xms10G -Xmx10G"`.
 
-You can `list` the running applications.
+`list` the running applications.
 
-You can `log` an application's `.log` file, you can specify the amount of `lines` with `-l` (defaults to 200). After printing the log, it will watch the file for any new lines added to it.
+`log` an application's `.log` file, you can specify the amount of `lines` with `-l` (defaults to 200). After printing the log, it will watch the file for any new lines added to it.
 
-You can `send` a command to the provided application.
+`send` a command to the provided application.
 
-You can `attach` to an application, which let's you watch logs in realtime and send commands.
+`attach` to an application, which let's you watch logs in realtime and send commands.
 
-You can use `kill` (SIGKILL), `stop` (SIGTERM) or `signal <int>` to send a signal to an application.
+`kill` (SIGKILL), `stop` (SIGTERM) or `signal <int>` to send a signal to an application.
 
-Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
+> Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 
 ## Why?
 
@@ -63,7 +73,7 @@ Not for anything in production, game servers for friends for example shouldn't b
 
 ## Todo
 
--   More tests
+-   More tests, 85% codecov would be cool
 -   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
 -   Lots of unwraps inside threads
 -   Profiles (add a `-p` argument to the `start` command to pass a config file)
