@@ -36,11 +36,17 @@ impl LogArgs {
         if log.length == 0 {
             println!("Log is empty at the moment.")
         } else {
-            for line in log.read_lines(read_lines)? {
-                println!("{line}")
-            }
+            let mut count = 0;
 
-            println!(">> Printed {read_lines} lines")
+            log.read_lines(read_lines)?
+                .into_iter()
+                .enumerate()
+                .for_each(|(i, line)| {
+                    println!("{line}");
+                    count = i;
+                });
+
+            println!(">> Printed {} lines", count)
         }
 
         if !self.follow {

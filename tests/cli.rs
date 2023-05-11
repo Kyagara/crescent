@@ -3,70 +3,11 @@ use assert_cmd::Command;
 use predicates::prelude::predicate;
 use std::{env, fs, os::unix::net::UnixListener, path::PathBuf, thread};
 
-fn delete_app_folder(name: &str) -> Result<()> {
-    let home = env::var("HOME").context("Error getting HOME env.")?;
-    let mut crescent_dir = PathBuf::from(home);
-    crescent_dir.push(".crescent/apps");
-
-    if !crescent_dir.exists() {
-        fs::create_dir_all(&crescent_dir)?;
-    }
-
-    crescent_dir.push(name);
-
-    if crescent_dir.exists() {
-        fs::remove_dir_all(&crescent_dir)?;
-    }
-
-    Ok(())
-}
-
-fn start_long_running_service() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    let args = [
-        "start",
-        "./tools/long_running_service.py",
-        "-i",
-        "python3",
-        "-n",
-        "long_running_service",
-    ];
-
-    cmd.args(args);
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains("Starting daemon."));
-
-    Ok(())
-}
-
-fn list_has_no_apps() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.arg("list");
-
-    cmd.assert().success().stdout("No application running.\n");
-
-    Ok(())
-}
-
-fn check_list_contains_app_name(name: &str) -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
-
-    cmd.arg("list");
-
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(name));
-
-    Ok(())
-}
+mod util;
 
 #[test]
 fn list_no_apps_running() -> Result<()> {
-    list_has_no_apps()?;
+    util::list_has_no_apps()?;
 
     Ok(())
 }
@@ -162,7 +103,7 @@ fn start_short_lived_command() -> Result<()> {
     // Sleeping to make sure the process exited
     thread::sleep(std::time::Duration::from_millis(500));
 
-    delete_app_folder("start_ls")?;
+    util::delete_app_folder("start_ls")?;
 
     Ok(())
 }
@@ -186,9 +127,9 @@ fn log_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains(">> Printed 200 lines"));
+        .stdout(predicate::str::contains(">> Printed 7 lines"));
 
-    delete_app_folder("log_echo")?;
+    util::delete_app_folder("log_echo")?;
 
     Ok(())
 }
@@ -213,18 +154,22 @@ fn log_follow_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .interrupted()
+        .stdout(predicate::str::contains(">> Printed 7 lines"));
+
+    cmd.assert()
+        .interrupted()
         .stdout(predicate::str::contains(">> Watching log"));
 
-    delete_app_folder("log_follow_echo")?;
+    util::delete_app_folder("log_follow_echo")?;
 
     Ok(())
 }
 
 #[test]
 fn list_long_running_service() -> Result<()> {
-    start_long_running_service()?;
+    util::start_long_running_service()?;
 
-    check_list_contains_app_name("long_running_service")?;
+    util::check_list_contains_app_name("long_running_service")?;
 
     let mut cmd = Command::cargo_bin("cres")?;
 
@@ -232,16 +177,16 @@ fn list_long_running_service() -> Result<()> {
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    delete_app_folder("long_running_service")?;
+    util::delete_app_folder("long_running_service")?;
 
     Ok(())
 }
 
 #[test]
 fn signal_long_running_service() -> Result<()> {
-    start_long_running_service()?;
+    util::start_long_running_service()?;
 
-    check_list_contains_app_name("long_running_service")?;
+    util::check_list_contains_app_name("long_running_service")?;
 
     let mut cmd = Command::cargo_bin("cres")?;
 
@@ -249,9 +194,9 @@ fn signal_long_running_service() -> Result<()> {
 
     cmd.assert().success().stdout("Signal sent.\n");
 
-    list_has_no_apps()?;
+    util::list_has_no_apps()?;
 
-    delete_app_folder("long_running_service")?;
+    util::delete_app_folder("long_running_service")?;
 
     Ok(())
 }
@@ -276,7 +221,7 @@ fn send_command_socket() -> Result<()> {
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    delete_app_folder("send_socket_test")?;
+    util::delete_app_folder("send_socket_test")?;
 
     Ok(())
 }
@@ -311,7 +256,7 @@ fn attach_command_socket_not_found() -> Result<()> {
         .failure()
         .stderr("Error: Socket file does not exist.\n");
 
-    delete_app_folder("attach_socket_not_found")?;
+    util::delete_app_folder("attach_socket_not_found")?;
 
     Ok(())
 }
