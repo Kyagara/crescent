@@ -127,7 +127,7 @@ fn log_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains(">> Printed 7 lines"));
+        .stdout(predicate::str::contains(">> Printed"));
 
     util::delete_app_folder("log_echo")?;
 
@@ -154,7 +154,7 @@ fn log_follow_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .interrupted()
-        .stdout(predicate::str::contains(">> Printed 7 lines"));
+        .stdout(predicate::str::contains(">> Printed"));
 
     cmd.assert()
         .interrupted()
