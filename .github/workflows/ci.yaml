@@ -6,7 +6,27 @@ env:
     CARGO_TERM_COLOR: always
 
 jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Cargo cache
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ./target
+                  key: test-cargo-registry
+
+            - name: Clippy
+              run: cargo clippy
+
+            - name: Format
+              run: cargo fmt --check
+
     test:
+        needs: lint
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
@@ -25,32 +45,14 @@ jobs:
             - name: Integration tests
               run: cargo test --test '*' -- --test-threads=1
 
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: Cargo cache
-              uses: actions/cache@v2
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: test-cargo-registry
-
-            - name: Clippy
-              run: cargo clippy
-
-            - name: Format
-              run: cargo fmt --check
-
     coverage:
+        needs: test
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
 
             - name: Cargo cache
-              uses: actions/cache@v2
+              uses: actions/cache@v3
               with:
                   path: |
                       ~/.cargo/registry
@@ -91,6 +93,7 @@ jobs:
             TARGET: ${{ matrix.target }}
         steps:
             - uses: actions/checkout@v3
+
             - name: Cargo cache
               uses: actions/cache@v3
               with:
@@ -133,18 +136,13 @@ jobs:
             - name: Compress
               run: |
                   mkdir -p ./artifacts
-                  EXEC=cres
-                  if [[ $GITHUB_REF_TYPE =~ ^tag$ ]]; then
-                    TAG=$GITHUB_REF_NAME
-                  else
-                    TAG=$GITHUB_SHA
-                  fi
-                  mv ./target/$TARGET/release/$EXEC ./$EXEC
-                  tar -czf ./artifacts/$EXEC-$TARGET-$TAG.tar.gz $EXEC
+                  echo "ARTIFACT_NAME=cres-$TARGET.tar.gz" >> "$GITHUB_ENV"
+                  echo "ARTIFACT_PATH=./artifacts/$ARTIFACT_NAME" >> "$GITHUB_ENV"
+                  mv ./target/$TARGET/release/cres ./cres
+                  tar -czf $ARTIFACT_PATH cres
 
-            - name: Archive artifact
+            - name: Upload artifact
               uses: actions/upload-artifact@v3
               with:
-                  name: result
-                  path: |
-                      ./artifacts
+                  name: $ARTIFACT_NAME
+                  path: $ARTIFACT_PATH
