@@ -133,14 +133,14 @@ jobs:
             - name: Compress
               run: |
                   mkdir -p ./artifacts
-                  EXEC=crescent
+                  EXEC=cres
                   if [[ $GITHUB_REF_TYPE =~ ^tag$ ]]; then
                     TAG=$GITHUB_REF_NAME
                   else
                     TAG=$GITHUB_SHA
                   fi
                   mv ./target/$TARGET/release/$EXEC ./$EXEC
-                  tar -czf ./artifacts/crescent-$TARGET-$TAG.tar.gz $EXEC
+                  tar -czf ./artifacts/$EXEC-$TARGET-$TAG.tar.gz $EXEC
 
             - name: Archive artifact
               uses: actions/upload-artifact@v3
