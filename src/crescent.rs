@@ -15,6 +15,13 @@ pub fn crescent_dir() -> Result<PathBuf> {
     Ok(crescent_dir)
 }
 
+pub fn get_profile_path(profile_name: String) -> Result<PathBuf> {
+    let mut crescent_dir = crescent_dir()?;
+    crescent_dir.push("profiles");
+    crescent_dir.push(profile_name + ".toml");
+    Ok(crescent_dir)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,7 +1,6 @@
 use crate::{application, crescent};
 use anyhow::{Context, Result};
 use clap::Args;
-use std::fs;
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tabled::{settings::Style, Table, Tabled};
 
@@ -29,25 +28,19 @@ impl ListArgs {
 
         crescent_pathbuf.push("apps");
 
-        if !crescent_pathbuf.exists() {
-            fs::create_dir_all(&crescent_pathbuf)?;
-        }
-
         let crescent_dir = crescent_pathbuf
             .read_dir()
-            .context("Error reading crescent directory.")?;
+            .context("Error reading crescent directory.")?
+            .flatten();
 
         let mut system = System::new();
         system.refresh_processes();
 
         let mut apps = vec![];
 
-        for app_dir in crescent_dir.flatten() {
-            let path = app_dir.path();
-
-            let app_name = path
-                .file_stem()
-                .context("Error extracting file name.")?
+        for app_dir in crescent_dir {
+            let app_name = app_dir
+                .file_name()
                 .to_str()
                 .context("Error converting OsStr to str.")?
                 .to_string();

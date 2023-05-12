@@ -7,7 +7,11 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 -   `status` command.
--   Added two environment variables for the subprocess, `CRESCENT_APP_NAME` and `CRESCENT_APP_ARGS`.
+-   Profiles for the `start` command, you can now make profiles and use them to start services with a preset.
+-   Added some examples of profiles.
+-   A `profiles` folder is created when you build crescent.
+-   Added two environment variables for the subprocess, `CRESCENT_APP_NAME`, `CRESCENT_APP_ARGS` and `CRESCENT_APP_PROFILE`.
+-   Added `serde` and `toml` as dependencies.
 
 ### Changed
 
