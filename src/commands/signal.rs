@@ -3,11 +3,11 @@ use anyhow::{anyhow, Result};
 use clap::Args;
 
 #[derive(Args)]
-#[command(about = "Send a signal to an application.")]
+#[command(about = "Send a signal to the application subprocess.")]
 pub struct SignalArgs {
-    #[arg(help = "The application name.")]
+    #[arg(help = "Application name.")]
     pub name: String,
-    #[arg(help = "The signal to send.")]
+    #[arg(help = "Signal to send.")]
     pub signal: u8,
 }
 

@@ -7,15 +7,16 @@ use std::thread;
 #[derive(Args)]
 #[command(about = "Print or watch the '.log' file from an application.")]
 pub struct LogArgs {
-    #[arg(help = "The application name.")]
+    #[arg(help = "Application name.")]
     pub name: String,
-    #[arg(short, long, help = "Lines to print. Defaults to 200.")]
-    pub lines: Option<usize>,
     #[arg(
         short,
         long,
-        help = "Watches the file for any modification, printing new lines."
+        help = "Lines to print. Defaults to 200.",
+        default_value_t = 200
     )]
+    pub lines: usize,
+    #[arg(short, long, help = "Keep watching the log for any new lines.")]
     pub follow: bool,
 }
 
@@ -29,8 +30,6 @@ impl LogArgs {
 
         app_dir.push(self.name + ".log");
 
-        let read_lines = self.lines.unwrap_or(200);
-
         let mut log = tail::Tail::new(app_dir)?;
 
         if log.length == 0 {
@@ -38,7 +37,7 @@ impl LogArgs {
         } else {
             let mut count = 0;
 
-            log.read_lines(read_lines)?
+            log.read_lines(self.lines)?
                 .into_iter()
                 .enumerate()
                 .for_each(|(i, line)| {

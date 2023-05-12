@@ -6,10 +6,10 @@ use std::{io::Write, os::unix::net::UnixStream};
 #[derive(Args)]
 #[command(about = "Send a command to an application.")]
 pub struct SendArgs {
-    #[arg(help = "The application name.")]
+    #[arg(help = "Application name.")]
     pub name: String,
-    #[arg(help = "The command to send.", allow_hyphen_values = true)]
-    pub command: String,
+    #[arg(help = "Command to send.", allow_hyphen_values = true)]
+    pub command: Vec<String>,
 }
 
 impl SendArgs {
@@ -25,7 +25,7 @@ impl SendArgs {
         let mut socket = UnixStream::connect(app_dir)
             .context(format!("Error connecting to '{}' socket.", self.name))?;
 
-        let message = format!("{}\n", self.command);
+        let message = format!("{}\n", self.command.join(" "));
 
         socket.write_all(message.as_bytes())?;
         socket.flush()?;

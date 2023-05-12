@@ -6,9 +6,9 @@ use crossterm::style::Stylize;
 use sysinfo::{ProcessExt, System, SystemExt};
 
 #[derive(Args)]
-#[command(about = "Prints information about an application.")]
+#[command(about = "Print information about an application.")]
 pub struct StatusArgs {
-    #[arg(help = "The application name.")]
+    #[arg(help = "Application name.")]
     pub name: String,
 }
 

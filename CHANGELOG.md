@@ -7,12 +7,18 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 -   `status` command.
--   Two environment variables for the subprocess, `CRESCENT_APP_NAME` and `CRESCENT_APP_ARGS`.
+-   Added two environment variables for the subprocess, `CRESCENT_APP_NAME` and `CRESCENT_APP_ARGS`.
+
+### Changed
+
+-   Small changes to `help` on all commands.
 
 ### Fixed
 
--   Start `args` argument now actually work.
--   Integration tests now use the `status` command instead of `list`, this lets these tests run in parallel without issues.
+-   `start` command `args` argument now actually works.
+-   `send` command now accepts a `Vec<String>`, this lets you send a command with multiple strings like `cres send say hello`.
+-   Subprocess is now terminated when an error creating a socket listener occurs.
+-   Integration tests now use the `status` command instead of `list`, this lets most tests run in parallel without issues.
 
 ## [0.2.0] - 2023-05-10
 
