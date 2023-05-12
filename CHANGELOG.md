@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+-   `status` command.
+-   Two environment variables for the subprocess, `CRESCENT_APP_NAME` and `CRESCENT_APP_ARGS`.
+
+### Fixed
+
+-   Start `args` argument now actually work.
+-   Integration tests now use the `status` command instead of `list`, this lets these tests run in parallel without issues.
+
 ## [0.2.0] - 2023-05-10
 
 ### Added
