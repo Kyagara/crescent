@@ -142,5 +142,5 @@ jobs:
             - name: Upload artifact
               uses: actions/upload-artifact@v3
               with:
-                  name: cres-$TARGET.tar.gz
-                  path: ./artifacts/cres-$TARGET.tar.gz
+                  name: cres-${{matrix.target}}.tar.gz
+                  path: ./artifacts/cres-${{matrix.target}}.tar.gz
