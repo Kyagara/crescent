@@ -3,9 +3,9 @@ use anyhow::Result;
 use clap::Args;
 
 #[derive(Args)]
-#[command(about = "Sends a SIGKILL signal to an application.")]
+#[command(about = "Send a SIGKILL signal to the application subprocess.")]
 pub struct KillArgs {
-    #[arg(help = "The application name.")]
+    #[arg(help = "Application name.")]
     pub name: String,
 }
 

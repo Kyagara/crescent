@@ -10,24 +10,28 @@ use std::{
 };
 
 #[derive(Args)]
-#[command(about = "Starts an application from the file path provided.")]
+#[command(about = "Start an application from the file path provided.")]
 pub struct StartArgs {
     pub file_path: String,
-    #[arg(short = 'n', long = "name", help = "The application name.")]
+    #[arg(
+        short = 'n',
+        long = "name",
+        help = "Application name. Defaults to the executable name."
+    )]
     pub name: Option<String>,
     #[arg(
         short = 'i',
         long = "interpreter",
-        help = "Example: node, python3, java (will add a -jar argument automatically)."
+        help = "node, python3, java (will add a -jar argument automatically). Not needed if file path is an executable."
     )]
     pub interpreter: Option<String>,
     #[arg(
         short = 'a',
         long = "arguments",
-        help = "Arguments for the application. Example: -a \"-Xms10G -Xmx10G\".",
+        help = "Arguments for the subprocess. Example: -a \"-Xms10G -Xmx10G.\"",
         allow_hyphen_values = true
     )]
-    pub arguments: Option<String>,
+    pub arguments: Option<Vec<String>>,
 }
 
 static LOGGER: logger::Logger = logger::Logger;
@@ -66,13 +70,19 @@ impl StartArgs {
 
         let mut args = check_interpreter_and_executable(&mut interpreter, &file_path);
 
-        if let Some(arguments) = &self.arguments {
-            args.push(arguments.to_string());
-        }
+        let command_args = match &self.arguments {
+            Some(arguments) => {
+                args.push(arguments.join(" "));
+                arguments.join(" ")
+            }
+            None => String::new(),
+        };
 
         // The subprocess inherits all environment variables
         env::set_var("CRESCENT_APP_NAME", &name);
-        env::set_var("CRESCENT_APP_ARGS", self.arguments.unwrap_or(String::new()));
+        env::set_var("CRESCENT_APP_ARGS", &command_args);
+
+        drop(command_args);
 
         log::set_logger(&LOGGER).unwrap();
         log::set_max_level(LevelFilter::Info);

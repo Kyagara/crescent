@@ -33,7 +33,7 @@ use tui_logger::{init_logger, set_default_level, TuiLoggerWidget, TuiWidgetEvent
 #[derive(Args)]
 #[command(about = "Attach to an application.")]
 pub struct AttachArgs {
-    #[arg(help = "The application name.")]
+    #[arg(help = "Application name.")]
     pub name: String,
 }
 

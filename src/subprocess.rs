@@ -71,13 +71,19 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
         .spawn(move || {
-            let listener = UnixListener::bind(&socket_addr).unwrap();
+            let listener = match UnixListener::bind(&socket_addr) {
+                Ok(socket) => socket,
+                Err(err) => {
+                    error!("Error connecting to socket: {err}");
+                    terminate(&pid_parsed);
+                    return;
+                }
+            };
 
-            for stream in listener.incoming() {
-                match stream {
+            for client in listener.incoming() {
+                match client {
                     Ok(mut stream) => {
                         let mut stdin_clone = stdin.try_clone().unwrap();
-                        let socket = socket_addr.clone();
 
                         thread::spawn(move || {
                             let mut recv_buf = vec![0u8; 1024];
@@ -94,8 +100,7 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
                                             // Should any error here shutdown and exit?
                                             // Only exiting if the pipe is closed for now
                                             if err.kind() == ErrorKind::BrokenPipe {
-                                                info!("Sending SIGTERM to subprocess.");
-                                                terminate(&pid_parsed, &socket);
+                                                terminate(&pid_parsed);
                                                 break;
                                             }
                                         }
@@ -127,7 +132,17 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
         }
     }
 
-    terminate(&pid_parsed, &socket_address);
+    if socket_address.exists() {
+        info!("Removing socket.");
+        match fs::remove_file(socket_address) {
+            Ok(_) => {
+                info!("Socket file removed.");
+            }
+            Err(err) => {
+                error!("Error removing socket file: {err}.");
+            }
+        };
+    }
 
     info!("Shutting down.");
 
@@ -147,24 +162,11 @@ fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut us
     *read_bytes
 }
 
-// This might be called two times if the stdin pipe is broken
-fn terminate(subprocess_pid: &Pid, socket_path: &PathBuf) {
-    if let Err(err) = check_and_send_signal(subprocess_pid, &15) {
-        if err.to_string() != "Process does not exist." {
-            error!("{err}");
-        }
-    }
+fn terminate(subprocess_pid: &Pid) {
+    info!("Sending SIGTERM to subprocess.");
 
-    if socket_path.exists() {
-        info!("Removing socket.");
-        match fs::remove_file(socket_path) {
-            Ok(_) => {
-                info!("Socket file removed.");
-            }
-            Err(err) => {
-                error!("Error removing socket file: {err}.");
-            }
-        };
+    if let Err(err) = check_and_send_signal(subprocess_pid, &15) {
+        error!("{err}");
     }
 }
 

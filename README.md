@@ -49,7 +49,7 @@ With `start` you can launch an application by passing the file path to your exec
 
 > If you provide a `java` interpreter it will add a `-jar` argument automatically.
 
-> If your arguments have spaces make sure to use quotes after `-a` like: `-a "-Xms10G -Xmx10G"`.
+> If your arguments have spaces or `-` make sure to use quotes after `-a` like: `-a "-Xms10G -Xmx10G"`.
 
 `list` the running applications.
 
@@ -60,6 +60,8 @@ With `start` you can launch an application by passing the file path to your exec
 `attach` to an application, which let's you watch logs in realtime and send commands.
 
 `kill` (SIGKILL), `stop` (SIGTERM) or `signal <int>` to send a signal to an application.
+
+`status` prints information about an application.
 
 > Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
 
@@ -74,7 +76,7 @@ Not for anything in production, game servers for friends for example shouldn't b
 ## Todo
 
 -   More tests, 85% codecov would be cool
--   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
+-   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead, this command needs a rework, looks horrible
 -   Lots of unwraps inside threads
 -   Profiles (add a `-p` argument to the `start` command to pass a config file)
 -   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
