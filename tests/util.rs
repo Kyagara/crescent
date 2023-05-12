@@ -1,7 +1,7 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use assert_cmd::Command;
-use predicates::prelude::predicate;
-use std::{env, fs, path::PathBuf};
+use predicates::{prelude::predicate, Predicate};
+use std::{env, fs, path::PathBuf, str::from_utf8};
 
 pub fn delete_app_folder(name: &str) -> Result<()> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
@@ -37,29 +37,25 @@ pub fn start_long_running_service() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting daemon."));
 
     Ok(())
 }
 
-pub fn check_list_contains_app_name(name: &str) -> Result<()> {
+pub fn check_app_is_running(name: &str) -> Result<bool> {
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.arg("list");
+    cmd.args(["status", name]);
 
-    cmd.assert()
-        .success()
-        .stdout(predicate::str::contains(name));
+    let binding = cmd.assert().success();
+    let output = binding.get_output();
 
-    Ok(())
-}
+    let stdout = &output.stdout;
 
-pub fn list_has_no_apps() -> Result<()> {
-    let mut cmd = Command::cargo_bin("cres")?;
+    let predicate = predicate::str::contains("Memory usage:");
 
-    cmd.arg("list");
-
-    cmd.assert().success().stdout("No application running.\n");
-
-    Ok(())
+    match from_utf8(stdout) {
+        Ok(string) => Ok(predicate.eval(string)),
+        Err(err) => Err(anyhow!("{err}")),
+    }
 }

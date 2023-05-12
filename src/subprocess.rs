@@ -232,6 +232,6 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String)>> {
 
             Err(anyhow!("Process did not return any crescent envs."))
         }
-        None => Err(anyhow!("Process does not exist.")),
+        None => Ok(None),
     }
 }
