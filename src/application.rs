@@ -56,10 +56,16 @@ pub fn app_pids_by_name(name: &String) -> Result<Vec<Pid>> {
 
 pub fn app_already_running(name: &String) -> Result<bool> {
     match app_pids_by_name(name) {
-        Ok(pids) => match subprocess::get_app_process_envs(&pids[1])? {
-            Some(_) => Ok(true),
-            None => Ok(false),
-        },
+        Ok(pids) => {
+            if pids.is_empty() || pids.len() < 2 {
+                return Ok(false);
+            }
+
+            match subprocess::get_app_process_envs(&pids[1])? {
+                Some(_) => Ok(true),
+                None => Ok(false),
+            }
+        }
         Err(err) => Err(err),
     }
 }
