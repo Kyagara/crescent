@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use assert_cmd::Command;
 use predicates::{prelude::predicate, Predicate};
-use std::{env, fs, path::PathBuf, str::from_utf8};
+use std::{env, fs, path::PathBuf, str::from_utf8, thread};
 
 pub fn delete_app_folder(name: &str) -> Result<()> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
@@ -38,6 +38,9 @@ pub fn start_long_running_service(name: &str) -> Result<()> {
     cmd.assert()
         .success()
         .stderr(predicate::str::contains("Starting daemon."));
+
+    // Sleeping to make sure the process started
+    thread::sleep(std::time::Duration::from_secs(1));
 
     Ok(())
 }
