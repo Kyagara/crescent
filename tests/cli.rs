@@ -202,6 +202,34 @@ fn list_command_long_running_service() -> Result<()> {
 }
 
 #[test]
+fn start_long_running_service_with_profile() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    let args = ["start", "-p", "example"];
+
+    cmd.args(args);
+
+    cmd.assert()
+        .success()
+        .stderr(predicate::str::contains("Starting daemon."));
+
+    // Sleeping to make sure the process started
+    thread::sleep(std::time::Duration::from_secs(1));
+
+    assert!(util::check_app_is_running("example")?);
+
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["send", "example", "stop"]);
+
+    cmd.assert().success().stdout("Command sent.\n");
+
+    util::delete_app_folder("example")?;
+
+    Ok(())
+}
+
+#[test]
 fn signal_long_running_service() -> Result<()> {
     util::start_long_running_service("signal_long_running_service")?;
 

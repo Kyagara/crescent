@@ -25,6 +25,7 @@ mod tests {
     use super::*;
     use anyhow::Result;
     use log::{Level, LevelFilter, MetadataBuilder};
+
     static LOGGER: Logger = Logger;
 
     #[test]

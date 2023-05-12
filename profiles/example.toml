@@ -1,0 +1,4 @@
+file_path = "./tools/long_running_service.py"
+interpreter = "python3"
+name = "example"
+arguments = ["arguments can be in one big element", "or", "in", "multiple", "elements"]

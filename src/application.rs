@@ -1,7 +1,7 @@
-use crate::crescent;
+use crate::{crescent, subprocess};
 use anyhow::{Context, Result};
 use std::{fs, path::PathBuf, str::FromStr};
-use sysinfo::{Pid, System, SystemExt};
+use sysinfo::Pid;
 
 pub fn app_dir_by_name(name: &String) -> Result<PathBuf> {
     let mut crescent_dir = crescent::crescent_dir()?;
@@ -56,32 +56,18 @@ pub fn app_pids_by_name(name: &String) -> Result<Vec<Pid>> {
 
 pub fn app_already_running(name: &String) -> Result<bool> {
     match app_pids_by_name(name) {
-        Ok(pids) => {
-            let mut system = System::new();
-            system.refresh_all();
-
-            if pids.is_empty() {
-                return Ok(false);
-            }
-
-            let cres_process = system.process(pids[0]).is_some();
-            let mut app_process = false;
-
-            if pids.len() == 2 {
-                app_process = system.process(pids[1]).is_some();
-            }
-
-            Ok(cres_process || app_process)
-        }
+        Ok(pids) => match subprocess::get_app_process_envs(&pids[1])? {
+            Some(_) => Ok(true),
+            None => Ok(false),
+        },
         Err(err) => Err(err),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::crescent::crescent_dir;
-
     use super::*;
+    use crate::crescent::crescent_dir;
     use std::fs::remove_dir_all;
 
     #[test]

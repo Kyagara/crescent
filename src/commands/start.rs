@@ -1,18 +1,19 @@
-use crate::{application, logger, subprocess};
+use crate::{application, crescent, logger, subprocess};
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use daemonize::Daemonize;
 use log::{info, LevelFilter};
+use serde::Deserialize;
 use std::{
     env,
     fs::{self, File},
     path::Path,
 };
 
-#[derive(Args)]
+#[derive(Args, Deserialize)]
 #[command(about = "Start an application from the file path provided.")]
 pub struct StartArgs {
-    pub file_path: String,
+    pub file_path: Option<String>,
     #[arg(
         short = 'n',
         long = "name",
@@ -32,17 +33,30 @@ pub struct StartArgs {
         allow_hyphen_values = true
     )]
     pub arguments: Option<Vec<String>>,
+    #[arg(
+        short = 'p',
+        long = "profile",
+        help = "Name of the profile to load fields from."
+    )]
+    pub profile_name: Option<String>,
 }
 
 static LOGGER: logger::Logger = logger::Logger;
 
 impl StartArgs {
-    pub fn run(self) -> Result<()> {
-        let file_path = fs::canonicalize(&self.file_path)?;
+    pub fn run(mut self) -> Result<()> {
+        if let Some(profile) = self.profile_name {
+            let path = crescent::get_profile_path(profile)?;
+            let string = fs::read_to_string(path)?;
+            let args: StartArgs = toml::from_str(&string)?;
+            self = args;
+        }
+
+        let file_path = fs::canonicalize(self.file_path.unwrap())?;
 
         if !file_path.exists() {
             return Err(anyhow!(format!(
-                "File '{}' not found",
+                "File '{}' not found.",
                 &file_path.to_string_lossy()
             )));
         }
@@ -51,6 +65,10 @@ impl StartArgs {
             Some(name) => name,
             None => file_path.file_stem().unwrap().to_str().unwrap().to_string(),
         };
+
+        if name.contains(char::is_whitespace) {
+            return Err(anyhow!("Name contains whitespace."));
+        }
 
         if application::app_already_running(&name)? {
             return Err(anyhow!(
@@ -81,6 +99,10 @@ impl StartArgs {
         // The subprocess inherits all environment variables
         env::set_var("CRESCENT_APP_NAME", &name);
         env::set_var("CRESCENT_APP_ARGS", &command_args);
+        env::set_var(
+            "CRESCENT_APP_PROFILE",
+            self.profile_name.unwrap_or(String::new()),
+        );
 
         drop(command_args);
 
