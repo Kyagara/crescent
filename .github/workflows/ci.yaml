@@ -136,13 +136,11 @@ jobs:
             - name: Compress
               run: |
                   mkdir -p ./artifacts
-                  echo "ARTIFACT_NAME=cres-$TARGET.tar.gz" >> "$GITHUB_ENV"
-                  echo "ARTIFACT_PATH=./artifacts/$ARTIFACT_NAME" >> "$GITHUB_ENV"
                   mv ./target/$TARGET/release/cres ./cres
-                  tar -czf $ARTIFACT_PATH cres
+                  tar -czf ./artifacts/cres-$TARGET.tar.gz cres
 
             - name: Upload artifact
               uses: actions/upload-artifact@v3
               with:
-                  name: $ARTIFACT_NAME
-                  path: $ARTIFACT_PATH
+                  name: cres-$TARGET.tar.gz
+                  path: ./artifacts/cres-$TARGET.tar.gz
