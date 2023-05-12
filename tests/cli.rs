@@ -119,7 +119,7 @@ fn start_short_lived_command() -> Result<()> {
         .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
-    thread::sleep(std::time::Duration::from_millis(500));
+    thread::sleep(std::time::Duration::from_secs(1));
 
     util::delete_app_folder("start_ls")?;
 
@@ -137,7 +137,7 @@ fn log_short_lived_command() -> Result<()> {
         .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
-    thread::sleep(std::time::Duration::from_millis(500));
+    thread::sleep(std::time::Duration::from_secs(1));
 
     cmd = Command::cargo_bin("cres")?;
 
@@ -163,7 +163,7 @@ fn log_follow_short_lived_command() -> Result<()> {
         .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
-    thread::sleep(std::time::Duration::from_millis(500));
+    thread::sleep(std::time::Duration::from_secs(1));
 
     cmd = Command::cargo_bin("cres")?;
 
@@ -256,7 +256,7 @@ fn attach_command_socket_not_found() -> Result<()> {
         .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
-    thread::sleep(std::time::Duration::from_millis(500));
+    thread::sleep(std::time::Duration::from_secs(1));
 
     let home = env::var("HOME").context("Error getting HOME env.")?;
     let mut crescent_dir = PathBuf::from(home);
