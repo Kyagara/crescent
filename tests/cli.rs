@@ -261,7 +261,7 @@ fn attach_command_socket_not_found() -> Result<()> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
     let mut crescent_dir = PathBuf::from(home);
 
-    crescent_dir.push(".crescent/apps/attach_socket_not_found.sock");
+    crescent_dir.push(".crescent/apps/attach_socket_not_found/attach_socket_not_found.sock");
 
     if crescent_dir.exists() {
         fs::remove_file(crescent_dir)?
