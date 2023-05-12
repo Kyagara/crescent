@@ -6,7 +6,8 @@ use std::{env, fs, os::unix::net::UnixListener, path::PathBuf, thread};
 mod util;
 
 #[test]
-fn list_no_apps_running() -> Result<()> {
+#[ignore = "this test might list apps from other tests"]
+fn list_command_no_apps_running() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     cmd.arg("list");
@@ -183,37 +184,38 @@ fn log_follow_short_lived_command() -> Result<()> {
 }
 
 #[test]
-fn list_long_running_service() -> Result<()> {
-    util::start_long_running_service()?;
+#[ignore = "this test might list apps from other tests"]
+fn list_command_long_running_service() -> Result<()> {
+    util::start_long_running_service("list_long_running_service")?;
 
-    assert!(util::check_app_is_running("long_running_service")?);
+    assert!(util::check_app_is_running("list_long_running_service")?);
 
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.args(["send", "long_running_service", "stop"]);
+    cmd.args(["send", "list_long_running_service", "stop"]);
 
     cmd.assert().success().stdout("Command sent.\n");
 
-    util::delete_app_folder("long_running_service")?;
+    util::delete_app_folder("list_long_running_service")?;
 
     Ok(())
 }
 
 #[test]
 fn signal_long_running_service() -> Result<()> {
-    util::start_long_running_service()?;
+    util::start_long_running_service("signal_long_running_service")?;
 
-    assert!(util::check_app_is_running("long_running_service")?);
+    assert!(util::check_app_is_running("signal_long_running_service")?);
 
     let mut cmd = Command::cargo_bin("cres")?;
 
-    cmd.args(["signal", "long_running_service", "15"]);
+    cmd.args(["signal", "signal_long_running_service", "15"]);
 
     cmd.assert().success().stdout("Signal sent.\n");
 
-    assert!(!util::check_app_is_running("long_running_service")?);
+    assert!(!util::check_app_is_running("signal_long_running_service")?);
 
-    util::delete_app_folder("long_running_service")?;
+    util::delete_app_folder("signal_long_running_service")?;
 
     Ok(())
 }

@@ -21,7 +21,7 @@ pub fn delete_app_folder(name: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn start_long_running_service() -> Result<()> {
+pub fn start_long_running_service(name: &str) -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     let args = [
@@ -30,7 +30,7 @@ pub fn start_long_running_service() -> Result<()> {
         "-i",
         "python3",
         "-n",
-        "long_running_service",
+        name,
     ];
 
     cmd.args(args);
