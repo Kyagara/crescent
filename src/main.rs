@@ -1,6 +1,6 @@
 use crate::commands::{
     attach::AttachArgs, kill::KillArgs, list::ListArgs, log::LogArgs, send::SendArgs,
-    signal::SignalArgs, start::StartArgs, stop::StopArgs,
+    signal::SignalArgs, start::StartArgs, status::StatusArgs, stop::StopArgs,
 };
 use crate::Commands::*;
 use anyhow::Result;
@@ -34,6 +34,7 @@ enum Commands {
     Signal(SignalArgs),
     Stop(StopArgs),
     Kill(KillArgs),
+    Status(StatusArgs),
 }
 
 fn main() -> Result<()> {
@@ -47,6 +48,7 @@ fn main() -> Result<()> {
         Attach(args) => AttachArgs::run(args),
         Signal(args) => SignalArgs::run(args),
         Stop(args) => StopArgs::run(args),
+        Status(args) => StatusArgs::run(args),
         Kill(args) => KillArgs::run(args),
     }?;
 

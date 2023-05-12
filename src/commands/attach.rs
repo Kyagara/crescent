@@ -1,4 +1,4 @@
-use crate::{application, tail::Tail};
+use crate::{application, tail};
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::{
@@ -33,7 +33,7 @@ use tui_logger::{init_logger, set_default_level, TuiLoggerWidget, TuiWidgetEvent
 #[derive(Args)]
 #[command(about = "Attach to an application.")]
 pub struct AttachArgs {
-    #[arg(help = "The application name")]
+    #[arg(help = "The application name.")]
     pub name: String,
 }
 
@@ -211,7 +211,7 @@ fn log_tail_events(name: &String) -> Result<Receiver<String>> {
 
     log_dir.push(name.clone() + ".log");
 
-    let mut log = Tail::new(log_dir)?;
+    let mut log = tail::Tail::new(log_dir)?;
 
     let (sender, receiver) = unbounded();
 

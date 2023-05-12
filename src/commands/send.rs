@@ -6,9 +6,9 @@ use std::{io::Write, os::unix::net::UnixStream};
 #[derive(Args)]
 #[command(about = "Send a command to an application.")]
 pub struct SendArgs {
-    #[arg(help = "The application name")]
+    #[arg(help = "The application name.")]
     pub name: String,
-    #[arg(help = "The command to send", allow_hyphen_values = true)]
+    #[arg(help = "The command to send.", allow_hyphen_values = true)]
     pub command: String,
 }
 
