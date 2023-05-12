@@ -5,7 +5,7 @@ use clap::Args;
 #[derive(Args)]
 #[command(about = "Sends a SIGKILL signal to an application.")]
 pub struct KillArgs {
-    #[arg(help = "The application name")]
+    #[arg(help = "The application name.")]
     pub name: String,
 }
 

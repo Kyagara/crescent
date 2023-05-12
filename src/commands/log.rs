@@ -1,4 +1,4 @@
-use crate::{application, tail::Tail};
+use crate::{application, tail};
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::unbounded;
@@ -7,9 +7,9 @@ use std::thread;
 #[derive(Args)]
 #[command(about = "Print or watch the '.log' file from an application.")]
 pub struct LogArgs {
-    #[arg(help = "The application name")]
+    #[arg(help = "The application name.")]
     pub name: String,
-    #[arg(short, long, help = "Lines to print. Defaults to 200")]
+    #[arg(short, long, help = "Lines to print. Defaults to 200.")]
     pub lines: Option<usize>,
     #[arg(
         short,
@@ -31,7 +31,7 @@ impl LogArgs {
 
         let read_lines = self.lines.unwrap_or(200);
 
-        let mut log = Tail::new(app_dir)?;
+        let mut log = tail::Tail::new(app_dir)?;
 
         if log.length == 0 {
             println!("Log is empty at the moment.")

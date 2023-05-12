@@ -5,4 +5,5 @@ pub mod log;
 pub mod send;
 pub mod signal;
 pub mod start;
+pub mod status;
 pub mod stop;

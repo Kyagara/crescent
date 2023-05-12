@@ -21,7 +21,6 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
         .args(args)
         .stdout(Redirection::Merge)
         .stdin(Redirection::Pipe)
-        .env("CRESCENT_APP_NAME", name)
         .popen()?;
 
     info!("Subprocess started.");
@@ -67,7 +66,6 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
     };
 
     let socket_addr = socket_address.clone();
-    let app_name = name.clone();
     let pid_parsed = Pid::from(pid as usize);
 
     thread::Builder::new()
@@ -80,7 +78,6 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
                     Ok(mut stream) => {
                         let mut stdin_clone = stdin.try_clone().unwrap();
                         let socket = socket_addr.clone();
-                        let app_name_clone = app_name.clone();
 
                         thread::spawn(move || {
                             let mut recv_buf = vec![0u8; 1024];
@@ -98,7 +95,7 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
                                             // Only exiting if the pipe is closed for now
                                             if err.kind() == ErrorKind::BrokenPipe {
                                                 info!("Sending SIGTERM to subprocess.");
-                                                terminate(&app_name_clone, &pid_parsed, &socket);
+                                                terminate(&pid_parsed, &socket);
                                                 break;
                                             }
                                         }
@@ -130,7 +127,7 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
         }
     }
 
-    terminate(name, &pid_parsed, &socket_address);
+    terminate(&pid_parsed, &socket_address);
 
     info!("Shutting down.");
 
@@ -151,8 +148,8 @@ fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut us
 }
 
 // This might be called two times if the stdin pipe is broken
-fn terminate(app_name: &String, subprocess_pid: &Pid, socket_path: &PathBuf) {
-    if let Err(err) = check_and_send_signal(app_name, subprocess_pid, &15) {
+fn terminate(subprocess_pid: &Pid, socket_path: &PathBuf) {
+    if let Err(err) = check_and_send_signal(subprocess_pid, &15) {
         if err.to_string() != "Process does not exist." {
             error!("{err}");
         }
@@ -171,42 +168,69 @@ fn terminate(app_name: &String, subprocess_pid: &Pid, socket_path: &PathBuf) {
     }
 }
 
-pub fn check_and_send_signal(app_name: &String, pid: &Pid, signal: &u8) -> Result<()> {
-    let is_running = is_running(app_name, pid)?;
+pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<()> {
+    match get_app_process_envs(pid)? {
+        Some(_) => {
+            let subprocess_pid: usize = (*pid).into();
+            let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
 
-    if is_running {
-        let subprocess_pid: usize = (*pid).into();
-        let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
+            if result == 0 {
+                return Ok(());
+            }
 
-        if result == 0 {
-            return Ok(());
+            Err(anyhow!("Error sending signal: errno {result}."))
         }
-
-        return Err(anyhow!("Error sending signal: errno {result}"));
+        None => Ok(()),
     }
-
-    Ok(())
 }
 
-fn is_running(name: &String, pid: &Pid) -> Result<bool> {
+pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String)>> {
     let mut system = System::new();
     system.refresh_process(*pid);
 
     match system.process(*pid) {
-        Some(subprocess) => {
-            let envs = subprocess.environ();
+        Some(process) => {
+            let envs = process.environ();
 
-            let env = envs.iter().find(|string| {
-                let env: Vec<&str> = string.split('=').collect();
-                env[0] == "CRESCENT_APP_NAME"
-            });
+            let env: Vec<&String> = envs
+                .iter()
+                .filter(|string| {
+                    let env: Vec<&str> = string.split('=').collect();
+                    env[0] == "CRESCENT_APP_NAME" || env[0] == "CRESCENT_APP_ARGS"
+                })
+                .collect();
 
-            if let Some(file_name) = env {
-                let values: Vec<&str> = file_name.split('=').collect();
-                return Ok(name == values[1]);
-            };
+            if !env.is_empty() {
+                let app_name = env
+                    .iter()
+                    .map(|string| {
+                        let env: Vec<&str> = string.split('=').collect();
 
-            Ok(false)
+                        if env[0] == "CRESCENT_APP_NAME" {
+                            return env[1].to_string();
+                        }
+
+                        "".to_string()
+                    })
+                    .collect();
+
+                let args = env
+                    .iter()
+                    .map(|string| {
+                        let env: Vec<&str> = string.split('=').collect();
+
+                        if env[0] == "CRESCENT_APP_ARGS" {
+                            return env[1].to_string();
+                        }
+
+                        "".to_string()
+                    })
+                    .collect();
+
+                return Ok(Some((app_name, args)));
+            }
+
+            Err(anyhow!("Process did not return any crescent envs."))
         }
         None => Err(anyhow!("Process does not exist.")),
     }
