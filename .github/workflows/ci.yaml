@@ -39,11 +39,8 @@ jobs:
                       ./target
                   key: test-cargo-registry
 
-            - name: Unit tests
-              run: cargo test --bins
-
-            - name: Integration tests
-              run: cargo test --test '*' -- --test-threads=1
+            - name: Run tests
+              run: cargo test
 
     coverage:
         needs: test

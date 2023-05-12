@@ -34,43 +34,38 @@ impl StatusArgs {
             println!("{} \"{}\"", "Arguments:".white(), args);
             println!("{} {}", "Crescent PID:".white(), pids[0]);
 
-            match system.process(subprocess_pid) {
-                Some(process) => {
-                    let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
-                    let start_time = NaiveDateTime::from_timestamp_opt(
-                        process.start_time().try_into().unwrap(),
-                        0,
-                    )
-                    .unwrap();
-                    let cpu_count = system.physical_core_count().unwrap() as f32;
+            if let Some(process) = system.process(subprocess_pid) {
+                let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
+                let start_time =
+                    NaiveDateTime::from_timestamp_opt(process.start_time().try_into().unwrap(), 0)
+                        .unwrap();
+                let cpu_count = system.physical_core_count().unwrap() as f32;
 
-                    println!();
-                    println!("{}", "Subprocess information:".bold().cyan());
+                println!();
+                println!("{}", "Subprocess information:".bold().cyan());
 
-                    println!("{} {}", "Subprocess PID:".white(), subprocess_pid);
-                    println!("{} {:?}", "CWD:".white(), process.cwd());
-                    println!(
-                        "{} \"{}\"",
-                        "Full command line:".white(),
-                        process.cmd().join(" ")
-                    );
+                println!("{} {}", "Subprocess PID:".white(), subprocess_pid);
+                println!("{} {:?}", "CWD:".white(), process.cwd());
+                println!(
+                    "{} \"{}\"",
+                    "Full command line:".white(),
+                    process.cmd().join(" ")
+                );
 
-                    println!(
-                        "{} {:.2}%",
-                        "CPU usage:".white(),
-                        process.cpu_usage() / cpu_count,
-                    );
-                    println!(
-                        "{} {:.2}% ({} Mb)",
-                        "Memory usage:".white(),
-                        memory,
-                        process.memory() / 1024 / 1024
-                    );
+                println!(
+                    "{} {:.2}%",
+                    "CPU usage:".white(),
+                    process.cpu_usage() / cpu_count,
+                );
+                println!(
+                    "{} {:.2}% ({} Mb)",
+                    "Memory usage:".white(),
+                    memory,
+                    process.memory() / 1024 / 1024
+                );
 
-                    println!("{} {}", "Started at:".white(), start_time);
-                    println!("{} {}s", "Uptime:".white(), process.run_time());
-                }
-                None => return Err(anyhow!("Process does not exist.")),
+                println!("{} {}", "Started at:".white(), start_time);
+                println!("{} {}s", "Uptime:".white(), process.run_time());
             }
 
             return Ok(());

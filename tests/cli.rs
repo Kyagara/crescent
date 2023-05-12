@@ -7,7 +7,11 @@ mod util;
 
 #[test]
 fn list_no_apps_running() -> Result<()> {
-    util::list_has_no_apps()?;
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.arg("list");
+
+    cmd.assert().success().stdout("No application running.\n");
 
     Ok(())
 }
@@ -43,6 +47,19 @@ fn signal_no_apps_running() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
     cmd.args(["signal", "test_app_not_available", "0"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application does not exist.\n");
+
+    Ok(())
+}
+
+#[test]
+fn status_no_apps_running() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["status", "test_app_not_available"]);
 
     cmd.assert()
         .failure()
@@ -98,7 +115,7 @@ fn start_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
     thread::sleep(std::time::Duration::from_millis(500));
@@ -116,7 +133,7 @@ fn log_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
     thread::sleep(std::time::Duration::from_millis(500));
@@ -142,7 +159,7 @@ fn log_follow_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
     thread::sleep(std::time::Duration::from_millis(500));
@@ -169,7 +186,7 @@ fn log_follow_short_lived_command() -> Result<()> {
 fn list_long_running_service() -> Result<()> {
     util::start_long_running_service()?;
 
-    util::check_list_contains_app_name("long_running_service")?;
+    assert!(util::check_app_is_running("long_running_service")?);
 
     let mut cmd = Command::cargo_bin("cres")?;
 
@@ -186,7 +203,7 @@ fn list_long_running_service() -> Result<()> {
 fn signal_long_running_service() -> Result<()> {
     util::start_long_running_service()?;
 
-    util::check_list_contains_app_name("long_running_service")?;
+    assert!(util::check_app_is_running("long_running_service")?);
 
     let mut cmd = Command::cargo_bin("cres")?;
 
@@ -194,7 +211,7 @@ fn signal_long_running_service() -> Result<()> {
 
     cmd.assert().success().stdout("Signal sent.\n");
 
-    util::list_has_no_apps()?;
+    assert!(!util::check_app_is_running("long_running_service")?);
 
     util::delete_app_folder("long_running_service")?;
 
@@ -234,10 +251,10 @@ fn attach_command_socket_not_found() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting daemon."));
 
     // Sleeping to make sure the process exited
-    thread::sleep(std::time::Duration::from_secs(1));
+    thread::sleep(std::time::Duration::from_millis(500));
 
     let home = env::var("HOME").context("Error getting HOME env.")?;
     let mut crescent_dir = PathBuf::from(home);
