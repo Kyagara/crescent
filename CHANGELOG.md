@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+-   Reworked `attach`, removed ticker.
+
 ## [0.3.0] - 2023-05-12
 
 ### Added
