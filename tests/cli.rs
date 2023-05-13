@@ -103,7 +103,7 @@ fn attach_no_apps_running() -> Result<()> {
 
     cmd.assert()
         .failure()
-        .stderr("Error: Application does not exist.\n");
+        .stderr("Error: Application not running.\n");
 
     Ok(())
 }
@@ -274,6 +274,34 @@ fn send_command_socket() -> Result<()> {
 }
 
 #[test]
+fn attach_short_lived_command() -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["start", "/bin/echo", "-n", "attach_echo"]);
+
+    cmd.assert()
+        .success()
+        .stderr(predicate::str::contains("Starting daemon."));
+
+    // Sleeping to make sure the process exited
+    thread::sleep(std::time::Duration::from_secs(1));
+
+    cmd = Command::cargo_bin("cres")?;
+
+    cmd.args(["attach", "attach_echo"]);
+
+    cmd.assert()
+        .failure()
+        .stderr("Error: Application not running.\n");
+
+    assert!(!util::check_app_is_running("attach_echo")?);
+
+    util::delete_app_folder("attach_echo")?;
+
+    Ok(())
+}
+
+#[test]
 fn attach_command_socket_not_found() -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
@@ -301,7 +329,7 @@ fn attach_command_socket_not_found() -> Result<()> {
 
     cmd.assert()
         .failure()
-        .stderr("Error: Socket file does not exist.\n");
+        .stderr("Error: Application not running.\n");
 
     util::delete_app_folder("attach_socket_not_found")?;
 
