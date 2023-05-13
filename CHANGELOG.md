@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.3.0] - 2023-05-12
 
 ### Added
 
@@ -23,6 +23,11 @@ All notable changes to this project will be documented in this file.
 -   `send` command now accepts a `Vec<String>`, this lets you send a command with multiple strings like `cres send say hello`.
 -   Subprocess is now terminated when an error creating a socket listener occurs.
 -   Integration tests now use the `status` command instead of `list`, this lets most tests run in parallel without issues.
+-   Process start time on `status` was showing the wrong timezone.
+
+### Removed
+
+-   Removed unused `temp_file` dependency.
 
 ## [0.2.0] - 2023-05-10
 
