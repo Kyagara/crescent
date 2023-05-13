@@ -1,6 +1,6 @@
 use crate::{application, subprocess};
 use anyhow::{anyhow, Result};
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
 use crossterm::style::Stylize;
 use sysinfo::{ProcessExt, System, SystemExt};
@@ -33,17 +33,17 @@ impl StatusArgs {
             println!("{} {}", "Name:".white(), name);
             println!("{} \"{}\"", "Arguments:".white(), args);
             println!("{} {}", "Crescent PID:".white(), pids[0]);
+            println!();
 
             if let Some(process) = system.process(subprocess_pid) {
                 let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
-                let start_time =
-                    NaiveDateTime::from_timestamp_opt(process.start_time().try_into().unwrap(), 0)
-                        .unwrap();
                 let cpu_count = system.physical_core_count().unwrap() as f32;
+                let utc = Utc
+                    .timestamp_opt(process.start_time().try_into().unwrap(), 0)
+                    .unwrap();
+                let start_time: DateTime<Local> = DateTime::from(utc);
 
-                println!();
                 println!("{}", "Subprocess information:".bold().cyan());
-
                 println!("{} {}", "Subprocess PID:".white(), subprocess_pid);
                 println!("{} {:?}", "CWD:".white(), process.cwd());
                 println!(

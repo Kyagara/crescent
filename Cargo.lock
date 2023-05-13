@@ -228,7 +228,7 @@ checksum = "e496a50fda8aacccc86d7529e2c1e0892dbd0f898a6b5645b5561b89c3210efa"
 
 [[package]]
 name = "crescent-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -246,7 +246,6 @@ dependencies = [
  "subprocess",
  "sysinfo",
  "tabled",
- "temp-file",
  "toml",
  "tui-input",
  "tui-logger",
@@ -1125,12 +1124,6 @@ dependencies = [
  "quote",
  "syn 1.0.109",
 ]
-
-[[package]]
-name = "temp-file"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4479870ee948e4c5c3fc4774b46aa73eedf97d84503a9b90922c1bb19a73a8d"
 
 [[package]]
 name = "termcolor"
