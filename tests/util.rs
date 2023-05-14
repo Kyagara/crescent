@@ -21,6 +21,20 @@ pub fn delete_app_folder(name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn start_short_lived_command(name: &str) -> Result<()> {
+    let mut cmd = Command::cargo_bin("cres")?;
+    cmd.args(["start", "/bin/echo", "-n", name]);
+
+    cmd.assert()
+        .success()
+        .stderr(predicate::str::contains("Starting daemon."));
+
+    // Sleeping to make sure the process started
+    thread::sleep(std::time::Duration::from_secs(1));
+
+    Ok(())
+}
+
 pub fn start_long_running_service(name: &str) -> Result<()> {
     let mut cmd = Command::cargo_bin("cres")?;
 
@@ -47,7 +61,6 @@ pub fn start_long_running_service(name: &str) -> Result<()> {
 
 pub fn check_app_is_running(name: &str) -> Result<bool> {
     let mut cmd = Command::cargo_bin("cres")?;
-
     cmd.args(["status", name]);
 
     let binding = cmd.assert().success();
@@ -55,10 +68,11 @@ pub fn check_app_is_running(name: &str) -> Result<bool> {
 
     let stdout = &output.stdout;
 
-    let predicate = predicate::str::contains("Memory usage:");
+    let usage_predicate = predicate::str::contains("Memory usage:");
+    let name_predicate = predicate::str::contains(name);
 
     match from_utf8(stdout) {
-        Ok(string) => Ok(predicate.eval(string)),
+        Ok(string) => Ok(usage_predicate.eval(string) && name_predicate.eval(string)),
         Err(err) => Err(anyhow!("{err}")),
     }
 }
