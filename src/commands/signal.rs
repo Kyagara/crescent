@@ -30,9 +30,15 @@ pub fn generic_send_signal_command(name: &String, signal: &u8) -> Result<()> {
         return Err(anyhow!("Application not running."));
     }
 
-    subprocess::check_and_send_signal(&pids[1], signal)?;
-
-    println!("Signal sent.");
-
-    Ok(())
+    match subprocess::check_and_send_signal(&pids[1], signal) {
+        Ok(exists) => {
+            if exists {
+                println!("Signal sent.");
+            } else {
+                println!("Subprocess not found, signal not sent.");
+            }
+            Ok(())
+        }
+        Err(err) => Err(err),
+    }
 }
