@@ -76,9 +76,8 @@ Not for anything in production, game servers for friends for example shouldn't b
 ## Todo
 
 -   More tests, 85% codecov would be cool
--   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead, this command needs a rework, looks horrible
+-   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
 -   Lots of unwraps inside threads
--   Profiles (add a `-p` argument to the `start` command to pass a config file)
 -   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
 
 ## License
