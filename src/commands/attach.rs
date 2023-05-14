@@ -325,3 +325,115 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
         chunks[2].y + 1,
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Context;
+    use assert_cmd::Command;
+    use predicates::{prelude::predicate, Predicate};
+    use std::{
+        env::{self, temp_dir},
+        fs::{self, remove_file, File},
+        os::unix::net::UnixListener,
+    };
+
+    #[test]
+    fn unit_attach_handlers() -> Result<()> {
+        let temp_dir = temp_dir();
+        let socket_dir = temp_dir.join("crescent_temp_attach_socket_handler.sock");
+        let log_dir = temp_dir.join("crescent_temp_attach_log_handler.log");
+
+        if socket_dir.exists() {
+            remove_file(&socket_dir)?;
+        }
+
+        if log_dir.exists() {
+            remove_file(&log_dir)?;
+        }
+
+        File::create(&log_dir)?.write_all(b"data")?;
+
+        let _socket = UnixListener::bind(&socket_dir)?;
+
+        let (sender, receiver) = unbounded();
+        let (socket_sender, socket_receiver): (Sender<String>, Receiver<String>) = unbounded();
+        let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
+        let pid = Pid::from(std::process::id() as usize);
+
+        event_read_handler(sender.clone());
+        log_handler(log_dir, sender.clone(), log_sender.clone(), log_receiver)?;
+        stats_handler(pid, sender);
+        socket_handler(socket_dir, socket_receiver)?;
+
+        loop {
+            if let TerminalEvent::Stats(a) = receiver.recv_timeout(Duration::from_secs(3))? {
+                let p = predicates::str::contains("load");
+                assert!(p.eval(&a));
+                break;
+            }
+        }
+
+        log_sender.send("log".to_string())?;
+        socket_sender.send("input".to_string())?;
+
+        Ok(())
+    }
+
+    #[test]
+    fn unit_attach_draw_ui() -> Result<()> {
+        let mut cmd = Command::cargo_bin("cres")?;
+        let name = String::from("attach_draw_ui");
+        let args = [
+            "start",
+            "./tools/long_running_service.py",
+            "-i",
+            "python3",
+            "-n",
+            &name,
+        ];
+
+        cmd.args(args);
+
+        cmd.assert()
+            .success()
+            .stderr(predicate::str::contains("Starting daemon."));
+
+        // Sleeping to make sure the process started
+        thread::sleep(std::time::Duration::from_secs(1));
+
+        let mut app = AttachTerminal::new(name.clone());
+        let stats_list = String::from("Waiting for stats.");
+
+        let mut stdout = io::stdout();
+        execute!(stdout, EnterAlternateScreen)?;
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+
+        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+
+        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+
+        let mut cmd = Command::cargo_bin("cres")?;
+
+        cmd.args(["signal", &name, "15"]);
+
+        cmd.assert().success().stdout("Signal sent.\n");
+
+        let home = env::var("HOME").context("Error getting HOME env.")?;
+        let mut crescent_dir = PathBuf::from(home);
+        crescent_dir.push(".crescent/apps");
+
+        if !crescent_dir.exists() {
+            fs::create_dir_all(&crescent_dir)?;
+        }
+
+        crescent_dir.push(name.clone());
+
+        if crescent_dir.exists() {
+            fs::remove_dir_all(&crescent_dir)?;
+        }
+
+        Ok(())
+    }
+}
