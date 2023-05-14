@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 -   Reworked `attach`, removed ticker.
 
+### Fixed
+
+-   `kill`, `stop` and `signal` now says if the subprocess wasn't found.
+
 ## [0.3.0] - 2023-05-12
 
 ### Added

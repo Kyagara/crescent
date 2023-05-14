@@ -170,19 +170,19 @@ fn terminate(subprocess_pid: &Pid) {
     }
 }
 
-pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<()> {
+pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<bool> {
     match get_app_process_envs(pid)? {
         Some(_) => {
             let subprocess_pid: usize = (*pid).into();
             let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
 
             if result == 0 {
-                return Ok(());
+                return Ok(true);
             }
 
             Err(anyhow!("Error sending signal: errno {result}."))
         }
-        None => Ok(()),
+        None => Ok(false),
     }
 }
 

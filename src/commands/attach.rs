@@ -64,8 +64,10 @@ impl AttachArgs {
             return Err(anyhow!("Application not running."));
         }
 
-        init_logger(LevelFilter::Debug).unwrap();
-        set_default_level(LevelFilter::Debug);
+        if !cfg!(test) {
+            init_logger(LevelFilter::Debug).unwrap();
+            set_default_level(LevelFilter::Debug);
+        }
 
         let pids = application::app_pids_by_name(&self.name)?;
 
@@ -84,6 +86,10 @@ impl AttachArgs {
 
         let mut app = AttachTerminal::new(self.name);
         let mut stats_list = String::from("Waiting for stats.");
+
+        if cfg!(test) {
+            return Ok(());
+        }
 
         terminal::enable_raw_mode()?;
         let mut stdout = io::stdout();
@@ -337,6 +343,7 @@ mod tests {
         fs::{self, remove_file, File},
         os::unix::net::UnixListener,
     };
+    use tui::backend::TestBackend;
 
     #[test]
     fn unit_attach_handlers() -> Result<()> {
@@ -405,33 +412,64 @@ mod tests {
         let mut app = AttachTerminal::new(name.clone());
         let stats_list = String::from("Waiting for stats.");
 
-        let mut stdout = io::stdout();
-        execute!(stdout, EnterAlternateScreen)?;
-        let backend = CrosstermBackend::new(stdout);
+        let backend = TestBackend::new(16, 16);
         let mut terminal = Terminal::new(backend)?;
 
         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
 
-        execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
-
         let mut cmd = Command::cargo_bin("cres")?;
-
         cmd.args(["signal", &name, "15"]);
-
         cmd.assert().success().stdout("Signal sent.\n");
 
         let home = env::var("HOME").context("Error getting HOME env.")?;
-        let mut crescent_dir = PathBuf::from(home);
-        crescent_dir.push(".crescent/apps");
+        let mut app_dir = PathBuf::from(home);
+        app_dir.push(".crescent/apps/".to_string() + &name);
 
-        if !crescent_dir.exists() {
-            fs::create_dir_all(&crescent_dir)?;
+        if app_dir.exists() {
+            fs::remove_dir_all(&app_dir)?;
         }
 
-        crescent_dir.push(name.clone());
+        Ok(())
+    }
 
-        if crescent_dir.exists() {
-            fs::remove_dir_all(&crescent_dir)?;
+    #[test]
+    fn unit_attach_run() -> Result<()> {
+        let mut cmd = Command::cargo_bin("cres")?;
+        let name = String::from("attach_run");
+        let args = [
+            "start",
+            "./tools/long_running_service.py",
+            "-i",
+            "python3",
+            "-n",
+            &name,
+        ];
+
+        cmd.args(args);
+
+        cmd.assert()
+            .success()
+            .stderr(predicate::str::contains("Starting daemon."));
+
+        // Sleeping to make sure the process started
+        thread::sleep(std::time::Duration::from_secs(1));
+
+        let command_args = AttachArgs {
+            name: "attach_run".to_string(),
+        };
+
+        command_args.run()?;
+
+        let mut cmd = Command::cargo_bin("cres")?;
+        cmd.args(["signal", &name, "15"]);
+        cmd.assert().success().stdout("Signal sent.\n");
+
+        let home = env::var("HOME").context("Error getting HOME env.")?;
+        let mut app_dir = PathBuf::from(home);
+        app_dir.push(".crescent/apps/".to_string() + &name);
+
+        if app_dir.exists() {
+            fs::remove_dir_all(&app_dir)?;
         }
 
         Ok(())
