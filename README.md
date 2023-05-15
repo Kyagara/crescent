@@ -15,10 +15,8 @@
 	<p>
 		<a href="#installation">Installation</a> •
 		<a href="#commands">Commands</a> •
-		<a href="#why">Why?</a> •
-		<a href="#should-i-use-cres">Should I use cres-</a> •
-		<a href="#todo">Todo</a> •
-		<a href="#license">License</a>
+		<a href="https://github.com/Kyagara/crescent/blob/main/CHANGELOG.md">Changelog</a> •
+		<a href="#todo">Todo</a>
 	</p>
 </div>
 
@@ -27,11 +25,14 @@
 
 ## OS support:
 
-My main focus is Linux, crescent is built and tested on ubuntu `x86_64`, `aarch64`, `armv7` and `arm`. MacOs is not tested. Windows is not supported.
+-   Linux `x86_64` - Built and tested.
+-   Linux `aarch64`, `armv7` and `arm` - Built.
+-   macOS `x86_64` - Built.
+-   Windows - Not supported.
 
 ## Installation:
 
-You can either get artifacts from recent [workflows](https://github.com/Kyagara/crescent/actions) or install using cargo:
+You can either get artifacts from recent [workflows](https://github.com/Kyagara/crescent/actions), binaries from [releases](https://github.com/Kyagara/crescent/releases) or install using cargo:
 
 ```bash
 cargo install crescent-cli
@@ -43,9 +44,13 @@ or
 cargo install --git https://github.com/Kyagara/crescent
 ```
 
+When installing crescent using cargo, default profiles will be created in crescent's main directory: `/home/<user>/.crescent/`. You can find these profiles [here](https://github.com/Kyagara/crescent/tree/main/profiles).
+
+> Profiles and applications files are located in crescent's main directory.
+
 ## Commands:
 
-With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. Arguments can be added using `-a`.
+With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. Arguments can be added using `-a`. Profiles can be passed with `-p <name/path>`.
 
 > If you provide a `java` interpreter it will add a `-jar` argument automatically.
 
@@ -53,17 +58,25 @@ With `start` you can launch an application by passing the file path to your exec
 
 `list` the running applications.
 
-`log` an application's `.log` file, you can specify the amount of `lines` with `-l` (defaults to 200). After printing the log, it will watch the file for any new lines added to it.
+`log` prints an application's `.log` file, you can specify the amount of `lines` with `-l` (defaults to 200). You can watch the file by adding `-f` flag, which will print new lines as they are added to the file.
 
 `send` a command to the provided application.
 
 `attach` to an application, which let's you watch logs in realtime and send commands.
 
-`kill` (SIGKILL), `stop` (SIGTERM) or `signal <int>` to send a signal to an application.
+`kill` (SIGKILL), `stop` (SIGTERM) or `signal <app> <sig>` to send a signal to an application.
 
 `status` prints information about an application.
 
-> Log, PID and the application's socket are located in `/home/<user>/.crescent/apps/<app>`.
+## Testing
+
+A simple [cross](https://github.com/cross-rs/cross) configuration file is provided for testing different architectures, it simply installs `python3-minimal` before building as python is necessary to run `long_running_service`.
+
+```bash
+cross test --target aarch64-unknown-linux-gnu
+```
+
+> If you see permission errors when running tests, you can try setting the flag `CROSS_ROOTLESS_CONTAINER_ENGINE=1`.
 
 ## Why?
 
@@ -79,7 +92,3 @@ Not for anything in production, game servers for friends for example shouldn't b
 -   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
 -   Lots of unwraps inside threads
 -   Probably redesign the entire thing when I acquire more [knowledge](https://www.youtube.com/watch?v=jksPhQhJRoc)
-
-## License
-
-This project is licensed under the MIT license.

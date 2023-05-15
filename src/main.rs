@@ -12,6 +12,7 @@ mod crescent;
 mod logger;
 mod subprocess;
 mod tail;
+mod test_util;
 
 #[derive(Parser)]
 #[command(

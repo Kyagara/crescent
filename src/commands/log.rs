@@ -67,3 +67,25 @@ impl LogArgs {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_log_run() -> Result<()> {
+        let command = LogArgs {
+            name: "log_run".to_string(),
+            lines: 200,
+            follow: false,
+        };
+
+        assert_eq!(command.name, "log_run");
+        assert!(!command.follow);
+        assert_eq!(command.lines, 200);
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application does not exist.");
+
+        Ok(())
+    }
+}

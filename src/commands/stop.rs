@@ -14,3 +14,19 @@ impl StopArgs {
         signal::generic_send_signal_command(&self.name, &15)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_stop_run() -> Result<()> {
+        let command = StopArgs {
+            name: "stop_run".to_string(),
+        };
+        assert_eq!(command.name, "stop_run");
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application does not exist.");
+        Ok(())
+    }
+}

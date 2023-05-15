@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::{
     env,
     fs::{self, File},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 #[derive(Args, Deserialize)]
@@ -38,16 +38,18 @@ pub struct StartArgs {
         long = "profile",
         help = "Name of the profile to load fields from."
     )]
-    pub profile_name: Option<String>,
+    pub profile: Option<String>,
 }
 
 static LOGGER: logger::Logger = logger::Logger;
 
 impl StartArgs {
     pub fn run(mut self) -> Result<()> {
-        if let Some(profile) = self.profile_name {
-            let path = crescent::get_profile_path(profile)?;
-            let string = fs::read_to_string(path)?;
+        let mut profile_path = PathBuf::new();
+
+        if let Some(profile) = self.profile {
+            profile_path = crescent::get_profile_path(profile)?;
+            let string = fs::read_to_string(&profile_path)?;
             let args: StartArgs = toml::from_str(&string)?;
             self = args;
         }
@@ -99,10 +101,7 @@ impl StartArgs {
         // The subprocess inherits all environment variables
         env::set_var("CRESCENT_APP_NAME", &name);
         env::set_var("CRESCENT_APP_ARGS", &command_args);
-        env::set_var(
-            "CRESCENT_APP_PROFILE",
-            self.profile_name.unwrap_or(String::new()),
-        );
+        env::set_var("CRESCENT_APP_PROFILE", profile_path);
 
         drop(command_args);
 

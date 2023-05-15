@@ -186,7 +186,7 @@ pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<bool> {
     }
 }
 
-pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String)>> {
+pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String)>> {
     let mut system = System::new();
     system.refresh_process(*pid);
 
@@ -198,7 +198,9 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String)>> {
                 .iter()
                 .filter(|string| {
                     let env: Vec<&str> = string.split('=').collect();
-                    env[0] == "CRESCENT_APP_NAME" || env[0] == "CRESCENT_APP_ARGS"
+                    env[0] == "CRESCENT_APP_NAME"
+                        || env[0] == "CRESCENT_APP_ARGS"
+                        || env[0] == "CRESCENT_APP_PROFILE"
                 })
                 .collect();
 
@@ -229,11 +231,45 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String)>> {
                     })
                     .collect();
 
-                return Ok(Some((app_name, args)));
+                let profile = env
+                    .iter()
+                    .map(|string| {
+                        let env: Vec<&str> = string.split('=').collect();
+
+                        if env[0] == "CRESCENT_APP_PROFILE" {
+                            return env[1].to_string();
+                        }
+
+                        "".to_string()
+                    })
+                    .collect();
+
+                return Ok(Some((app_name, args, profile)));
             }
 
             Err(anyhow!("Process did not return any crescent envs."))
         }
         None => Ok(None),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{application::app_pids_by_name, test_util::util};
+
+    #[test]
+    fn unit_subprocess_terminate() -> Result<()> {
+        let name = "subprocess_terminate";
+        util::start_long_running_service(name)?;
+        assert!(util::check_app_is_running(name)?);
+
+        let pids = app_pids_by_name(&name.to_string())?;
+
+        terminate(&pids[1]);
+
+        assert!(!util::check_app_is_running(name)?);
+        util::delete_app_folder(name)?;
+        Ok(())
     }
 }
