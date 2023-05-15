@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+-   Added [cross](https://github.com/cross-rs/cross) configuration file for testing other architectures.
+-   Added tests util module.
+-   Added macOS to the ci.
+
+### Changed
+
+-   Profile argument in `start` now accepts a path to a file.
+
 ## [0.3.1]- 2023-05-14
 
 ### Added

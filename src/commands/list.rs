@@ -35,19 +35,16 @@ impl ListArgs {
             .context("Error reading crescent directory.")?
             .flatten();
 
-        let apps = get_application_info(crescent_dir)?;
+        let apps = get_applications_info(crescent_dir)?;
 
-        match !apps.is_empty() {
-            true => {
-                let table = create_table(apps)?;
-                println!("{table}");
-                Ok(())
-            }
-            false => {
-                println!("No application running.");
-                Ok(())
-            }
+        if apps.is_empty() {
+            println!("No application running.");
+            return Ok(());
         }
+
+        let table = create_table(apps)?;
+        println!("{table}");
+        Ok(())
     }
 }
 
@@ -57,7 +54,7 @@ fn create_table(apps: Vec<ApplicationInfo>) -> Result<Table> {
     Ok(table)
 }
 
-fn get_application_info(crescent_dir: Flatten<ReadDir>) -> Result<Vec<ApplicationInfo>> {
+fn get_applications_info(crescent_dir: Flatten<ReadDir>) -> Result<Vec<ApplicationInfo>> {
     let mut system = System::new();
     system.refresh_processes();
 
@@ -69,6 +66,10 @@ fn get_application_info(crescent_dir: Flatten<ReadDir>) -> Result<Vec<Applicatio
             .to_str()
             .context("Error converting OsStr to str.")?
             .to_string();
+
+        if !application::app_already_running(&app_name)? {
+            continue;
+        }
 
         let pids = application::app_pids_by_name(&app_name)?;
 
@@ -101,34 +102,17 @@ fn get_application_info(crescent_dir: Flatten<ReadDir>) -> Result<Vec<Applicatio
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_util::util;
     use anyhow::Context;
-    use assert_cmd::Command;
-    use predicates::prelude::predicate;
-    use std::{assert_eq, thread};
-    use std::{env, fs, path::PathBuf};
+    use serial_test::serial;
+    use std::assert_eq;
 
     #[test]
-    #[ignore = "this test might list apps from other tests"]
+    #[serial]
     fn unit_list_command_functions() -> Result<()> {
-        let mut cmd = Command::cargo_bin("cres")?;
-        let name = String::from("list_command_application_info");
-        let args = [
-            "start",
-            "./tools/long_running_service.py",
-            "-i",
-            "python3",
-            "-n",
-            &name,
-        ];
-
-        cmd.args(args);
-
-        cmd.assert()
-            .success()
-            .stderr(predicate::str::contains("Starting daemon."));
-
-        // Sleeping to make sure the process started
-        thread::sleep(std::time::Duration::from_secs(1));
+        let name = "list_command_application_info";
+        util::start_long_running_service(name)?;
+        assert!(util::check_app_is_running(name)?);
 
         let mut crescent_pathbuf = crescent::crescent_dir()?;
 
@@ -139,7 +123,7 @@ mod tests {
             .context("Error reading crescent directory.")?
             .flatten();
 
-        let apps = get_application_info(crescent_dir)?;
+        let apps = get_applications_info(crescent_dir)?;
         assert_eq!(apps.len(), 1);
         let app = &apps[0];
         assert_eq!(&app.name, &name);
@@ -148,15 +132,9 @@ mod tests {
         assert!(!table.is_empty());
         assert_eq!(table.shape(), (2, 5));
 
-        let mut cmd = Command::cargo_bin("cres")?;
-        cmd.args(["signal", &name, "15"]);
-        cmd.assert().success().stdout("Signal sent.\n");
-
-        let home = env::var("HOME").context("Error getting HOME env.")?;
-        let mut app_dir = PathBuf::from(home);
-        app_dir.push(".crescent/apps/".to_string() + &name);
-
-        fs::remove_dir_all(&app_dir)?;
+        util::shutdown_long_running_service(name)?;
+        assert!(!util::check_app_is_running(name)?);
+        util::delete_app_folder(name)?;
         Ok(())
     }
 }

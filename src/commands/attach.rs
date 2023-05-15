@@ -335,12 +335,12 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use anyhow::Context;
-    use assert_cmd::Command;
-    use predicates::{prelude::predicate, Predicate};
+    use crate::test_util::util;
+    use predicates::Predicate;
+    use serial_test::serial;
     use std::{
-        env::{self, temp_dir},
-        fs::{self, remove_file, File},
+        env::temp_dir,
+        fs::{remove_file, File},
         os::unix::net::UnixListener,
     };
     use tui::backend::TestBackend;
@@ -373,12 +373,9 @@ mod tests {
         stats_handler(pid, sender);
         socket_handler(socket_dir, socket_receiver)?;
 
-        loop {
-            if let TerminalEvent::Stats(a) = receiver.recv_timeout(Duration::from_secs(3))? {
-                let p = predicates::str::contains("load");
-                assert!(p.eval(&a));
-                break;
-            }
+        if let TerminalEvent::Stats(a) = receiver.recv_timeout(Duration::from_secs(3))? {
+            let p = predicates::str::contains("load");
+            assert!(p.eval(&a));
         }
 
         log_sender.send("log".to_string())?;
@@ -389,27 +386,11 @@ mod tests {
 
     #[test]
     fn unit_attach_draw_ui() -> Result<()> {
-        let mut cmd = Command::cargo_bin("cres")?;
-        let name = String::from("attach_draw_ui");
-        let args = [
-            "start",
-            "./tools/long_running_service.py",
-            "-i",
-            "python3",
-            "-n",
-            &name,
-        ];
+        let name = "attach_draw_ui";
+        util::start_long_running_service(name)?;
+        assert!(util::check_app_is_running(name)?);
 
-        cmd.args(args);
-
-        cmd.assert()
-            .success()
-            .stderr(predicate::str::contains("Starting daemon."));
-
-        // Sleeping to make sure the process started
-        thread::sleep(std::time::Duration::from_secs(1));
-
-        let mut app = AttachTerminal::new(name.clone());
+        let mut app = AttachTerminal::new(name.to_string());
         let stats_list = String::from("Waiting for stats.");
 
         let backend = TestBackend::new(16, 16);
@@ -417,42 +398,18 @@ mod tests {
 
         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
 
-        let mut cmd = Command::cargo_bin("cres")?;
-        cmd.args(["signal", &name, "15"]);
-        cmd.assert().success().stdout("Signal sent.\n");
-
-        let home = env::var("HOME").context("Error getting HOME env.")?;
-        let mut app_dir = PathBuf::from(home);
-        app_dir.push(".crescent/apps/".to_string() + &name);
-
-        if app_dir.exists() {
-            fs::remove_dir_all(&app_dir)?;
-        }
-
+        util::shutdown_long_running_service(name)?;
+        assert!(!util::check_app_is_running(name)?);
+        util::delete_app_folder(name)?;
         Ok(())
     }
 
     #[test]
+    #[serial]
     fn unit_attach_run() -> Result<()> {
-        let mut cmd = Command::cargo_bin("cres")?;
-        let name = String::from("attach_run");
-        let args = [
-            "start",
-            "./tools/long_running_service.py",
-            "-i",
-            "python3",
-            "-n",
-            &name,
-        ];
-
-        cmd.args(args);
-
-        cmd.assert()
-            .success()
-            .stderr(predicate::str::contains("Starting daemon."));
-
-        // Sleeping to make sure the process started
-        thread::sleep(std::time::Duration::from_secs(1));
+        let name = "attach_run";
+        util::start_long_running_service(name)?;
+        assert!(util::check_app_is_running(name)?);
 
         let command_args = AttachArgs {
             name: "attach_run".to_string(),
@@ -460,18 +417,9 @@ mod tests {
 
         command_args.run()?;
 
-        let mut cmd = Command::cargo_bin("cres")?;
-        cmd.args(["signal", &name, "15"]);
-        cmd.assert().success().stdout("Signal sent.\n");
-
-        let home = env::var("HOME").context("Error getting HOME env.")?;
-        let mut app_dir = PathBuf::from(home);
-        app_dir.push(".crescent/apps/".to_string() + &name);
-
-        if app_dir.exists() {
-            fs::remove_dir_all(&app_dir)?;
-        }
-
+        util::shutdown_long_running_service(name)?;
+        assert!(!util::check_app_is_running(name)?);
+        util::delete_app_folder(name)?;
         Ok(())
     }
 }

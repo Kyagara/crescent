@@ -42,3 +42,22 @@ pub fn generic_send_signal_command(name: &String, signal: &u8) -> Result<()> {
         Err(err) => Err(err),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_signal_run() -> Result<()> {
+        let command = SignalArgs {
+            name: "signal_run".to_string(),
+            signal: 0,
+        };
+
+        assert_eq!(command.name, "signal_run");
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application does not exist.");
+
+        Ok(())
+    }
+}

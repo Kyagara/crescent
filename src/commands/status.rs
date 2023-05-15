@@ -1,3 +1,5 @@
+use std::println;
+
 use crate::{application, subprocess};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, TimeZone, Utc};
@@ -22,16 +24,22 @@ impl StatusArgs {
 
         let pids = application::app_pids_by_name(&self.name)?;
 
+        if pids.len() < 2 {
+            println!("Application not running.");
+            return Ok(());
+        }
+
         let subprocess_pid = pids[1];
 
         let mut system = System::new();
         system.refresh_process(subprocess_pid);
         system.refresh_memory();
 
-        if let Some((name, args)) = subprocess::get_app_process_envs(&subprocess_pid)? {
+        if let Some((name, args, profile)) = subprocess::get_app_process_envs(&subprocess_pid)? {
             println!("{}", "Application information:".bold().cyan());
             println!("{} {}", "Name:".white(), name);
             println!("{} \"{}\"", "Arguments:".white(), args);
+            println!("{} \"{}\"", "Profile:".white(), profile);
             println!("{} {}", "Crescent PID:".white(), pids[0]);
             println!();
 
