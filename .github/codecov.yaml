@@ -15,9 +15,10 @@ coverage:
 
 # Test files aren't important for coverage
 ignore:
-    - 'tests'
+    - "tests"
+    - "test_util.rs"
 
 # Make comments less noisy
 comment:
-    layout: 'files'
+    layout: "files"
     require_changes: yes
