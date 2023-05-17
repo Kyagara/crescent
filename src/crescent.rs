@@ -21,7 +21,7 @@ pub fn get_profile_path(profile: String) -> Result<PathBuf> {
         Err(_) => {
             let mut crescent_dir = crescent_dir()?;
             crescent_dir.push("profiles");
-            crescent_dir.push(profile + ".toml");
+            crescent_dir.push(profile + ".json");
 
             if crescent_dir.exists() && crescent_dir.is_file() {
                 return Ok(crescent_dir);
@@ -54,7 +54,7 @@ mod tests {
         assert!(path.exists());
         assert!(path.is_file());
 
-        path = get_profile_path(String::from("./profiles/example.toml"))?;
+        path = get_profile_path(String::from("./profiles/example.json"))?;
         assert!(path.exists());
         assert!(path.is_file());
 

@@ -50,7 +50,7 @@ impl StartArgs {
         if let Some(profile) = self.profile {
             profile_path = crescent::get_profile_path(profile)?;
             let string = fs::read_to_string(&profile_path)?;
-            let args: StartArgs = toml::from_str(&string)?;
+            let args: StartArgs = serde_json::from_str(&string)?;
             self = args;
         }
 
@@ -101,9 +101,10 @@ impl StartArgs {
         // The subprocess inherits all environment variables
         env::set_var("CRESCENT_APP_NAME", &name);
         env::set_var("CRESCENT_APP_ARGS", &command_args);
-        env::set_var("CRESCENT_APP_PROFILE", profile_path);
+        env::set_var("CRESCENT_APP_PROFILE", &profile_path);
 
         drop(command_args);
+        drop(profile_path);
 
         log::set_logger(&LOGGER).unwrap();
         log::set_max_level(LevelFilter::Info);
@@ -127,9 +128,7 @@ impl StartArgs {
             info!("Daemon started.");
         }
 
-        drop(app_dir);
-
-        subprocess::start(&name, &interpreter, &args)?;
+        subprocess::start(name, interpreter, args, app_dir)?;
 
         Ok(())
     }

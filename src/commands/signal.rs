@@ -45,7 +45,16 @@ pub fn generic_send_signal_command(name: &String, signal: &u8) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_util::util::delete_app_folder;
+
     use super::*;
+    use anyhow::Context;
+    use std::{
+        env,
+        fs::{self, File},
+        io::Write,
+        path::PathBuf,
+    };
 
     #[test]
     fn unit_signal_run() -> Result<()> {
@@ -58,6 +67,35 @@ mod tests {
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application does not exist.");
 
+        let home = env::var("HOME").context("Error getting HOME env.")?;
+        let mut path = PathBuf::from(home);
+        path.push(".crescent/apps/signal_run");
+        fs::create_dir_all(path.clone())?;
+        path.push("signal_run.pid");
+        let mut file = File::create(path)?;
+
+        let command = SignalArgs {
+            name: "signal_run".to_string(),
+            signal: 0,
+        };
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application not running.");
+
+        let pid = std::process::id();
+        writeln!(&mut file, "{}", pid)?;
+        writeln!(&mut file, "{}", pid)?;
+
+        let command = SignalArgs {
+            name: "signal_run".to_string(),
+            signal: 0,
+        };
+        let err = command.run().unwrap_err();
+        assert_eq!(
+            format!("{}", err),
+            "Process did not return any crescent envs."
+        );
+
+        delete_app_folder("signal_run")?;
         Ok(())
     }
 }

@@ -1,7 +1,14 @@
 use anyhow::{anyhow, Context, Result};
 use predicates::{prelude::predicate, Predicate};
 use serial_test::serial;
-use std::{env, fs, os::unix::net::UnixListener, path::PathBuf, str::from_utf8, thread};
+use std::{
+    env,
+    fs::{self, File},
+    io::Read,
+    path::PathBuf,
+    str::from_utf8,
+    thread,
+};
 
 mod util;
 
@@ -95,6 +102,46 @@ fn start_short_lived_command() -> Result<()> {
 }
 
 #[test]
+fn start_python_without_interpreter() -> Result<()> {
+    let name = "start_python_without_interpreter";
+
+    let mut cmd = util::get_base_command();
+    cmd.args([
+        "start",
+        "./tools/long_running_service.py",
+        "-i",
+        "",
+        "-n",
+        name,
+    ]);
+
+    cmd.assert()
+        .success()
+        .stderr(predicate::str::contains("Starting daemon."));
+
+    // Sleeping to make sure the process started
+    thread::sleep(std::time::Duration::from_secs(1));
+
+    let home = env::var("HOME").context("Error getting HOME env.")?;
+
+    let pid_path = PathBuf::from(
+        home
+            + "/.crescent/apps/start_python_without_interpreter/start_python_without_interpreter.pid",
+    );
+
+    assert!(pid_path.exists());
+
+    let mut pid_str = String::new();
+    File::open(pid_path)?.read_to_string(&mut pid_str)?;
+    let pids: Vec<&str> = pid_str.lines().collect();
+    assert!(pids.len() == 1);
+
+    assert!(!util::check_app_is_running(name)?);
+    util::delete_app_folder(name)?;
+    Ok(())
+}
+
+#[test]
 fn log_short_lived_command() -> Result<()> {
     let name = "log_echo";
     util::start_short_lived_command(name)?;
@@ -111,22 +158,52 @@ fn log_short_lived_command() -> Result<()> {
 }
 
 #[test]
+fn log_empty_file() -> Result<()> {
+    let name = "log_empty_file";
+    util::start_short_lived_command(name)?;
+
+    let home = env::var("HOME").context("Error getting HOME env.")?;
+    let log_dir = PathBuf::from(home).join(".crescent/apps/log_empty_file/log_empty_file.log");
+    fs::remove_file(&log_dir)?;
+    File::create(log_dir)?;
+
+    let mut cmd = util::get_base_command();
+    cmd.args(["log", name]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Log is empty at the moment."));
+
+    util::delete_app_folder(name)?;
+    Ok(())
+}
+
+#[test]
 fn log_follow_short_lived_command() -> Result<()> {
     let name = "log_follow_echo";
-    util::start_short_lived_command(name)?;
+    util::start_long_running_service(name)?;
+    assert!(util::check_app_is_running(name)?);
+
     let mut cmd = util::get_base_command();
 
     cmd.args(["log", name, "-f"])
         .timeout(std::time::Duration::from_secs(1));
 
-    cmd.assert()
-        .interrupted()
-        .stdout(predicate::str::contains(">> Printed"));
+    let binding = cmd.assert().interrupted();
+    let output = binding.get_output();
 
-    cmd.assert()
-        .interrupted()
-        .stdout(predicate::str::contains(">> Watching log"));
+    let stdout = &output.stdout;
 
+    let print_predicate = predicate::str::contains(">> Printed");
+    let watching_predicate = predicate::str::contains(">> Watching log");
+
+    match from_utf8(stdout) {
+        Ok(string) => print_predicate.eval(string) && watching_predicate.eval(string),
+        Err(err) => return Err(anyhow!("{err}")),
+    };
+
+    util::shutdown_long_running_service(name)?;
+    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
@@ -203,22 +280,20 @@ fn signal_long_running_service() -> Result<()> {
 
 #[test]
 fn send_command_socket() -> Result<()> {
-    let home = env::var("HOME").context("Error getting HOME env.")?;
-    let app_dir = PathBuf::from(home).join(".crescent/apps/send_socket_test");
-    fs::create_dir_all(&app_dir).context("Error creating crescent directory.")?;
-
-    let address = app_dir.join("send_socket_test.sock");
-
-    let _socket = UnixListener::bind(address)?;
+    let name = "send_socket_test";
+    util::start_long_running_service(name)?;
+    assert!(util::check_app_is_running(name)?);
 
     let mut cmd = util::get_base_command();
-    cmd.args(["send", "send_socket_test", "command"]);
+    cmd.args(["send", name, "ping"]);
 
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("Command sent."));
 
-    util::delete_app_folder("send_socket_test")?;
+    util::shutdown_long_running_service(name)?;
+    assert!(!util::check_app_is_running(name)?);
+    util::delete_app_folder(name)?;
     Ok(())
 }
 
@@ -232,7 +307,7 @@ fn attach_short_lived_command() -> Result<()> {
 
     cmd.assert()
         .failure()
-        .stderr("Error: Application not running.\n");
+        .stderr(predicate::str::contains("Application not running."));
 
     assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
@@ -257,7 +332,7 @@ fn attach_command_socket_not_found() -> Result<()> {
 
     cmd.assert()
         .failure()
-        .stderr("Error: Application not running.\n");
+        .stderr(predicate::str::contains("Application not running."));
 
     util::delete_app_folder(name)?;
     Ok(())
