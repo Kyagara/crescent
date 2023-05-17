@@ -11,7 +11,12 @@ pub struct StopArgs {
 
 impl StopArgs {
     pub fn run(self) -> Result<()> {
-        signal::generic_send_signal_command(&self.name, &15)
+        let signal = signal::SignalArgs {
+            name: self.name,
+            signal: 15,
+        };
+
+        signal.run()
     }
 }
 

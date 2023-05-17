@@ -1,4 +1,4 @@
-use super::signal::generic_send_signal_command;
+use super::signal;
 use anyhow::Result;
 use clap::Args;
 
@@ -11,6 +11,27 @@ pub struct KillArgs {
 
 impl KillArgs {
     pub fn run(self) -> Result<()> {
-        generic_send_signal_command(&self.name, &9)
+        let signal = signal::SignalArgs {
+            name: self.name,
+            signal: 9,
+        };
+
+        signal.run()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_kill_run() -> Result<()> {
+        let command = KillArgs {
+            name: "kill_run".to_string(),
+        };
+        assert_eq!(command.name, "kill_run");
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application does not exist.");
+        Ok(())
     }
 }

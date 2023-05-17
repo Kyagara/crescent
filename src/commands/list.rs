@@ -24,7 +24,7 @@ struct ApplicationInfo {
 }
 
 impl ListArgs {
-    pub fn run() -> Result<()> {
+    pub fn run(self) -> Result<()> {
         let mut crescent_pathbuf = crescent::crescent_dir()?;
 
         crescent_pathbuf.push("apps");
@@ -34,68 +34,71 @@ impl ListArgs {
             .context("Error reading crescent directory.")?
             .flatten();
 
-        let apps = get_applications_info(crescent_dir)?;
+        let apps = self.get_applications_info(crescent_dir)?;
 
         if apps.is_empty() {
             println!("No application running.");
             return Ok(());
         }
 
-        let table = create_table(apps)?;
+        let table = self.create_table(apps)?;
         println!("{table}");
         Ok(())
     }
-}
 
-fn create_table(apps: Vec<ApplicationInfo>) -> Result<Table> {
-    let mut table = Table::new(apps);
-    table.with(Style::modern());
-    Ok(table)
-}
-
-fn get_applications_info(crescent_dir: Flatten<ReadDir>) -> Result<Vec<ApplicationInfo>> {
-    let mut system = System::new();
-    system.refresh_processes();
-
-    let mut apps = vec![];
-
-    for app_dir in crescent_dir {
-        let app_name = app_dir
-            .file_name()
-            .to_str()
-            .context("Error converting OsStr to str.")?
-            .to_string();
-
-        if !application::app_already_running(&app_name)? {
-            continue;
-        }
-
-        let pids = application::app_pids_by_name(&app_name)?;
-
-        if pids.is_empty() {
-            continue;
-        }
-
-        let subprocess_pid = if pids.len() == 2 {
-            pids[1].to_string()
-        } else {
-            String::from("Not running.")
-        };
-
-        if let Some(process) = system.process(pids[0]) {
-            let app = ApplicationInfo {
-                name: app_name,
-                crescent_pid: pids[0],
-                subprocess_pid,
-                cwd: process.cwd().display().to_string(),
-                uptime: format!("{}s", process.run_time()),
-            };
-
-            apps.push(app);
-        }
+    fn create_table(&self, apps: Vec<ApplicationInfo>) -> Result<Table> {
+        let mut table = Table::new(apps);
+        table.with(Style::modern());
+        Ok(table)
     }
 
-    Ok(apps)
+    fn get_applications_info(
+        &self,
+        crescent_dir: Flatten<ReadDir>,
+    ) -> Result<Vec<ApplicationInfo>> {
+        let mut system = System::new();
+        system.refresh_processes();
+
+        let mut apps = vec![];
+
+        for app_dir in crescent_dir {
+            let app_name = app_dir
+                .file_name()
+                .to_str()
+                .context("Error converting OsStr to str.")?
+                .to_string();
+
+            if !application::app_already_running(&app_name)? {
+                continue;
+            }
+
+            let pids = application::app_pids_by_name(&app_name)?;
+
+            if pids.is_empty() {
+                continue;
+            }
+
+            let subprocess_pid = if pids.len() == 2 {
+                pids[1].to_string()
+            } else {
+                String::from("Not running.")
+            };
+
+            if let Some(process) = system.process(pids[0]) {
+                let app = ApplicationInfo {
+                    name: app_name,
+                    crescent_pid: pids[0],
+                    subprocess_pid,
+                    cwd: process.cwd().display().to_string(),
+                    uptime: format!("{}s", process.run_time()),
+                };
+
+                apps.push(app);
+            }
+        }
+
+        Ok(apps)
+    }
 }
 
 #[cfg(test)]
@@ -120,12 +123,14 @@ mod tests {
             .context("Error reading crescent directory.")?
             .flatten();
 
-        let apps = get_applications_info(crescent_dir)?;
+        let list_command = ListArgs {};
+
+        let apps = list_command.get_applications_info(crescent_dir)?;
         let app = apps.into_iter().find(|app| app.name == name).unwrap();
 
         assert_eq!(&app.name, &name);
 
-        let table = create_table(vec![app])?;
+        let table = list_command.create_table(vec![app])?;
         assert!(!table.is_empty());
         assert_eq!(table.shape(), (2, 5));
 

@@ -132,6 +132,8 @@ impl StartArgs {
 
         interpreter_args.append(&mut application_args);
 
+        drop(application_args);
+
         subprocess::start(name, interpreter_args, app_dir)?;
 
         Ok(())

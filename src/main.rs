@@ -43,7 +43,7 @@ fn main() -> Result<()> {
 
     match cli.commands {
         Start(args) => StartArgs::run(args),
-        List(_) => ListArgs::run(),
+        List(args) => ListArgs::run(args),
         Send(args) => SendArgs::run(args),
         Log(args) => LogArgs::run(args),
         Attach(args) => AttachArgs::run(args),
