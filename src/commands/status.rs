@@ -34,10 +34,21 @@ impl StatusArgs {
         system.refresh_process(subprocess_pid);
         system.refresh_memory();
 
-        if let Some((name, args, profile)) = subprocess::get_app_process_envs(&subprocess_pid)? {
+        if let Some((name, interpreter_args, application_args, profile)) =
+            subprocess::get_app_process_envs(&subprocess_pid)?
+        {
             println!("{}", "Application information:".bold().cyan());
             println!("{} {}", "Name:".white(), name);
-            println!("{} \"{}\"", "Arguments:".white(), args);
+            println!(
+                "{} \"{}\"",
+                "Interpreter arguments:".white(),
+                interpreter_args
+            );
+            println!(
+                "{} \"{}\"",
+                "Application arguments:".white(),
+                application_args
+            );
             println!("{} \"{}\"", "Profile:".white(), profile);
             println!("{} {}", "Crescent PID:".white(), pids[0]);
             println!();

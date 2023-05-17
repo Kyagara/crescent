@@ -11,6 +11,7 @@ use std::{io::Write, os::unix::net::UnixStream};
 pub struct SendArgs {
     #[arg(help = "Application name.")]
     pub name: String,
+
     #[arg(help = "Command to send.", allow_hyphen_values = true)]
     pub command: Vec<String>,
 }
