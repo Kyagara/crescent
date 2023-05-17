@@ -27,8 +27,11 @@
 
 -   Linux `x86_64` - Built and tested.
 -   Linux `aarch64`, `armv7` and `arm` - Built.
--   macOS `x86_64`, `aarch64` - Built.
+-   macOS `x86_64`- Built and tested.
+-   macOS `aarch64` - Built.
 -   Windows - Not supported.
+
+Check [Testing](#testing).
 
 ## Installation:
 
@@ -44,21 +47,21 @@ or
 cargo install --git https://github.com/Kyagara/crescent
 ```
 
-When installing crescent using cargo, default profiles will be created in crescent's main directory: `/home/<user>/.crescent/`. You can find these profiles [here](https://github.com/Kyagara/crescent/tree/main/profiles).
+When installing crescent using cargo, default profiles will be created in crescent's main directory: `<home>/.crescent/`. You can find these profiles [here](https://github.com/Kyagara/crescent/tree/main/profiles).
 
-> Profiles and applications files are located in crescent's main directory.
+> Applications files, profiles and any important file is located in crescent's main directory.
 
 ## Commands:
 
-With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. Arguments can be added using `-a`. Profiles can be passed with `-p <name/path>`, arguments will overwrite profile options.
+With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an interpreter with `-i`, for example, if you have a python project you can pass `-i python3`.Interpreter arguments can be added using `--interpreter-args "-Xms2G -Xmx2G"`. Arguments can be added using `-a`. Profiles can be passed with `-p <name/path>`, arguments will overwrite profile options.
 
-> If you provide a `java` interpreter it will add a `-jar` argument automatically.
+> As an example, a command to start a Minecraft server would look like this: `cres start ./server.jar -i java --interpreter-args "-Xms2G -Xmx2G" -a "--nogui" -n fabric-server`.
 
-> If your arguments have spaces or `-` make sure to use quotes after `-a` like: `-a "-Xms10G -Xmx10G"`.
+> Profiles can be made to turn the above command to just: `cres start -p fabric-server`.
 
 `list` the running applications.
 
-`log` prints an application's `.log` file, you can specify the amount of `lines` with `-l` (defaults to 200). You can watch the file by adding `-f` flag, which will print new lines as they are added to the file.
+`log` prints an application's log file, you can specify the amount of lines with `-l` (defaults to 200). You can watch the file by adding `-f` flag, which will print new lines as they are added to the file.
 
 `send` a command to the provided application.
 
@@ -82,7 +85,7 @@ cross test --target aarch64-unknown-linux-gnu
 
 I wanted to learn some Rust so I decided to create a tool similar to [PM2](https://pm2.keymetrics.io/) and [mark2](https://github.com/mark2devel/mark2), these two tools saved me from a lot of headache when spinning up background services for apps and in the case of mark2, Minecraft servers.
 
-## Should I use cres-
+### Should I use cres-
 
 Not for anything in production, game servers for friends for example shouldn't be a problem. crescent does not currently support auto restarts in case of a crash or something equivalent to `pm2 save` to start apps on system startup.
 

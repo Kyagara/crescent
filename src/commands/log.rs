@@ -9,6 +9,7 @@ use std::thread;
 pub struct LogArgs {
     #[arg(help = "Application name.")]
     pub name: String,
+
     #[arg(
         short,
         long,
@@ -16,6 +17,7 @@ pub struct LogArgs {
         default_value_t = 200
     )]
     pub lines: usize,
+
     #[arg(short, long, help = "Keep watching the log for any new lines.")]
     pub follow: bool,
 }

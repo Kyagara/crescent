@@ -248,8 +248,7 @@ fn start_long_running_service_with_profile() -> Result<()> {
 
     let stdout = &output.stdout;
 
-    let usage_predicate =
-        predicate::str::contains("arguments can be in one big element or in multiple elements");
+    let usage_predicate = predicate::str::contains("arguments must be in multiple elements");
     let name_predicate = predicate::str::contains(name);
 
     match from_utf8(stdout) {

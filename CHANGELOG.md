@@ -12,12 +12,17 @@ All notable changes to this project will be documented in this file.
 -   Added `serde_json` as a dependency.
 -   More tests.
 -   Command history for `attach`, pressing up or down will scroll through past commands for that subprocess.
+-   Added macos `x86` tests to ci.
+-   Profile fields will be overwritten if you a flag already set by the profile.
+-   Added environment variable `CRESCENT_APP_INTERPRETER_ARGS`.
 
 ### Changed
 
 -   Profiles file format changed to json.
 -   Profile argument in `start` now accepts a path to a file.
 -   The subprocess socket now uses serialized structs using `serde_json` for communication.
+-   Changed compressed ci artifacts format from `.tar.gz` to `.zip`.
+-   All default profiles changed to match new `start` arguments.
 
 ### Removed
 

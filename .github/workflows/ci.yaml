@@ -17,7 +17,7 @@ jobs:
                   path: |
                       ~/.cargo/registry
                       ./target
-                  key: test-cargo-registry
+                  key: test-cargo-registry-linux
 
             - name: Clippy
               run: cargo clippy
@@ -25,7 +25,7 @@ jobs:
             - name: Format
               run: cargo fmt --check
 
-    test:
+    test_linux:
         needs: lint
         runs-on: ubuntu-latest
         steps:
@@ -37,7 +37,7 @@ jobs:
                   path: |
                       ~/.cargo/registry
                       ./target
-                  key: test-cargo-registry
+                  key: test-cargo-registry-linux
 
             - name: Run tests
               run: cargo test
@@ -56,17 +56,11 @@ jobs:
                       ./target
                   key: test-cargo-registry-macos
 
-            - name: Install rust target
-              run: rustup target add aarch64-apple-darwin
-
-            - name: Test x86
+            - name: Run tests
               run: cargo test
 
-            - name: Test aarch64
-              run: SDKROOT=$(xcrun -sdk macosx --show-sdk-path) MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version) cargo test --target aarch64-apple-darwin
-
     coverage:
-        needs: test
+        needs: [test_linux, test_macos]
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
@@ -77,7 +71,7 @@ jobs:
                   path: |
                       ~/.cargo/registry
                       ./target
-                  key: test-cargo-registry
+                  key: test-cargo-registry-linux
 
             - name: Install cargo-llvm-cov
               uses: taiki-e/install-action@cargo-llvm-cov
@@ -91,37 +85,25 @@ jobs:
                   files: lcov.info
                   fail_ci_if_error: false
 
-    # https://github.com/nicolas-van/rust-cross-compile-example/
-    build:
-        needs: test
-        runs-on: ${{ matrix.os }}
+    build_linux:
+        needs: test_linux
+        runs-on: ubuntu-latest
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - target: x86_64-unknown-linux-gnu
-                      os: ubuntu-latest
-                    - target: x86_64-unknown-linux-musl
-                      os: ubuntu-latest
-                    - target: aarch64-unknown-linux-gnu
-                      os: ubuntu-latest
-                    - target: aarch64-unknown-linux-musl
-                      os: ubuntu-latest
-                    - target: armv7-unknown-linux-gnueabihf # raspberry pi 2-3-4
-                      os: ubuntu-latest
-                    - target: armv7-unknown-linux-musleabihf # raspberry pi 2-3-4
-                      os: ubuntu-latest
-                    - target: arm-unknown-linux-gnueabihf # raspberry pi 0-1
-                      os: ubuntu-latest
-                    - target: arm-unknown-linux-musleabihf # raspberry pi 0-1
-                      os: ubuntu-latest
-                    - target: x86_64-apple-darwin
-                      os: macos-latest
-                    - target: aarch64-apple-darwin
-                      os: macos-latest
+                target:
+                    [
+                        x86_64-unknown-linux-gnu,
+                        x86_64-unknown-linux-musl,
+                        aarch64-unknown-linux-gnu,
+                        aarch64-unknown-linux-musl,
+                        armv7-unknown-linux-gnueabihf,
+                        armv7-unknown-linux-musleabihf,
+                        arm-unknown-linux-gnueabihf,
+                        arm-unknown-linux-musleabihf,
+                    ]
         env:
             TARGET: ${{ matrix.target }}
-            OS: ${{ matrix.os }}
         steps:
             - uses: actions/checkout@v3
 
@@ -134,14 +116,13 @@ jobs:
                   key: build-cargo-registry-${{matrix.target}}
 
             - name: Install Linux dependencies
-              if: runner.os == 'Linux'
               run: |
                   sudo apt-get update
                   sudo apt-get install -qq crossbuild-essential-arm64 crossbuild-essential-armhf
 
             - name: Add Linux targets configurations
-              if: runner.os == 'Linux'
               run: |
+                  # https://github.com/nicolas-van/rust-cross-compile-example/
                   # some additional configuration for cross-compilation on linux
                   cat >>~/.cargo/config <<EOF
                   [target.aarch64-unknown-linux-gnu]
@@ -164,11 +145,49 @@ jobs:
             - name: Build
               run: cargo build --release --verbose --target $TARGET
 
-            - name: Compress binary
+            - name: Zipi
               run: |
                   mkdir -p ./artifacts
                   mv ./target/$TARGET/release/cres ./cres
-                  tar -czf ./artifacts/cres-$TARGET.tar.gz cres
+                  zip -r ./artifacts/cres-$TARGET.zip -j cres
+
+            - name: Upload artifact
+              uses: actions/upload-artifact@v3
+              with:
+                  name: cres-${{matrix.target}}.tar.gz
+                  path: ./artifacts/cres-${{matrix.target}}.tar.gz
+
+    build_macos:
+        needs: test_macos
+        runs-on: macos-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                target: [aarch64-apple-darwin, x86_64-apple-darwin]
+        env:
+            TARGET: ${{ matrix.target }}
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Cargo cache
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ./target
+                  key: build-cargo-registry-${{matrix.target}}
+
+            - name: Install rust target
+              run: rustup target add $TARGET
+
+            - name: Build
+              run: cargo build --release --verbose --target $TARGET
+
+            - name: Zip
+              run: |
+                  mkdir -p ./artifacts
+                  mv ./target/$TARGET/release/cres ./cres
+                  zip -r ./artifacts/cres-$TARGET.zip -j cres
 
             - name: Upload artifact
               uses: actions/upload-artifact@v3

@@ -11,7 +11,7 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
-use subprocess::{Exec, Redirection};
+use subprocess::{Popen, PopenConfig, Redirection};
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 
 #[derive(Serialize, Deserialize)]
@@ -25,14 +25,25 @@ pub enum SocketEvent {
     WriteStdin(String),
 }
 
-pub fn start(name: String, interpreter: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
+pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
+    info!("Subprocess arguments: '{}'", args.join(" "));
+
     info!("Starting subprocess.");
 
-    let mut subprocess = Exec::cmd(interpreter)
-        .args(&args)
-        .stdout(Redirection::Merge)
-        .stdin(Redirection::Pipe)
-        .popen()?;
+    let mut subprocess = match Popen::create(
+        &args,
+        PopenConfig {
+            stdout: Redirection::Merge,
+            stdin: Redirection::Pipe,
+            ..Default::default()
+        },
+    ) {
+        Ok(subprocess) => subprocess,
+        Err(err) => {
+            error!("Error starting subprocess: {err}");
+            return Err(anyhow!("Shutting down."));
+        }
+    };
 
     info!("Subprocess started.");
 
@@ -218,7 +229,7 @@ pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<bool> {
     }
 }
 
-pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String)>> {
+pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String, String)>> {
     let mut system = System::new();
     system.refresh_process(*pid);
 
@@ -230,9 +241,7 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String)
                 .iter()
                 .filter(|string| {
                     let env: Vec<&str> = string.split('=').collect();
-                    env[0] == "CRESCENT_APP_NAME"
-                        || env[0] == "CRESCENT_APP_ARGS"
-                        || env[0] == "CRESCENT_APP_PROFILE"
+                    env[0].starts_with("CRESCENT_APP_")
                 })
                 .collect();
 
@@ -250,7 +259,20 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String)
                     })
                     .collect();
 
-                let args = env
+                let interpreter_args = env
+                    .iter()
+                    .map(|string| {
+                        let env: Vec<&str> = string.split('=').collect();
+
+                        if env[0] == "CRESCENT_APP_INTERPRETER_ARGS" {
+                            return env[1].to_string();
+                        }
+
+                        "".to_string()
+                    })
+                    .collect();
+
+                let application_args = env
                     .iter()
                     .map(|string| {
                         let env: Vec<&str> = string.split('=').collect();
@@ -276,7 +298,12 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String)
                     })
                     .collect();
 
-                return Ok(Some((app_name, args, profile)));
+                return Ok(Some((
+                    app_name,
+                    interpreter_args,
+                    application_args,
+                    profile,
+                )));
             }
 
             Err(anyhow!("Process did not return any crescent envs."))
