@@ -1,4 +1,7 @@
-use crate::application;
+use crate::{
+    application,
+    subprocess::{SocketEvent, SocketMessage},
+};
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use std::{io::Write, os::unix::net::UnixStream};
@@ -20,15 +23,21 @@ impl SendArgs {
             return Err(anyhow!("Application does not exist."));
         }
 
+        if self.command.join(" ").trim().is_empty() {
+            return Err(anyhow!("Command empty."));
+        }
+
         app_dir.push(self.name.clone() + ".sock");
 
-        let mut socket = UnixStream::connect(app_dir)
+        let mut stream = UnixStream::connect(app_dir)
             .context(format!("Error connecting to '{}' socket.", self.name))?;
 
-        let message = format!("{}\n", self.command.join(" "));
+        let event = serde_json::to_vec(&SocketMessage {
+            event: SocketEvent::WriteStdin(self.command.join(" ")),
+        })?;
 
-        socket.write_all(message.as_bytes())?;
-        socket.flush()?;
+        stream.write_all(&event)?;
+        stream.flush()?;
 
         println!("Command sent.");
 

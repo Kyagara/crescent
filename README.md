@@ -27,7 +27,7 @@
 
 -   Linux `x86_64` - Built and tested.
 -   Linux `aarch64`, `armv7` and `arm` - Built.
--   macOS `x86_64` - Built.
+-   macOS `x86_64`, `aarch64` - Built.
 -   Windows - Not supported.
 
 ## Installation:
@@ -50,7 +50,7 @@ When installing crescent using cargo, default profiles will be created in cresce
 
 ## Commands:
 
-With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. Arguments can be added using `-a`. Profiles can be passed with `-p <name/path>`.
+With `start` you can launch an application by passing the file path to your executable, optionally give it a custom name with `-n` (defaults to the file name), you can pass an `interpreter` with `-i`, for example, if you have a python project you can pass `-i python3`. Arguments can be added using `-a`. Profiles can be passed with `-p <name/path>`, arguments will overwrite profile options.
 
 > If you provide a `java` interpreter it will add a `-jar` argument automatically.
 

@@ -8,11 +8,20 @@ All notable changes to this project will be documented in this file.
 
 -   Added [cross](https://github.com/cross-rs/cross) configuration file for testing other architectures.
 -   Added tests util module.
--   Added macOS to the ci.
+-   Added macOS `x86_64` and `aarch64` to the ci.
+-   Added `serde_json` as a dependency.
+-   More tests.
+-   Command history for `attach`, pressing up or down will scroll through past commands for that subprocess.
 
 ### Changed
 
+-   Profiles file format changed to json.
 -   Profile argument in `start` now accepts a path to a file.
+-   The subprocess socket now uses serialized structs using `serde_json` for communication.
+
+### Removed
+
+-   Removed `toml` dependency.
 
 ## [0.3.1]- 2023-05-14
 

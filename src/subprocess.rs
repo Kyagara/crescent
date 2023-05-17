@@ -1,24 +1,35 @@
-use crate::application;
 use anyhow::{anyhow, Result};
 use libc::pid_t;
 use log::{error, info};
+use serde::{Deserialize, Serialize};
 use std::{
     ffi::c_int,
-    fs::{self, OpenOptions},
+    fs,
     io::{ErrorKind, Read, Write},
     os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
-    str::from_utf8,
+    sync::{Arc, Mutex},
     thread,
 };
 use subprocess::{Exec, Redirection};
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 
-pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()> {
+#[derive(Serialize, Deserialize)]
+pub struct SocketMessage {
+    pub event: SocketEvent,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum SocketEvent {
+    CommandHistory(Vec<String>),
+    WriteStdin(String),
+}
+
+pub fn start(name: String, interpreter: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
     info!("Starting subprocess.");
 
     let mut subprocess = Exec::cmd(interpreter)
-        .args(args)
+        .args(&args)
         .stdout(Redirection::Merge)
         .stdin(Redirection::Pipe)
         .popen()?;
@@ -34,28 +45,19 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
         }
     };
 
-    let application_path = match application::app_dir_by_name(name) {
-        Ok(path) => path,
-        Err(err) => {
-            error!("Error retrieving application path: {err}");
-            subprocess.terminate()?;
-            return Err(anyhow!("Shutting down."));
-        }
-    };
-
-    let socket_address = application_path.join(name.clone() + ".sock");
-    let pid_path = application_path.join(name.clone() + ".pid");
-
-    drop(application_path);
-
     if let Some(status) = subprocess.poll() {
         error!(
-            "Checked if subprocess was running and it returned {:?}.",
+            "Checked if subprocess was running and it returned: {:?}.",
             status
         );
 
         return Err(anyhow!("Shutting down."));
     }
+
+    let socket_address = app_dir.join(name.clone() + ".sock");
+    let pid_path = app_dir.join(name + ".pid");
+
+    drop(app_dir);
 
     let pid = subprocess.pid().unwrap();
 
@@ -67,6 +69,8 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
 
     let socket_addr = socket_address.clone();
     let pid_parsed = Pid::from(pid as usize);
+
+    let command_history = Arc::new(Mutex::new(Vec::new()));
 
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
@@ -84,33 +88,58 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
                 match client {
                     Ok(mut stream) => {
                         let mut stdin_clone = stdin.try_clone().unwrap();
+                        let history = command_history.clone();
 
                         thread::spawn(move || {
-                            let mut recv_buf = vec![0u8; 1024];
-                            let mut bytes_read: usize = 0;
+                            let mut history = history.lock().unwrap();
+                            let mut received = vec![0u8; 1024];
+                            let mut read: usize = 0;
 
-                            while read_stream(&mut stream, &mut recv_buf, &mut bytes_read) > 0 {
-                                match from_utf8(&recv_buf[..bytes_read]) {
-                                    Ok(str) => {
-                                        info!("Command received: '{}'", str.trim());
+                            while read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
+                                match serde_json::from_slice::<SocketMessage>(&received[..read]) {
+                                    Ok(message) => {
+                                        match message.event {
+                                            SocketEvent::WriteStdin(content) => {
+                                                info!("Command received: '{}'", &content);
+                                                history.insert(0, content.to_string());
 
-                                        if let Err(err) = stdin_clone.write_all(str.as_bytes()) {
-                                            error!("Error writing to subprocess stdin: {err}.");
+                                                let cmd = content.trim().to_owned() + "\n";
 
-                                            // Should any error here shutdown and exit?
-                                            // Only exiting if the pipe is closed for now
-                                            if err.kind() == ErrorKind::BrokenPipe {
-                                                terminate(&pid_parsed);
-                                                break;
+                                                if let Err(err) =
+                                                    stdin_clone.write_all(cmd.as_bytes())
+                                                {
+                                                    error!(
+                                                        "Error writing to subprocess stdin: {err}."
+                                                    );
+
+                                                    // Should any error here shutdown and exit?
+                                                    // Only exiting if the pipe is closed for now
+                                                    if err.kind() == ErrorKind::BrokenPipe {
+                                                        terminate(&pid_parsed);
+                                                        break;
+                                                    }
+                                                }
+
+                                                if let Err(err) = stdin_clone.flush() {
+                                                    error!(
+                                                        "Error flushing subprocess stdin: {err}."
+                                                    );
+                                                }
                                             }
-                                        }
-
-                                        if let Err(err) = stdin_clone.flush() {
-                                            error!("Error flushing subprocess stdin: {err}.");
+                                            SocketEvent::CommandHistory(_) => {
+                                                let event = serde_json::to_vec(&SocketMessage {
+                                                    event: SocketEvent::CommandHistory(
+                                                        history.clone(),
+                                                    ),
+                                                })
+                                                .unwrap();
+                                                stream.write_all(&event).unwrap();
+                                                stream.flush().unwrap();
+                                            }
                                         }
                                     }
                                     Err(err) => {
-                                        error!("Error converting message to a string slice: {err}")
+                                        error!("Error converting event to struct: {err}")
                                     }
                                 };
                             }
@@ -150,16 +179,19 @@ pub fn start(name: &String, interpreter: &String, args: &[String]) -> Result<()>
 }
 
 fn append_pid(pid_path: &PathBuf, pid: &u32) -> Result<()> {
-    let mut pid_file = OpenOptions::new().read(true).append(true).open(pid_path)?;
+    let mut pid_file = fs::OpenOptions::new()
+        .read(true)
+        .append(true)
+        .open(pid_path)?;
     pid_file.write_all(pid.to_string().as_bytes())?;
     pid_file.flush()?;
     Ok(())
 }
 
 // https://codereview.stackexchange.com/questions/243693/rust-multi-cliented-tcp-server-library
-fn read_stream(stream: &mut UnixStream, recv_buf: &mut [u8], read_bytes: &mut usize) -> usize {
-    *read_bytes = stream.read(recv_buf).unwrap_or(0);
-    *read_bytes
+pub fn read_socket_stream(stream: &mut UnixStream, received: &mut [u8], read: &mut usize) -> usize {
+    *read = stream.read(received).unwrap_or(0);
+    *read
 }
 
 fn terminate(subprocess_pid: &Pid) {

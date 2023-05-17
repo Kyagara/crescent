@@ -1,10 +1,9 @@
-use std::println;
-
 use crate::{application, subprocess};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
 use crossterm::style::Stylize;
+use std::println;
 use sysinfo::{ProcessExt, System, SystemExt};
 
 #[derive(Args)]

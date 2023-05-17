@@ -1,4 +1,8 @@
-use crate::{application, tail};
+use crate::{
+    application,
+    subprocess::{read_socket_stream, SocketEvent, SocketMessage},
+    tail,
+};
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::{tick, unbounded, Receiver, Sender};
@@ -12,8 +16,10 @@ use std::{
     io::{self, Write},
     os::unix::net::UnixStream,
     path::PathBuf,
+    sync::Mutex,
     thread,
     time::Duration,
+    vec,
 };
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tui::{
@@ -37,25 +43,28 @@ pub struct AttachArgs {
 struct AttachTerminal {
     app_name: String,
     logger: TuiWidgetState,
-    input: Input,
+    input: Mutex<Input>,
     running: bool,
+    history: Vec<String>,
 }
 
 impl AttachTerminal {
     fn new(app_name: String) -> AttachTerminal {
         AttachTerminal {
             app_name,
-            input: Input::default(),
             logger: TuiWidgetState::new(),
             running: true,
+            input: Mutex::new(Input::default()),
+            history: Vec::new(),
         }
     }
 }
 
 enum TerminalEvent {
     CrosstermEvent(Event),
-    Log(String),
+    Log(Vec<String>),
     Stats(String),
+    SocketEvent(SocketMessage),
 }
 
 impl AttachArgs {
@@ -72,20 +81,25 @@ impl AttachArgs {
         let pids = application::app_pids_by_name(&self.name)?;
 
         let (sender, receiver) = unbounded();
-        let (socket_sender, socket_receiver): (Sender<String>, Receiver<String>) = unbounded();
+        let (socket_sender, socket_receiver): (Sender<SocketMessage>, Receiver<SocketMessage>) =
+            unbounded();
         let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
 
         let app_dir = application::app_dir_by_name(&self.name)?;
         let log_dir = app_dir.join(self.name.clone() + ".log");
         let socket_dir = app_dir.join(self.name.clone() + ".sock");
 
-        event_read_handler(sender.clone());
-        log_handler(log_dir, sender.clone(), log_sender, log_receiver)?;
-        stats_handler(pids[1], sender);
-        socket_handler(socket_dir, socket_receiver)?;
-
         let mut app = AttachTerminal::new(self.name);
         let mut stats_list = String::from("Waiting for stats.");
+
+        event_read_handler(sender.clone());
+        log_handler(log_dir, sender.clone(), log_sender, log_receiver)?;
+        stats_handler(pids[1], sender.clone());
+        socket_handler(socket_dir, sender, socket_receiver)?;
+
+        socket_sender.send(SocketMessage {
+            event: SocketEvent::CommandHistory(vec![]),
+        })?;
 
         if cfg!(test) {
             return Ok(());
@@ -99,21 +113,28 @@ impl AttachArgs {
 
         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
 
+        let mut history_pos: i16 = -1;
+
         while app.running {
             match receiver.recv()? {
                 TerminalEvent::CrosstermEvent(event) => match event {
                     Event::Key(key) => {
                         match key.code {
                             KeyCode::Enter => {
-                                let input = app.input.value().to_string();
+                                let mut input = app.input.lock().unwrap();
+                                let content = input.value().to_string();
 
-                                if input.is_empty() {
+                                if content.trim().is_empty() {
                                     continue;
                                 }
 
-                                app.input.reset();
-                                let message = format!("{}\n", input);
-                                socket_sender.send(message)?;
+                                input.reset();
+
+                                app.history.insert(0, content.clone());
+                                history_pos = -1;
+                                socket_sender.send(SocketMessage {
+                                    event: SocketEvent::WriteStdin(content),
+                                })?;
                                 app.logger.transition(&TuiWidgetEvent::EscapeKey);
                             }
                             KeyCode::PageUp => {
@@ -122,10 +143,28 @@ impl AttachArgs {
                             KeyCode::PageDown => {
                                 app.logger.transition(&TuiWidgetEvent::NextPageKey);
                             }
+                            KeyCode::Up => {
+                                if history_pos < app.history.len() as i16 - 1 {
+                                    history_pos += 1;
+                                    let mut input = app.input.lock().unwrap();
+                                    let input_clone = input.clone();
+                                    *input = input_clone
+                                        .with_value(app.history[history_pos as usize].to_string());
+                                }
+                            }
+                            KeyCode::Down => {
+                                if history_pos > 0 && history_pos < app.history.len() as i16 {
+                                    history_pos -= 1;
+                                    let mut input = app.input.lock().unwrap();
+                                    let input_clone = input.clone();
+                                    *input = input_clone
+                                        .with_value(app.history[history_pos as usize].to_string());
+                                }
+                            }
                             KeyCode::Esc => break,
                             _ => {
                                 tui_input::backend::crossterm::EventHandler::handle_event(
-                                    &mut app.input,
+                                    &mut *app.input.lock().unwrap(),
                                     &event,
                                 );
                             }
@@ -153,12 +192,18 @@ impl AttachArgs {
                         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
                     }
                 },
-                TerminalEvent::Log(content) => {
-                    if content.is_empty() {
+                TerminalEvent::Log(lines) => {
+                    if lines.is_empty() {
                         continue;
                     }
 
-                    debug!("{content}");
+                    for line in lines {
+                        if line.is_empty() {
+                            continue;
+                        }
+
+                        debug!("{line}");
+                    }
 
                     terminal.draw(|f| ui(f, &mut app, &stats_list))?;
                 }
@@ -166,6 +211,10 @@ impl AttachArgs {
                     stats_list = stats;
                     terminal.draw(|f| ui(f, &mut app, &stats_list))?;
                 }
+                TerminalEvent::SocketEvent(message) => match message.event {
+                    SocketEvent::CommandHistory(history) => app.history = history,
+                    SocketEvent::WriteStdin(_) => {}
+                },
             }
         }
 
@@ -195,18 +244,46 @@ fn event_read_handler(input: Sender<TerminalEvent>) {
 
 fn socket_handler(
     socket_dir: PathBuf,
-    socket_receiver: Receiver<String>,
+    sender: Sender<TerminalEvent>,
+    socket_receiver: Receiver<SocketMessage>,
 ) -> Result<(), anyhow::Error> {
     if !socket_dir.exists() {
         return Err(anyhow!("Socket file does not exist."));
     }
 
     let mut stream = UnixStream::connect(socket_dir)?;
+    let mut s = stream.try_clone()?;
 
     thread::spawn(move || {
         for received in socket_receiver {
-            stream.write_all(received.as_bytes()).unwrap();
-            stream.flush().unwrap();
+            let event = match received.event {
+                SocketEvent::CommandHistory(_content) => serde_json::to_vec(&SocketMessage {
+                    event: SocketEvent::CommandHistory(_content),
+                }),
+                SocketEvent::WriteStdin(command) => serde_json::to_vec(&SocketMessage {
+                    event: SocketEvent::WriteStdin(command),
+                }),
+            }
+            .unwrap();
+
+            s.write_all(&event).unwrap();
+            s.flush().unwrap();
+        }
+    });
+
+    let mut received = vec![0u8; 1024];
+    let mut read: usize = 0;
+
+    thread::spawn(move || {
+        while read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
+            match serde_json::from_slice::<SocketMessage>(&received[..read]) {
+                Ok(message) => {
+                    sender.send(TerminalEvent::SocketEvent(message)).unwrap();
+                }
+                Err(err) => {
+                    debug!("Error converting socket message to struct: {err}")
+                }
+            };
         }
     });
 
@@ -223,15 +300,13 @@ fn log_handler(
 
     let lines = log.read_lines(200)?;
 
-    for line in lines {
-        sender.send(TerminalEvent::Log(line))?;
-    }
+    sender.send(TerminalEvent::Log(lines))?;
 
     thread::spawn(move || log.watch(&log_sender).unwrap());
 
     thread::spawn(move || {
         for line in log_receiver {
-            sender.send(TerminalEvent::Log(line)).unwrap();
+            sender.send(TerminalEvent::Log([line].to_vec())).unwrap();
         }
     });
 
@@ -320,14 +395,16 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
 
     let input_text = Span::styled("Input", text_style);
 
-    let tui_input = Paragraph::new(app.input.value())
+    let input = app.input.lock().unwrap();
+
+    let tui_input = Paragraph::new(input.value())
         .style(Style::default())
         .block(Block::default().borders(Borders::ALL).title(input_text));
 
     f.render_widget(tui_input, chunks[2]);
 
     f.set_cursor(
-        chunks[2].x + app.input.visual_cursor() as u16 + 1,
+        chunks[2].x + input.visual_cursor() as u16 + 1,
         chunks[2].y + 1,
     )
 }
@@ -341,6 +418,7 @@ mod tests {
     use std::{
         env::temp_dir,
         fs::{remove_file, File},
+        io::Write,
         os::unix::net::UnixListener,
     };
     use tui::backend::TestBackend;
@@ -364,14 +442,15 @@ mod tests {
         let _socket = UnixListener::bind(&socket_dir)?;
 
         let (sender, receiver) = unbounded();
-        let (socket_sender, socket_receiver): (Sender<String>, Receiver<String>) = unbounded();
+        let (socket_sender, socket_receiver): (Sender<SocketMessage>, Receiver<SocketMessage>) =
+            unbounded();
         let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
         let pid = Pid::from(std::process::id() as usize);
 
         event_read_handler(sender.clone());
         log_handler(log_dir, sender.clone(), log_sender.clone(), log_receiver)?;
-        stats_handler(pid, sender);
-        socket_handler(socket_dir, socket_receiver)?;
+        stats_handler(pid, sender.clone());
+        socket_handler(socket_dir, sender, socket_receiver)?;
 
         if let TerminalEvent::Stats(a) = receiver.recv_timeout(Duration::from_secs(3))? {
             let p = predicates::str::contains("load");
@@ -379,7 +458,9 @@ mod tests {
         }
 
         log_sender.send("log".to_string())?;
-        socket_sender.send("input".to_string())?;
+        socket_sender.send(SocketMessage {
+            event: SocketEvent::WriteStdin("".to_string()),
+        })?;
 
         Ok(())
     }
