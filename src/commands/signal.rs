@@ -13,33 +13,29 @@ pub struct SignalArgs {
 
 impl SignalArgs {
     pub fn run(self) -> Result<()> {
-        generic_send_signal_command(&self.name, &self.signal)
-    }
-}
+        let app_dir = application::app_dir_by_name(&self.name)?;
 
-pub fn generic_send_signal_command(name: &String, signal: &u8) -> Result<()> {
-    let app_dir = application::app_dir_by_name(name)?;
-
-    if !app_dir.exists() {
-        return Err(anyhow!("Application does not exist."));
-    }
-
-    let pids = application::app_pids_by_name(name)?;
-
-    if pids.len() < 2 {
-        return Err(anyhow!("Application not running."));
-    }
-
-    match subprocess::check_and_send_signal(&pids[1], signal) {
-        Ok(exists) => {
-            if exists {
-                println!("Signal sent.");
-            } else {
-                println!("Subprocess not found, signal not sent.");
-            }
-            Ok(())
+        if !app_dir.exists() {
+            return Err(anyhow!("Application does not exist."));
         }
-        Err(err) => Err(err),
+
+        let pids = application::app_pids_by_name(&self.name)?;
+
+        if pids.len() < 2 {
+            return Err(anyhow!("Application not running."));
+        }
+
+        match subprocess::check_and_send_signal(&pids[1], &self.signal) {
+            Ok(exists) => {
+                if exists {
+                    println!("Signal sent.");
+                } else {
+                    println!("Subprocess not found, signal not sent.");
+                }
+                Ok(())
+            }
+            Err(err) => Err(err),
+        }
     }
 }
 

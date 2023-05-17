@@ -16,7 +16,6 @@ coverage:
 # Test files aren't important for coverage
 ignore:
     - "tests"
-    - "**/test_util"
 
 # Make comments less noisy
 comment:

@@ -154,8 +154,8 @@ jobs:
             - name: Upload artifact
               uses: actions/upload-artifact@v3
               with:
-                  name: cres-${{matrix.target}}.tar.gz
-                  path: ./artifacts/cres-${{matrix.target}}.tar.gz
+                  name: cres-${{matrix.target}}.zip
+                  path: ./artifacts/cres-${{matrix.target}}.zip
 
     build_macos:
         needs: test_macos
@@ -192,5 +192,5 @@ jobs:
             - name: Upload artifact
               uses: actions/upload-artifact@v3
               with:
-                  name: cres-${{matrix.target}}.tar.gz
-                  path: ./artifacts/cres-${{matrix.target}}.tar.gz
+                  name: cres-${{matrix.target}}.zip
+                  path: ./artifacts/cres-${{matrix.target}}.zip
