@@ -103,11 +103,9 @@ mod tests {
     use super::*;
     use crate::test_util::util;
     use anyhow::Context;
-    use serial_test::serial;
     use std::assert_eq;
 
     #[test]
-    #[serial]
     fn unit_list_command_functions() -> Result<()> {
         let name = "list_command_application_info";
         util::start_long_running_service(name)?;
@@ -123,11 +121,11 @@ mod tests {
             .flatten();
 
         let apps = get_applications_info(crescent_dir)?;
-        assert_eq!(apps.len(), 1);
-        let app = &apps[0];
+        let app = apps.into_iter().find(|app| app.name == name).unwrap();
+
         assert_eq!(&app.name, &name);
 
-        let table = create_table(apps)?;
+        let table = create_table(vec![app])?;
         assert!(!table.is_empty());
         assert_eq!(table.shape(), (2, 5));
 
