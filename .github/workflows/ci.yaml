@@ -42,6 +42,29 @@ jobs:
             - name: Run tests
               run: cargo test
 
+    test_macos:
+      needs: lint
+      runs-on: macos-latest
+      steps:
+          - uses: actions/checkout@v3
+
+          - name: Cargo cache
+            uses: actions/cache@v3
+            with:
+                path: |
+                    ~/.cargo/registry
+                    ./target
+                key: test-cargo-registry-macos
+
+          - name: Run tests
+            run: cargo test
+
+          - name: Install rust target
+            run: rustup target add aarch64-apple-darwin
+
+          - name: Build
+            run: cargo test --target aarch64-apple-darwin
+
     coverage:
         needs: test
         runs-on: ubuntu-latest

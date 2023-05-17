@@ -414,7 +414,6 @@ mod tests {
     use super::*;
     use crate::test_util::util;
     use predicates::Predicate;
-    use serial_test::serial;
     use std::{
         env::temp_dir,
         fs::{remove_file, File},
@@ -486,7 +485,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn unit_attach_run() -> Result<()> {
         let name = "attach_run";
         util::start_long_running_service(name)?;

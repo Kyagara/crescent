@@ -181,8 +181,7 @@ fn log_empty_file() -> Result<()> {
 #[test]
 fn log_follow_short_lived_command() -> Result<()> {
     let name = "log_follow_echo";
-    util::start_long_running_service(name)?;
-    assert!(util::check_app_is_running(name)?);
+    util::start_short_lived_command(name)?;
 
     let mut cmd = util::get_base_command();
 
@@ -202,8 +201,6 @@ fn log_follow_short_lived_command() -> Result<()> {
         Err(err) => return Err(anyhow!("{err}")),
     };
 
-    util::shutdown_long_running_service(name)?;
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
