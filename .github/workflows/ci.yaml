@@ -43,27 +43,27 @@ jobs:
               run: cargo test
 
     test_macos:
-      needs: lint
-      runs-on: macos-latest
-      steps:
-          - uses: actions/checkout@v3
+        needs: lint
+        runs-on: macos-latest
+        steps:
+            - uses: actions/checkout@v3
 
-          - name: Cargo cache
-            uses: actions/cache@v3
-            with:
-                path: |
-                    ~/.cargo/registry
-                    ./target
-                key: test-cargo-registry-macos
+            - name: Cargo cache
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ./target
+                  key: test-cargo-registry-macos
 
-          - name: Run tests
-            run: cargo test
+            - name: Install rust target
+              run: rustup target add aarch64-apple-darwin
 
-          - name: Install rust target
-            run: rustup target add aarch64-apple-darwin
+            - name: Test x86
+              run: cargo test
 
-          - name: Build
-            run: cargo test --target aarch64-apple-darwin
+            - name: Test aarch64
+              run: SDKROOT=$(xcrun -sdk macosx --show-sdk-path) MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version) cargo test --target aarch64-apple-darwin
 
     coverage:
         needs: test
