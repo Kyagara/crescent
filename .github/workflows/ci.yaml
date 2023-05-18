@@ -1,8 +1,16 @@
 name: Continuous integration
 
-on: [push, pull_request]
+on:
+  push:
+    branches: '**'
+    paths:
+      - "**.rs"
+      - ".github/workflows/ci.yml"
+      - "Cargo.lock"
+  workflow_dispatch:
 
 env:
+    CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
     CARGO_TERM_COLOR: always
 
 jobs:
@@ -145,7 +153,7 @@ jobs:
             - name: Build
               run: cargo build --release --verbose --target $TARGET
 
-            - name: Zipi
+            - name: Zip
               run: |
                   mkdir -p ./artifacts
                   mv ./target/$TARGET/release/cres ./cres
