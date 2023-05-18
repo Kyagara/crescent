@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.4.0] - 2023-05-17
 
 ### Added
 
@@ -28,7 +28,7 @@ All notable changes to this project will be documented in this file.
 
 -   Removed `toml` dependency.
 
-## [0.3.1]- 2023-05-14
+## [0.3.1] - 2023-05-14
 
 ### Added
 
