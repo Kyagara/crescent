@@ -65,14 +65,10 @@ impl StartArgs {
             self = self.overwrite_args(args)?;
         }
 
-        let file_path = fs::canonicalize(self.file_path.clone().unwrap())?;
-
-        if !file_path.exists() && file_path.is_file() {
-            return Err(anyhow!(format!(
-                "File '{}' not found.",
-                &file_path.to_string_lossy()
-            )));
-        }
+        let file_path = match fs::canonicalize(self.file_path.clone().unwrap()) {
+            Ok(path) => path,
+            Err(err) => return Err(anyhow!("Error retrieving absolute file path: {err}.")),
+        };
 
         let name = match &self.name {
             Some(name) => name.to_string(),
@@ -80,7 +76,7 @@ impl StartArgs {
         };
 
         if name.contains(char::is_whitespace) {
-            return Err(anyhow!("Name can't contain whitespace."));
+            return Err(anyhow!("Name contains whitespace."));
         }
 
         if application::app_already_running(&name)? {
@@ -92,7 +88,7 @@ impl StartArgs {
         let app_dir = application::app_dir_by_name(&name)?;
 
         if app_dir.exists() {
-            fs::remove_dir_all(&app_dir).context("Error reseting application directory.")?;
+            fs::remove_dir_all(&app_dir).context("Error resetting application directory.")?;
         }
 
         fs::create_dir_all(&app_dir).context("Error creating application directory.")?;
@@ -212,5 +208,68 @@ impl StartArgs {
         interpreter_args.push(exec_path.to_str().unwrap().to_string());
 
         (interpreter_args, application_args)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::util;
+    use predicates::prelude::predicate;
+
+    #[test]
+    fn unit_start_run() -> Result<()> {
+        let start_command = StartArgs {
+            file_path: Some(String::from("/does/not/exist")),
+            name: Some(String::from("name with space")),
+            interpreter: None,
+            interpreter_arguments: None,
+            application_arguments: None,
+            profile: None,
+        };
+
+        let err = start_command.run().unwrap_err();
+        assert_eq!(
+            format!("{}", err),
+            "Error retrieving absolute file path: No such file or directory (os error 2)."
+        );
+
+        let start_command = StartArgs {
+            file_path: Some(String::from("./tools/long_running_service.py")),
+            name: Some(String::from("name with space")),
+            interpreter: None,
+            interpreter_arguments: None,
+            application_arguments: None,
+            profile: None,
+        };
+
+        let err = start_command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Name contains whitespace.");
+
+        let name = "duplicate_app";
+        util::start_long_running_service(name)?;
+        assert!(util::check_app_is_running(name)?);
+
+        let mut cmd = util::get_base_command();
+
+        let args = [
+            "start",
+            "./tools/long_running_service.py",
+            "-i",
+            "python3",
+            "-n",
+            name,
+        ];
+
+        cmd.args(args);
+
+        cmd.assert().failure().stderr(predicate::str::contains(
+            "An application with the same name is already running.",
+        ));
+
+        util::shutdown_long_running_service(name)?;
+        assert!(!util::check_app_is_running(name)?);
+        util::delete_app_folder(name)?;
+        Ok(())
     }
 }
