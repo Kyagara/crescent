@@ -10,7 +10,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Args, Deserialize, Clone)]
+#[derive(Args, Deserialize)]
 #[command(about = "Start an application from the file path provided.")]
 pub struct StartArgs {
     pub file_path: Option<String>,
