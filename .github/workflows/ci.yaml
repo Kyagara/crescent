@@ -189,7 +189,7 @@ jobs:
               run: rustup target add $TARGET
 
             - name: Build
-              run: cargo build --release --verbose --target $TARGET
+              run: SDKROOT=$(xcrun -sdk macosx --show-sdk-path) MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version) cargo build --verbose --target=$TARGET
 
             - name: Zip
               run: |
