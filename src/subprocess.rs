@@ -78,23 +78,21 @@ pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
         return Err(anyhow!("Shutting down."));
     };
 
-    let socket_addr = socket_address.clone();
     let pid_parsed = Pid::from(pid as usize);
-
     let command_history = Arc::new(Mutex::new(Vec::new()));
+
+    let listener = match UnixListener::bind(&socket_address) {
+        Ok(socket) => socket,
+        Err(err) => {
+            error!("Error connecting to socket: {err}");
+            subprocess.terminate()?;
+            return Err(anyhow!("Shutting down."));
+        }
+    };
 
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
         .spawn(move || {
-            let listener = match UnixListener::bind(&socket_addr) {
-                Ok(socket) => socket,
-                Err(err) => {
-                    error!("Error connecting to socket: {err}");
-                    terminate(&pid_parsed);
-                    return;
-                }
-            };
-
             for client in listener.incoming() {
                 match client {
                     Ok(mut stream) => {
