@@ -58,9 +58,7 @@ impl LogArgs {
 
         let (sender, receiver) = unbounded();
 
-        thread::spawn(move || {
-            log.watch(&sender).unwrap();
-        });
+        thread::spawn(move || log.watch(&sender));
 
         for content in receiver {
             print!("{content}")

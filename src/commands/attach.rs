@@ -302,7 +302,7 @@ fn log_handler(
 
     sender.send(TerminalEvent::Log(lines))?;
 
-    thread::spawn(move || log.watch(&log_sender).unwrap());
+    thread::spawn(move || log.watch(&log_sender));
 
     thread::spawn(move || {
         for line in log_receiver {

@@ -56,6 +56,11 @@ static LOGGER: logger::Logger = logger::Logger;
 
 impl StartArgs {
     pub fn run(mut self) -> Result<()> {
+        if !cfg!(test) {
+            log::set_logger(&LOGGER).unwrap();
+            log::set_max_level(LevelFilter::Info);
+        }
+
         let mut profile_path = PathBuf::new();
 
         if let Some(profile) = &self.profile {
@@ -103,9 +108,6 @@ impl StartArgs {
         env::set_var("CRESCENT_APP_PROFILE", &profile_path);
 
         drop(profile_path);
-
-        log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(LevelFilter::Info);
 
         info!("Starting application.");
 
