@@ -34,7 +34,7 @@ or
 cargo install --git https://github.com/Kyagara/crescent
 ```
 
-When installing crescent using cargo, default profiles will be created in crescent's main directory: `<home>/.crescent/`. You can find these profiles [here](https://github.com/Kyagara/crescent/tree/main/profiles).
+When installing crescent using cargo, default profiles will be created in crescent's main directory: `<home>/.crescent/`. Learn more about profiles [here](https://github.com/Kyagara/crescent/wiki/Profiles).
 
 > Applications files, profiles and any important file is located in crescent's main directory.
 
