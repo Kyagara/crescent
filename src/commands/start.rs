@@ -70,7 +70,12 @@ impl StartArgs {
             self = self.overwrite_args(args)?;
         }
 
-        let file_path = match fs::canonicalize(self.file_path.clone().unwrap()) {
+        let path = match &self.file_path {
+            Some(path) => path,
+            None => return Err(anyhow!("Executable path not provided.")),
+        };
+
+        let file_path = match fs::canonicalize(path) {
             Ok(path) => path,
             Err(err) => return Err(anyhow!("Error retrieving absolute file path: {err}.")),
         };
@@ -221,6 +226,18 @@ mod tests {
 
     #[test]
     fn unit_start_run() -> Result<()> {
+        let start_command = StartArgs {
+            file_path: None,
+            name: Some(String::from("name with space")),
+            interpreter: None,
+            interpreter_arguments: None,
+            application_arguments: None,
+            profile: None,
+        };
+
+        let err = start_command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Executable path not provided.");
+
         let start_command = StartArgs {
             file_path: Some(String::from("/does/not/exist")),
             name: Some(String::from("name with space")),
