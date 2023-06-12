@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2023-06-12
+
+### Added
+
+-   Added `--flush` flag to `log` command, which will clear the log file contents.
+-   Added a check to see if the executable path was provided.
+-   Added build for Intel and Arm macOs to ci.
+-   Added [Velocity Proxy](https://github.com/PaperMC/Velocity) profile.
+
+### Fixed
+
+-   Minecraft profiles missing `-jar` at the end of the interpreter arguments.
+
 ## [0.4.0] - 2023-05-17
 
 ### Added
