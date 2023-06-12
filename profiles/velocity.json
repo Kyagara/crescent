@@ -1,0 +1,16 @@
+{
+    "__comment": "Profile for the Minecraft proxy Velocity https://docs.papermc.io/velocity/getting-started#launching-velocity-under-macos-or-linux",
+    "name": "proxy",
+    "interpreter": "java",
+    "interpreter_arguments": [
+        "-Xms1G",
+        "-Xmx1G",
+        "-XX:+UseG1GC",
+        "-XX:G1HeapRegionSize=4M",
+        "-XX:+UnlockExperimentalVMOptions",
+        "-XX:+ParallelRefProcEnabled",
+        "-XX:+AlwaysPreTouch",
+        "-XX:MaxInlineLevel=15",
+        "-jar"
+    ]
+}
