@@ -206,6 +206,7 @@ fn log_follow_short_lived_command() -> Result<()> {
 }
 
 #[test]
+#[serial]
 fn log_flush_command_long_running_service() -> Result<()> {
     let name = "log_flush_long_running_service";
     util::start_long_running_service(name)?;
