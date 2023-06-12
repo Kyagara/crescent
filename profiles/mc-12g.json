@@ -1,6 +1,6 @@
 {
     "__comment": "Aikar's flags for Minecraft, 12G ram with GC logging, Java 11+. https://docs.papermc.io/paper/aikars-flags#recommended-jvm-startup-flags",
-    "name": "minecraft-server",
+    "name": "server",
     "interpreter": "java",
     "interpreter_arguments": [
         "-Xms12G",
@@ -25,7 +25,8 @@
         "-XX:MaxTenuringThreshold=1",
         "-Dusing.aikars.flags=https://mcflags.emc.gs",
         "-Daikars.new.flags=true",
-        "-Xlog:gc*:logs/gc.log:time,uptime:filecount=5,filesize=1M"
+        "-Xlog:gc*:logs/gc.log:time,uptime:filecount=5,filesize=1M",
+        "-jar"
     ],
     "application_arguments": ["--nogui"]
 }

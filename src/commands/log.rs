@@ -2,10 +2,10 @@ use crate::{application, tail};
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::unbounded;
-use std::thread;
+use std::{fs::OpenOptions, thread};
 
 #[derive(Args)]
-#[command(about = "Print or watch the '.log' file from an application.")]
+#[command(about = "Print, watch or flush the log file from an application.")]
 pub struct LogArgs {
     #[arg(help = "Application name.")]
     pub name: String,
@@ -20,6 +20,9 @@ pub struct LogArgs {
 
     #[arg(short, long, help = "Keep watching the log for any new lines.")]
     pub follow: bool,
+
+    #[arg(long, help = "Flush the application log.")]
+    pub flush: bool,
 }
 
 impl LogArgs {
@@ -30,7 +33,23 @@ impl LogArgs {
             return Err(anyhow!("Application does not exist."));
         }
 
-        app_dir.push(self.name + ".log");
+        app_dir.push(format!("{}.log", self.name));
+
+        if !app_dir.is_file() {
+            return Err(anyhow!("Log file does not exist."));
+        }
+
+        if self.flush {
+            match OpenOptions::new().write(true).truncate(true).open(app_dir) {
+                Ok(_) => {
+                    println!("Flushed '{}' log file.", self.name);
+                    return Ok(());
+                }
+                Err(err) => {
+                    return Err(anyhow!("Error flushing log file: {err:}"));
+                }
+            }
+        }
 
         let mut log = tail::Tail::new(app_dir)?;
 
@@ -78,10 +97,12 @@ mod tests {
             name: "log_run".to_string(),
             lines: 200,
             follow: false,
+            flush: false,
         };
 
         assert_eq!(command.name, "log_run");
         assert!(!command.follow);
+        assert!(!command.flush);
         assert_eq!(command.lines, 200);
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application does not exist.");
