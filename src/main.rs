@@ -15,11 +15,7 @@ mod tail;
 mod test_util;
 
 #[derive(Parser)]
-#[command(
-    author,
-    version,
-    about = "Process manager for game servers or services."
-)]
+#[command(name = "Crescent", version, about)]
 struct Crescent {
     #[command(subcommand)]
     pub commands: Commands,
