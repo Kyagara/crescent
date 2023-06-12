@@ -68,7 +68,7 @@ jobs:
               run: cargo test
 
     coverage:
-        needs: [test_linux, test_macos]
+        needs: lint
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v3
