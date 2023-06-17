@@ -5,7 +5,7 @@ on:
         branches: '**'
         paths:
             - '**.rs'
-            - '.github/workflows/ci.yml'
+            - '.github/workflows/ci.yaml'
             - 'Cargo.lock'
     workflow_dispatch:
 
@@ -130,8 +130,6 @@ jobs:
 
             - name: Add Linux targets configurations
               run: |
-                  # https://github.com/nicolas-van/rust-cross-compile-example/
-                  # some additional configuration for cross-compilation on linux
                   cat >>~/.cargo/config <<EOF
                   [target.aarch64-unknown-linux-gnu]
                   linker = "aarch64-linux-gnu-gcc"
@@ -150,10 +148,10 @@ jobs:
             - name: Install rust target
               run: rustup target add $TARGET
 
-            - name: Build
+            - name: Build binary
               run: cargo build --release --verbose --target $TARGET
 
-            - name: Zip
+            - name: Zip binary
               run: |
                   mkdir -p ./artifacts
                   mv ./target/$TARGET/release/cres ./cres
@@ -188,10 +186,10 @@ jobs:
             - name: Install rust target
               run: rustup target add $TARGET
 
-            - name: Build
+            - name: Build binary
               run: SDKROOT=$(xcrun -sdk macosx --show-sdk-path) MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version) cargo build --release --verbose --target=$TARGET
 
-            - name: Zip
+            - name: Zip binary
               run: |
                   mkdir -p ./artifacts
                   mv ./target/$TARGET/release/cres ./cres
