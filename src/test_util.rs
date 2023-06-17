@@ -1,5 +1,5 @@
 #[cfg(test)]
-pub mod util {
+pub mod test_utils {
     use anyhow::{anyhow, Context, Result};
     use assert_cmd::Command;
     use predicates::{prelude::predicate, Predicate};

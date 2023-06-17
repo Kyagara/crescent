@@ -41,7 +41,7 @@ impl SignalArgs {
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::util::delete_app_folder;
+    use crate::test_util::test_utils::delete_app_folder;
 
     use super::*;
     use anyhow::Context;

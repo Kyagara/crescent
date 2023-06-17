@@ -412,7 +412,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::util;
+    use crate::test_util::test_utils;
     use predicates::Predicate;
     use std::{
         env::temp_dir,
@@ -467,8 +467,8 @@ mod tests {
     #[test]
     fn unit_attach_draw_ui() -> Result<()> {
         let name = "attach_draw_ui";
-        util::start_long_running_service(name)?;
-        assert!(util::check_app_is_running(name)?);
+        test_utils::start_long_running_service(name)?;
+        assert!(test_utils::check_app_is_running(name)?);
 
         let mut app = AttachTerminal::new(name.to_string());
         let stats_list = String::from("Waiting for stats.");
@@ -478,17 +478,17 @@ mod tests {
 
         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
 
-        util::shutdown_long_running_service(name)?;
-        assert!(!util::check_app_is_running(name)?);
-        util::delete_app_folder(name)?;
+        test_utils::shutdown_long_running_service(name)?;
+        assert!(!test_utils::check_app_is_running(name)?);
+        test_utils::delete_app_folder(name)?;
         Ok(())
     }
 
     #[test]
     fn unit_attach_run() -> Result<()> {
         let name = "attach_run";
-        util::start_long_running_service(name)?;
-        assert!(util::check_app_is_running(name)?);
+        test_utils::start_long_running_service(name)?;
+        assert!(test_utils::check_app_is_running(name)?);
 
         let command_args = AttachArgs {
             name: "attach_run".to_string(),
@@ -496,9 +496,9 @@ mod tests {
 
         command_args.run()?;
 
-        util::shutdown_long_running_service(name)?;
-        assert!(!util::check_app_is_running(name)?);
-        util::delete_app_folder(name)?;
+        test_utils::shutdown_long_running_service(name)?;
+        assert!(!test_utils::check_app_is_running(name)?);
+        test_utils::delete_app_folder(name)?;
         Ok(())
     }
 }

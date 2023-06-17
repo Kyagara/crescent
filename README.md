@@ -38,8 +38,11 @@ When installing crescent using cargo, default profiles will be created in cresce
 
 > Applications files, profiles and any important file is located in crescent's main directory.
 
-## Todo
+## Planned
 
 -   More tests, 85% target.
+-   Reduce unwraps
+-   Restart command
+-   Async
 -   Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
--   Lots of unwraps inside threads
+-   Log rotation
