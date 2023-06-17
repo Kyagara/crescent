@@ -1,4 +1,4 @@
-use crate::{application, crescent};
+use crate::{application, crescent, util};
 use anyhow::{Context, Result};
 use clap::Args;
 use std::{fs::ReadDir, iter::Flatten, vec};
@@ -90,7 +90,7 @@ impl ListArgs {
                     crescent_pid: pids[0],
                     subprocess_pid,
                     cwd: process.cwd().display().to_string(),
-                    uptime: format!("{}s", process.run_time()),
+                    uptime: util::get_uptime_from_seconds(process.run_time()),
                 };
 
                 apps.push(app);

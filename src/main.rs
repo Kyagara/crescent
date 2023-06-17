@@ -13,6 +13,7 @@ mod logger;
 mod subprocess;
 mod tail;
 mod test_util;
+mod util;
 
 #[derive(Parser)]
 #[command(name = "Crescent", version, about)]
