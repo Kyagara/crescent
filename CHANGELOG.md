@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+-   Changed the project license from `MIT` to `Apache-2.0`.
+-   'Uptime' in `status` and `list` now display seconds/minutes/hours/days.
+
+### Fixed
+
+-   CI typos.
+
 ## [0.4.1] - 2023-06-12
 
 ### Added

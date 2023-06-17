@@ -8,7 +8,7 @@ description = "A process manager for game servers or services."
 keywords = ["process-manager", "minecraft", "socket", "tui"]
 repository = "https://github.com/Kyagara/crescent"
 homepage = "https://github.com/Kyagara/crescent"
-license = "MIT"
+license = "Apache-2.0"
 rust-version = "1.65"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
