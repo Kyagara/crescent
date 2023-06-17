@@ -1,4 +1,4 @@
-use crate::{application, subprocess};
+use crate::{application, subprocess, util};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
@@ -83,7 +83,11 @@ impl StatusArgs {
                 );
 
                 println!("{} {}", "Started at:".white(), start_time);
-                println!("{} {}s", "Uptime:".white(), process.run_time());
+                println!(
+                    "{} {}",
+                    "Uptime:".white(),
+                    util::get_uptime_from_seconds(process.run_time())
+                );
             }
 
             return Ok(());
