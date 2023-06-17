@@ -313,20 +313,20 @@ pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{application::app_pids_by_name, test_util::util};
+    use crate::{application::app_pids_by_name, test_util::test_utils};
 
     #[test]
     fn unit_subprocess_terminate() -> Result<()> {
         let name = "subprocess_terminate";
-        util::start_long_running_service(name)?;
-        assert!(util::check_app_is_running(name)?);
+        test_utils::start_long_running_service(name)?;
+        assert!(test_utils::check_app_is_running(name)?);
 
         let pids = app_pids_by_name(&name.to_string())?;
 
         terminate(&pids[1]);
 
-        assert!(!util::check_app_is_running(name)?);
-        util::delete_app_folder(name)?;
+        assert!(!test_utils::check_app_is_running(name)?);
+        test_utils::delete_app_folder(name)?;
         Ok(())
     }
 }

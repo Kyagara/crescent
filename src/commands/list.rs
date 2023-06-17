@@ -104,15 +104,15 @@ impl ListArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::util;
+    use crate::test_util::test_utils;
     use anyhow::Context;
     use std::assert_eq;
 
     #[test]
     fn unit_list_command_functions() -> Result<()> {
         let name = "list_command_application_info";
-        util::start_long_running_service(name)?;
-        assert!(util::check_app_is_running(name)?);
+        test_utils::start_long_running_service(name)?;
+        assert!(test_utils::check_app_is_running(name)?);
 
         let mut crescent_pathbuf = crescent::crescent_dir()?;
 
@@ -134,9 +134,9 @@ mod tests {
         assert!(!table.is_empty());
         assert_eq!(table.shape(), (2, 5));
 
-        util::shutdown_long_running_service(name)?;
-        assert!(!util::check_app_is_running(name)?);
-        util::delete_app_folder(name)?;
+        test_utils::shutdown_long_running_service(name)?;
+        assert!(!test_utils::check_app_is_running(name)?);
+        test_utils::delete_app_folder(name)?;
         Ok(())
     }
 }

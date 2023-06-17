@@ -221,7 +221,7 @@ impl StartArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::util;
+    use crate::test_util::test_utils;
     use predicates::prelude::predicate;
 
     #[test]
@@ -266,10 +266,10 @@ mod tests {
         assert_eq!(format!("{}", err), "Name contains whitespace.");
 
         let name = "duplicate_app";
-        util::start_long_running_service(name)?;
-        assert!(util::check_app_is_running(name)?);
+        test_utils::start_long_running_service(name)?;
+        assert!(test_utils::check_app_is_running(name)?);
 
-        let mut cmd = util::get_base_command();
+        let mut cmd = test_utils::get_base_command();
 
         let args = [
             "start",
@@ -286,9 +286,9 @@ mod tests {
             "An application with the same name is already running.",
         ));
 
-        util::shutdown_long_running_service(name)?;
-        assert!(!util::check_app_is_running(name)?);
-        util::delete_app_folder(name)?;
+        test_utils::shutdown_long_running_service(name)?;
+        assert!(!test_utils::check_app_is_running(name)?);
+        test_utils::delete_app_folder(name)?;
         Ok(())
     }
 }
