@@ -106,9 +106,11 @@ mod tests {
     use super::*;
     use crate::test_util::test_utils;
     use anyhow::Context;
+    use serial_test::serial;
     use std::assert_eq;
 
     #[test]
+    #[serial]
     fn unit_list_command_functions() -> Result<()> {
         let name = "list_command_application_info";
         test_utils::start_long_running_service(name)?;
