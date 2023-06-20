@@ -1,13 +1,15 @@
-use crate::{application, crescent, logger, subprocess};
+use crate::{
+    application::{self, ApplicationStatus},
+    crescent, logger, subprocess,
+};
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use daemonize::Daemonize;
 use log::{info, LevelFilter};
 use serde::Deserialize;
 use std::{
-    env,
     fs::{self, File},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 #[derive(Args, Deserialize)]
@@ -49,6 +51,7 @@ pub struct StartArgs {
         long = "profile",
         help = "Name or path to the profile to load fields from."
     )]
+    #[serde(skip)]
     pub profile: Option<String>,
 }
 
@@ -61,11 +64,12 @@ impl StartArgs {
             log::set_max_level(LevelFilter::Info);
         }
 
-        let mut profile_path = PathBuf::new();
+        let mut profile_name = String::new();
 
         if let Some(profile) = &self.profile {
-            profile_path = crescent::get_profile_path(profile.to_string())?;
-            let string = fs::read_to_string(&profile_path)?;
+            profile_name = profile.clone();
+            let profile_path = crescent::get_profile_path(profile.to_string())?;
+            let string = fs::read_to_string(profile_path)?;
             let args: StartArgs = serde_json::from_str(&string)?;
             self = self.overwrite_args(args)?;
         }
@@ -103,16 +107,7 @@ impl StartArgs {
 
         fs::create_dir_all(&app_dir).context("Error creating application directory.")?;
 
-        let (mut interpreter_args, mut application_args) =
-            self.create_subprocess_arguments(&file_path);
-
-        // The subprocess inherits all environment variables
-        env::set_var("CRESCENT_APP_NAME", &name);
-        env::set_var("CRESCENT_APP_INTERPRETER_ARGS", interpreter_args.join(" "));
-        env::set_var("CRESCENT_APP_ARGS", application_args.join(" "));
-        env::set_var("CRESCENT_APP_PROFILE", &profile_path);
-
-        drop(profile_path);
+        let (interpreter_args, application_args) = self.create_subprocess_arguments(&file_path);
 
         info!("Starting application.");
 
@@ -133,11 +128,23 @@ impl StartArgs {
             info!("Daemon started.");
         }
 
-        interpreter_args.append(&mut application_args);
+        let cmd: Vec<String>;
+        {
+            let mut i_args = interpreter_args.clone();
+            let mut a_args = application_args.clone();
+            i_args.append(&mut a_args);
+            cmd = i_args
+        }
 
-        drop(application_args);
+        let app_status = ApplicationStatus {
+            name,
+            interpreter_args,
+            application_args,
+            cmd,
+            profile: profile_name,
+        };
 
-        subprocess::start(name, interpreter_args, app_dir)?;
+        subprocess::start(app_status, app_dir)?;
 
         Ok(())
     }
