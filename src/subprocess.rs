@@ -1,10 +1,11 @@
+use crate::application::{ping_app, ApplicationStatus};
 use anyhow::{anyhow, Result};
 use libc::pid_t;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::c_int,
-    fs,
+    fs::{self, File},
     io::{ErrorKind, Read, Write},
     os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
@@ -12,83 +13,47 @@ use std::{
     thread,
 };
 use subprocess::{Popen, PopenConfig, Redirection};
-use sysinfo::{Pid, ProcessExt, System, SystemExt};
-
-#[derive(Serialize, Deserialize)]
-pub struct SocketMessage {
-    pub event: SocketEvent,
-}
+use sysinfo::Pid;
 
 #[derive(Serialize, Deserialize)]
 pub enum SocketEvent {
+    RetrieveStatus(ApplicationStatus),
     CommandHistory(Vec<String>),
     WriteStdin(String),
+    Ping(),
 }
 
-pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
-    info!("Subprocess arguments: '{}'", args.join(" "));
+pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
+    info!("Subprocess arguments: '{}'", app_status.cmd.join(" "));
+
+    let socket_address = app_dir.join(app_status.name.clone() + ".sock");
+    let pid_path = app_dir.join(app_status.name.clone() + ".pid");
+
+    drop(app_dir);
 
     info!("Starting subprocess.");
 
-    let mut subprocess = match Popen::create(
-        &args,
-        PopenConfig {
-            stdout: Redirection::Merge,
-            stdin: Redirection::Pipe,
-            ..Default::default()
-        },
-    ) {
+    let (mut subprocess, stdin, pid) = match exec_subprocess(pid_path, app_status.cmd.clone()) {
         Ok(subprocess) => subprocess,
         Err(err) => {
-            error!("Error starting subprocess: {err}");
+            error!("{err}");
             return Err(anyhow!("Shutting down."));
         }
     };
 
     info!("Subprocess started.");
 
-    let stdin = match subprocess.stdin.take() {
-        Some(stdin) => stdin,
-        None => {
-            error!("Subprocess stdin was empty, terminating subprocess.");
-            subprocess.terminate()?;
-            return Err(anyhow!("Shutting down."));
-        }
-    };
-
-    if let Some(status) = subprocess.poll() {
-        error!(
-            "Checked if subprocess was running and it returned: {:?}.",
-            status
-        );
-
-        return Err(anyhow!("Shutting down."));
-    }
-
-    let socket_address = app_dir.join(name.clone() + ".sock");
-    let pid_path = app_dir.join(name + ".pid");
-
-    drop(app_dir);
-
-    let pid = subprocess.pid().unwrap();
-
-    if let Err(err) = append_pid(&pid_path, &pid) {
-        error!("Error appending PID to file: {err}");
-        subprocess.terminate()?;
-        return Err(anyhow!("Shutting down."));
-    };
-
-    let pid_parsed = Pid::from(pid as usize);
-    let command_history = Arc::new(Mutex::new(Vec::new()));
-
     let listener = match UnixListener::bind(&socket_address) {
         Ok(socket) => socket,
         Err(err) => {
-            error!("Error connecting to socket: {err}");
+            error!("Error starting socket listener: {err}.");
             subprocess.terminate()?;
             return Err(anyhow!("Shutting down."));
         }
     };
+
+    let command_history = Arc::new(Mutex::new(Vec::new()));
+    let status = Arc::new(Mutex::new(app_status));
 
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
@@ -98,16 +63,18 @@ pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
                     Ok(mut stream) => {
                         let mut stdin_clone = stdin.try_clone().unwrap();
                         let history = command_history.clone();
+                        let status = status.clone();
 
                         thread::spawn(move || {
                             let mut history = history.lock().unwrap();
+                            let status = status.lock().unwrap();
                             let mut received = vec![0u8; 1024];
                             let mut read: usize = 0;
 
                             while read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
-                                match serde_json::from_slice::<SocketMessage>(&received[..read]) {
+                                match serde_json::from_slice::<SocketEvent>(&received[..read]) {
                                     Ok(message) => {
-                                        match message.event {
+                                        match message {
                                             SocketEvent::WriteStdin(content) => {
                                                 info!("Command received: '{}'", &content);
                                                 history.insert(0, content.to_string());
@@ -124,11 +91,10 @@ pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
                                                     // Should any error here shutdown and exit?
                                                     // Only exiting if the pipe is closed for now
                                                     if err.kind() == ErrorKind::BrokenPipe {
-                                                        terminate(&pid_parsed);
+                                                        terminate(&status.name, &pid);
                                                         break;
                                                     }
                                                 }
-
                                                 if let Err(err) = stdin_clone.flush() {
                                                     error!(
                                                         "Error flushing subprocess stdin: {err}."
@@ -136,12 +102,23 @@ pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
                                                 }
                                             }
                                             SocketEvent::CommandHistory(_) => {
-                                                let event = serde_json::to_vec(&SocketMessage {
-                                                    event: SocketEvent::CommandHistory(
-                                                        history.clone(),
-                                                    ),
-                                                })
+                                                let event = serde_json::to_vec(
+                                                    &SocketEvent::CommandHistory(history.clone()),
+                                                )
                                                 .unwrap();
+                                                stream.write_all(&event).unwrap();
+                                                stream.flush().unwrap();
+                                            }
+                                            SocketEvent::RetrieveStatus(_) => {
+                                                let event =
+                                                    serde_json::to_vec(&status.clone()).unwrap();
+                                                stream.write_all(&event).unwrap();
+                                                stream.flush().unwrap();
+                                            }
+                                            SocketEvent::Ping() => {
+                                                let event =
+                                                    serde_json::to_vec(&SocketEvent::Ping())
+                                                        .unwrap();
                                                 stream.write_all(&event).unwrap();
                                                 stream.flush().unwrap();
                                             }
@@ -187,13 +164,51 @@ pub fn start(name: String, args: Vec<String>, app_dir: PathBuf) -> Result<()> {
     Ok(())
 }
 
+fn exec_subprocess(pid_path: PathBuf, args: Vec<String>) -> Result<(Popen, File, Pid)> {
+    let mut subprocess = match Popen::create(
+        &args,
+        PopenConfig {
+            stdout: Redirection::Merge,
+            stdin: Redirection::Pipe,
+            ..Default::default()
+        },
+    ) {
+        Ok(subprocess) => subprocess,
+        Err(err) => return Err(anyhow!("Error starting subprocess: {err}.")),
+    };
+
+    if let Some(status) = subprocess.poll() {
+        return Err(anyhow!(
+            "Checked if subprocess was running and it returned status: {status:?}."
+        ));
+    }
+
+    let stdin = match subprocess.stdin.take() {
+        Some(stdin) => stdin,
+        None => {
+            subprocess.terminate()?;
+            return Err(anyhow!(
+                "Subprocess stdin was empty, terminating subprocess."
+            ));
+        }
+    };
+
+    let pid = subprocess.pid().expect("pid shouldn't be empty");
+
+    if let Err(err) = append_pid(&pid_path, &pid) {
+        subprocess.terminate()?;
+        return Err(anyhow!("Error appending PID to file: {err}."));
+    };
+
+    Ok((subprocess, stdin, Pid::from(pid as usize)))
+}
+
 fn append_pid(pid_path: &PathBuf, pid: &u32) -> Result<()> {
     let mut pid_file = fs::OpenOptions::new()
         .read(true)
         .append(true)
         .open(pid_path)?;
     pid_file.write_all(pid.to_string().as_bytes())?;
-    pid_file.flush()?;
     Ok(())
 }
 
@@ -203,17 +218,17 @@ pub fn read_socket_stream(stream: &mut UnixStream, received: &mut [u8], read: &m
     *read
 }
 
-fn terminate(subprocess_pid: &Pid) {
+fn terminate(name: &String, subprocess_pid: &Pid) {
     info!("Sending SIGTERM to subprocess.");
 
-    if let Err(err) = check_and_send_signal(subprocess_pid, &15) {
+    if let Err(err) = check_and_send_signal(name, subprocess_pid, &15) {
         error!("{err}");
     }
 }
 
-pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<bool> {
-    match get_app_process_envs(pid)? {
-        Some(_) => {
+pub fn check_and_send_signal(name: &String, pid: &Pid, signal: &u8) -> Result<bool> {
+    match ping_app(name) {
+        Ok(_) => {
             let subprocess_pid: usize = (*pid).into();
             let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
 
@@ -223,90 +238,7 @@ pub fn check_and_send_signal(pid: &Pid, signal: &u8) -> Result<bool> {
 
             Err(anyhow!("Error sending signal: errno {result}."))
         }
-        None => Ok(false),
-    }
-}
-
-pub fn get_app_process_envs(pid: &Pid) -> Result<Option<(String, String, String, String)>> {
-    let mut system = System::new();
-    system.refresh_process(*pid);
-
-    match system.process(*pid) {
-        Some(process) => {
-            let envs = process.environ();
-
-            let env: Vec<&String> = envs
-                .iter()
-                .filter(|string| {
-                    let env: Vec<&str> = string.split('=').collect();
-                    env[0].starts_with("CRESCENT_APP_")
-                })
-                .collect();
-
-            if !env.is_empty() {
-                let app_name = env
-                    .iter()
-                    .map(|string| {
-                        let env: Vec<&str> = string.split('=').collect();
-
-                        if env[0] == "CRESCENT_APP_NAME" {
-                            return env[1].to_string();
-                        }
-
-                        "".to_string()
-                    })
-                    .collect();
-
-                let interpreter_args = env
-                    .iter()
-                    .map(|string| {
-                        let env: Vec<&str> = string.split('=').collect();
-
-                        if env[0] == "CRESCENT_APP_INTERPRETER_ARGS" {
-                            return env[1].to_string();
-                        }
-
-                        "".to_string()
-                    })
-                    .collect();
-
-                let application_args = env
-                    .iter()
-                    .map(|string| {
-                        let env: Vec<&str> = string.split('=').collect();
-
-                        if env[0] == "CRESCENT_APP_ARGS" {
-                            return env[1].to_string();
-                        }
-
-                        "".to_string()
-                    })
-                    .collect();
-
-                let profile = env
-                    .iter()
-                    .map(|string| {
-                        let env: Vec<&str> = string.split('=').collect();
-
-                        if env[0] == "CRESCENT_APP_PROFILE" {
-                            return env[1].to_string();
-                        }
-
-                        "".to_string()
-                    })
-                    .collect();
-
-                return Ok(Some((
-                    app_name,
-                    interpreter_args,
-                    application_args,
-                    profile,
-                )));
-            }
-
-            Err(anyhow!("Process did not return any crescent envs."))
-        }
-        None => Ok(None),
+        Err(_) => Ok(false),
     }
 }
 
@@ -323,7 +255,7 @@ mod tests {
 
         let pids = app_pids_by_name(&name.to_string())?;
 
-        terminate(&pids[1]);
+        terminate(&name.to_string(), &pids[1]);
 
         assert!(!test_utils::check_app_is_running(name)?);
         test_utils::delete_app_folder(name)?;

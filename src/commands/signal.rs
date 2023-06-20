@@ -25,7 +25,7 @@ impl SignalArgs {
             return Err(anyhow!("Application not running."));
         }
 
-        match subprocess::check_and_send_signal(&pids[1], &self.signal) {
+        match subprocess::check_and_send_signal(&self.name, &pids[1], &self.signal) {
             Ok(exists) => {
                 if exists {
                     println!("Signal sent.");

@@ -1,6 +1,6 @@
 use crate::{
     application,
-    subprocess::{read_socket_stream, SocketEvent, SocketMessage},
+    subprocess::{read_socket_stream, SocketEvent},
     tail,
 };
 use anyhow::{anyhow, Result};
@@ -64,7 +64,7 @@ enum TerminalEvent {
     CrosstermEvent(Event),
     Log(Vec<String>),
     Stats(String),
-    SocketEvent(SocketMessage),
+    SocketEvent(SocketEvent),
 }
 
 impl AttachArgs {
@@ -81,7 +81,7 @@ impl AttachArgs {
         let pids = application::app_pids_by_name(&self.name)?;
 
         let (sender, receiver) = unbounded();
-        let (socket_sender, socket_receiver): (Sender<SocketMessage>, Receiver<SocketMessage>) =
+        let (socket_sender, socket_receiver): (Sender<SocketEvent>, Receiver<SocketEvent>) =
             unbounded();
         let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
 
@@ -97,9 +97,7 @@ impl AttachArgs {
         stats_handler(pids[1], sender.clone());
         socket_handler(socket_dir, sender, socket_receiver)?;
 
-        socket_sender.send(SocketMessage {
-            event: SocketEvent::CommandHistory(vec![]),
-        })?;
+        socket_sender.send(SocketEvent::CommandHistory(vec![]))?;
 
         if cfg!(test) {
             return Ok(());
@@ -132,9 +130,7 @@ impl AttachArgs {
 
                                 app.history.insert(0, content.clone());
                                 history_pos = -1;
-                                socket_sender.send(SocketMessage {
-                                    event: SocketEvent::WriteStdin(content),
-                                })?;
+                                socket_sender.send(SocketEvent::WriteStdin(content))?;
                                 app.logger.transition(&TuiWidgetEvent::EscapeKey);
                             }
                             KeyCode::PageUp => {
@@ -211,9 +207,11 @@ impl AttachArgs {
                     stats_list = stats;
                     terminal.draw(|f| ui(f, &mut app, &stats_list))?;
                 }
-                TerminalEvent::SocketEvent(message) => match message.event {
+                TerminalEvent::SocketEvent(message) => match message {
                     SocketEvent::CommandHistory(history) => app.history = history,
                     SocketEvent::WriteStdin(_) => {}
+                    SocketEvent::RetrieveStatus(_) => {}
+                    SocketEvent::Ping() => {}
                 },
             }
         }
@@ -245,7 +243,7 @@ fn event_read_handler(input: Sender<TerminalEvent>) {
 fn socket_handler(
     socket_dir: PathBuf,
     sender: Sender<TerminalEvent>,
-    socket_receiver: Receiver<SocketMessage>,
+    socket_receiver: Receiver<SocketEvent>,
 ) -> Result<(), anyhow::Error> {
     if !socket_dir.exists() {
         return Err(anyhow!("Socket file does not exist."));
@@ -256,18 +254,27 @@ fn socket_handler(
 
     thread::spawn(move || {
         for received in socket_receiver {
-            let event = match received.event {
-                SocketEvent::CommandHistory(_content) => serde_json::to_vec(&SocketMessage {
-                    event: SocketEvent::CommandHistory(_content),
-                }),
-                SocketEvent::WriteStdin(command) => serde_json::to_vec(&SocketMessage {
-                    event: SocketEvent::WriteStdin(command),
-                }),
-            }
-            .unwrap();
+            let json = match received {
+                SocketEvent::CommandHistory(_content) => {
+                    Some(serde_json::to_vec(&SocketEvent::CommandHistory(_content)))
+                }
+                SocketEvent::WriteStdin(command) => {
+                    Some(serde_json::to_vec(&SocketEvent::WriteStdin(command)))
+                }
+                _ => None,
+            };
 
-            s.write_all(&event).unwrap();
-            s.flush().unwrap();
+            if let Some(event) = json {
+                match event {
+                    Ok(event) => {
+                        s.write_all(&event).unwrap();
+                        s.flush().unwrap();
+                    }
+                    Err(err) => {
+                        debug!("Error serializing event: {err}")
+                    }
+                }
+            }
         }
     });
 
@@ -276,7 +283,7 @@ fn socket_handler(
 
     thread::spawn(move || {
         while read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
-            match serde_json::from_slice::<SocketMessage>(&received[..read]) {
+            match serde_json::from_slice::<SocketEvent>(&received[..read]) {
                 Ok(message) => {
                     sender.send(TerminalEvent::SocketEvent(message)).unwrap();
                 }
@@ -441,7 +448,7 @@ mod tests {
         let _socket = UnixListener::bind(&socket_dir)?;
 
         let (sender, receiver) = unbounded();
-        let (socket_sender, socket_receiver): (Sender<SocketMessage>, Receiver<SocketMessage>) =
+        let (socket_sender, socket_receiver): (Sender<SocketEvent>, Receiver<SocketEvent>) =
             unbounded();
         let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
         let pid = Pid::from(std::process::id() as usize);
@@ -457,9 +464,7 @@ mod tests {
         }
 
         log_sender.send("log".to_string())?;
-        socket_sender.send(SocketMessage {
-            event: SocketEvent::WriteStdin("".to_string()),
-        })?;
+        socket_sender.send(SocketEvent::WriteStdin("".to_string()))?;
 
         Ok(())
     }

@@ -1,7 +1,4 @@
-use crate::{
-    application,
-    subprocess::{SocketEvent, SocketMessage},
-};
+use crate::{application, subprocess::SocketEvent};
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use std::{io::Write, os::unix::net::UnixStream};
@@ -33,9 +30,7 @@ impl SendArgs {
         let mut stream = UnixStream::connect(app_dir)
             .context(format!("Error connecting to '{}' socket.", self.name))?;
 
-        let event = serde_json::to_vec(&SocketMessage {
-            event: SocketEvent::WriteStdin(self.command.join(" ")),
-        })?;
+        let event = serde_json::to_vec(&SocketEvent::WriteStdin(self.command.join(" ")))?;
 
         stream.write_all(&event)?;
         stream.flush()?;

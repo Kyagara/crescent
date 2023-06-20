@@ -1,16 +1,47 @@
-use crate::{crescent, subprocess};
+use crate::{crescent, subprocess::SocketEvent};
 use anyhow::{Context, Result};
-use std::{fs, path::PathBuf, str::FromStr};
+use serde::{Deserialize, Serialize};
+use std::{
+    fs,
+    io::{Read, Write},
+    os::unix::net::UnixStream,
+    path::PathBuf,
+    str::FromStr,
+};
 use sysinfo::Pid;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ApplicationStatus {
+    pub name: String,
+    pub interpreter_args: Vec<String>,
+    pub application_args: Vec<String>,
+    pub profile: String,
+    pub cmd: Vec<String>,
+}
+
+impl ApplicationStatus {
+    pub fn new() -> Self {
+        Self {
+            name: String::new(),
+            interpreter_args: vec![],
+            application_args: vec![],
+            profile: String::new(),
+            cmd: vec![],
+        }
+    }
+}
 
 pub fn app_dir_by_name(name: &String) -> Result<PathBuf> {
     let mut crescent_dir = crescent::crescent_dir()?;
-
     crescent_dir.push("apps");
-
     crescent_dir.push(name);
-
     Ok(crescent_dir)
+}
+
+pub fn get_app_socket(name: &String) -> Result<PathBuf> {
+    let mut socket_dir = app_dir_by_name(name)?;
+    socket_dir.push(format!("{}.sock", name));
+    Ok(socket_dir)
 }
 
 pub fn app_pids_by_name(name: &String) -> Result<Vec<Pid>> {
@@ -61,13 +92,55 @@ pub fn app_already_running(name: &String) -> Result<bool> {
                 return Ok(false);
             }
 
-            match subprocess::get_app_process_envs(&pids[1])? {
-                Some(_) => Ok(true),
-                None => Ok(false),
+            match ping_app(name) {
+                Ok(_) => Ok(true),
+                Err(err) => {
+                    // This looks horrible
+                    if err.to_string().contains("Error connecting to") {
+                        return Ok(false);
+                    }
+                    Err(err)
+                }
             }
         }
         Err(err) => Err(err),
     }
+}
+
+pub fn get_app_status(name: &String) -> Result<ApplicationStatus> {
+    let socket_dir = get_app_socket(name)?;
+
+    let mut stream = UnixStream::connect(socket_dir)
+        .context(format!("Error connecting to '{}' socket.", name))?;
+
+    let event = serde_json::to_vec(&SocketEvent::RetrieveStatus(ApplicationStatus::new()))?;
+
+    stream.write_all(&event)?;
+    stream.flush()?;
+
+    let mut received = vec![0u8; 2024];
+    let read = stream.read(&mut received)?;
+
+    Ok(serde_json::from_slice::<ApplicationStatus>(
+        &received[..read],
+    )?)
+}
+
+pub fn ping_app(name: &String) -> Result<SocketEvent> {
+    let socket_dir = get_app_socket(name)?;
+
+    let mut stream = UnixStream::connect(socket_dir)
+        .context(format!("Error connecting to '{}' socket.", name))?;
+
+    let event = serde_json::to_vec(&SocketEvent::Ping())?;
+
+    stream.write_all(&event)?;
+    stream.flush()?;
+
+    let mut received = vec![0u8; 1024];
+    let read = stream.read(&mut received)?;
+
+    Ok(serde_json::from_slice::<SocketEvent>(&received[..read])?)
 }
 
 #[cfg(test)]
