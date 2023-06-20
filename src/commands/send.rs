@@ -17,11 +17,11 @@ impl SendArgs {
     pub fn run(self) -> Result<()> {
         application::check_app_exists(&self.name)?;
 
-        let mut app_dir = application::app_dir_by_name(&self.name)?;
-
         if self.command.join(" ").trim().is_empty() {
             return Err(anyhow!("Command empty."));
         }
+
+        let mut app_dir = application::app_dir_by_name(&self.name)?;
 
         app_dir.push(self.name.clone() + ".sock");
 

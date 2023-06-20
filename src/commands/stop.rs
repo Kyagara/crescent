@@ -1,22 +1,51 @@
+use std::{io::Write, os::unix::net::UnixStream};
+
+use crate::{application, subprocess::SocketEvent};
+
 use super::signal;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Args;
 
 #[derive(Args)]
-#[command(about = "Send a SIGTERM signal to the application subprocess.")]
+#[command(about = "Send a stop command or a SIGTERM signal to the application subprocess.")]
 pub struct StopArgs {
     #[arg(help = "Application name.")]
     pub name: String,
+
+    #[arg(
+        short,
+        long,
+        help = "Ignore 'stop command' if defined and send a SIGTERM signal."
+    )]
+    pub force: bool,
 }
 
 impl StopArgs {
     pub fn run(self) -> Result<()> {
-        let signal = signal::SignalArgs {
-            name: self.name,
-            signal: 15,
-        };
+        if self.force {
+            let signal = signal::SignalArgs {
+                name: self.name,
+                signal: 15,
+            };
 
-        signal.run()
+            return signal.run();
+        }
+
+        let mut app_dir = application::app_dir_by_name(&self.name)?;
+
+        app_dir.push(self.name.clone() + ".sock");
+
+        let mut stream = UnixStream::connect(app_dir)
+            .context(format!("Error connecting to '{}' socket.", self.name))?;
+
+        let event = serde_json::to_vec(&SocketEvent::Stop())?;
+
+        stream.write_all(&event)?;
+        stream.flush()?;
+
+        println!("Stop command event sent.");
+
+        Ok(())
     }
 }
 
@@ -28,6 +57,7 @@ mod tests {
     fn unit_stop_run() -> Result<()> {
         let command = StopArgs {
             name: "stop_run".to_string(),
+            force: true,
         };
         assert_eq!(command.name, "stop_run");
         let err = command.run().unwrap_err();

@@ -66,7 +66,7 @@ fn status_no_apps_running() -> Result<()> {
 #[test]
 fn stop_no_apps_running() -> Result<()> {
     let mut cmd = util::get_base_command();
-    cmd.args(["stop", "test_app_not_available"]);
+    cmd.args(["stop", "test_app_not_available", "-f"]);
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("Application does not exist."));

@@ -209,12 +209,11 @@ impl AttachArgs {
                     stats_list = stats;
                     terminal.draw(|f| ui(f, &mut app, &stats_list))?;
                 }
-                TerminalEvent::SocketEvent(message) => match message {
-                    SocketEvent::CommandHistory(history) => app.history = history,
-                    SocketEvent::WriteStdin(_) => {}
-                    SocketEvent::RetrieveStatus(_) => {}
-                    SocketEvent::Ping() => {}
-                },
+                TerminalEvent::SocketEvent(message) => {
+                    if let SocketEvent::CommandHistory(history) = message {
+                        app.history = history
+                    }
+                }
             }
         }
 

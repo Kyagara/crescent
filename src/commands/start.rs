@@ -1,18 +1,18 @@
 use crate::{
-    application::{self, ApplicationStatus},
-    crescent, logger, subprocess,
+    application::{self, ApplicationInfo},
+    crescent::{self, Profile},
+    logger, subprocess,
 };
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use daemonize::Daemonize;
 use log::{info, LevelFilter};
-use serde::Deserialize;
 use std::{
     fs::{self, File},
     path::Path,
 };
 
-#[derive(Args, Deserialize)]
+#[derive(Args)]
 #[command(about = "Start an application from the file path provided.")]
 pub struct StartArgs {
     pub file_path: Option<String>,
@@ -51,8 +51,20 @@ pub struct StartArgs {
         long = "profile",
         help = "Name or path to the profile to load fields from."
     )]
-    #[serde(skip)]
     pub profile: Option<String>,
+}
+
+impl From<Profile> for StartArgs {
+    fn from(profile: Profile) -> Self {
+        Self {
+            file_path: profile.file_path,
+            name: profile.name,
+            interpreter: profile.interpreter,
+            interpreter_arguments: profile.interpreter_arguments,
+            application_arguments: profile.application_arguments,
+            profile: None,
+        }
+    }
 }
 
 static LOGGER: logger::Logger = logger::Logger;
@@ -66,13 +78,17 @@ impl StartArgs {
 
         let mut profile_name = String::new();
 
-        if let Some(profile) = &self.profile {
-            profile_name = profile.clone();
-            let profile_path = crescent::get_profile_path(profile.to_string())?;
-            let string = fs::read_to_string(profile_path)?;
-            let args: StartArgs = serde_json::from_str(&string)?;
-            self = self.overwrite_args(args)?;
-        }
+        let stop_command = match &self.profile {
+            Some(profile_str) => {
+                profile_name = profile_str.clone();
+                let profile_path = crescent::get_profile_path(profile_str.to_string())?;
+                let string = fs::read_to_string(profile_path)?;
+                let profile: Profile = serde_json::from_str(&string)?;
+                self = self.overwrite_args(profile.clone().into())?;
+                profile.stop_command
+            }
+            None => None,
+        };
 
         let path = match &self.file_path {
             Some(path) => path,
@@ -136,7 +152,7 @@ impl StartArgs {
             cmd = i_args
         }
 
-        let app_status = ApplicationStatus {
+        let app_status = ApplicationInfo {
             name,
             interpreter_args,
             application_args,
@@ -144,7 +160,7 @@ impl StartArgs {
             profile: profile_name,
         };
 
-        subprocess::start(app_status, app_dir)?;
+        subprocess::start(app_status, stop_command, app_dir)?;
 
         Ok(())
     }

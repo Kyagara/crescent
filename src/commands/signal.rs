@@ -7,6 +7,7 @@ use clap::Args;
 pub struct SignalArgs {
     #[arg(help = "Application name.")]
     pub name: String,
+
     #[arg(help = "Signal to send.")]
     pub signal: u8,
 }
@@ -22,12 +23,8 @@ impl SignalArgs {
         let pids = application::app_pids_by_name(&self.name)?;
 
         match subprocess::check_and_send_signal(&self.name, &pids[1], &self.signal) {
-            Ok(exists) => {
-                if exists {
-                    println!("Signal sent.");
-                } else {
-                    println!("Subprocess not found, signal not sent.");
-                }
+            Ok(_exists) => {
+                println!("Signal sent.");
                 Ok(())
             }
             Err(err) => Err(err),
