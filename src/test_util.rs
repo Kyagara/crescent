@@ -77,10 +77,10 @@ pub mod test_utils {
 
     pub fn shutdown_long_running_service(name: &str) -> Result<()> {
         let mut cmd = get_base_command();
-        cmd.args(["signal", name, "15"]);
+        cmd.args(["send", name, "stop"]);
         cmd.assert()
             .success()
-            .stdout(predicate::str::contains("Signal sent."));
+            .stdout(predicate::str::contains("Command sent."));
 
         // Sleeping to make sure the process exited
         thread::sleep(std::time::Duration::from_secs(1));

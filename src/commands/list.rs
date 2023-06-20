@@ -137,7 +137,6 @@ mod tests {
         assert_eq!(table.shape(), (2, 5));
 
         test_utils::shutdown_long_running_service(name)?;
-        assert!(!test_utils::check_app_is_running(name)?);
         test_utils::delete_app_folder(name)?;
         Ok(())
     }

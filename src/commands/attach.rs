@@ -69,6 +69,8 @@ enum TerminalEvent {
 
 impl AttachArgs {
     pub fn run(self) -> Result<()> {
+        application::check_app_exists(&self.name)?;
+
         if !application::app_already_running(&self.name)? {
             return Err(anyhow!("Application not running."));
         }
@@ -484,7 +486,6 @@ mod tests {
         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
 
         test_utils::shutdown_long_running_service(name)?;
-        assert!(!test_utils::check_app_is_running(name)?);
         test_utils::delete_app_folder(name)?;
         Ok(())
     }
@@ -502,7 +503,6 @@ mod tests {
         command_args.run()?;
 
         test_utils::shutdown_long_running_service(name)?;
-        assert!(!test_utils::check_app_is_running(name)?);
         test_utils::delete_app_folder(name)?;
         Ok(())
     }

@@ -1,5 +1,5 @@
 use crate::{crescent, subprocess::SocketEvent};
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
@@ -31,11 +31,19 @@ impl ApplicationStatus {
     }
 }
 
+pub fn check_app_exists(name: &String) -> Result<PathBuf> {
+    let app_dir = app_dir_by_name(name)?;
+    if !app_dir.exists() {
+        return Err(anyhow!("Application does not exist."));
+    }
+    Ok(app_dir)
+}
+
 pub fn app_dir_by_name(name: &String) -> Result<PathBuf> {
-    let mut crescent_dir = crescent::crescent_dir()?;
-    crescent_dir.push("apps");
-    crescent_dir.push(name);
-    Ok(crescent_dir)
+    let mut app_dir = crescent::crescent_dir()?;
+    app_dir.push("apps");
+    app_dir.push(name);
+    Ok(app_dir)
 }
 
 pub fn get_app_socket(name: &String) -> Result<PathBuf> {
@@ -45,7 +53,7 @@ pub fn get_app_socket(name: &String) -> Result<PathBuf> {
 }
 
 pub fn app_pids_by_name(name: &String) -> Result<Vec<Pid>> {
-    let application_path = app_dir_by_name(name)?;
+    let mut application_path = app_dir_by_name(name)?;
 
     let app_name = application_path
         .file_name()
@@ -54,14 +62,14 @@ pub fn app_pids_by_name(name: &String) -> Result<Vec<Pid>> {
         .context("Error converting OsStr to str.")?
         .to_string();
 
-    let mut pid_path = application_path;
-    pid_path.push(app_name + ".pid");
+    application_path.push(app_name + ".pid");
 
-    if !pid_path.exists() {
+    if !application_path.exists() {
         return Ok(vec![]);
     }
 
-    let pid_file = fs::read_to_string(pid_path).context("Error reading PID file to string.")?;
+    let pid_file =
+        fs::read_to_string(application_path).context("Error reading PID file to string.")?;
 
     let mut pid_strs: Vec<&str> = pid_file.split('\n').collect();
     pid_strs.retain(|&x| !x.is_empty());
