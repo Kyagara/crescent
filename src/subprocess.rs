@@ -1,4 +1,4 @@
-use crate::application::{ping_app, ApplicationStatus};
+use crate::application::{ping_app, ApplicationInfo};
 use anyhow::{anyhow, Result};
 use libc::pid_t;
 use log::{error, info};
@@ -17,13 +17,18 @@ use sysinfo::Pid;
 
 #[derive(Serialize, Deserialize)]
 pub enum SocketEvent {
-    RetrieveStatus(ApplicationStatus),
+    RetrieveStatus(ApplicationInfo),
     CommandHistory(Vec<String>),
     WriteStdin(String),
+    Stop(),
     Ping(),
 }
 
-pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
+pub fn start(
+    app_status: ApplicationInfo,
+    stop_command: Option<String>,
+    app_dir: PathBuf,
+) -> Result<()> {
     info!("Subprocess arguments: '{}'", app_status.cmd.join(" "));
 
     let socket_address = app_dir.join(app_status.name.clone() + ".sock");
@@ -54,6 +59,7 @@ pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
 
     let command_history = Arc::new(Mutex::new(Vec::new()));
     let status = Arc::new(Mutex::new(app_status));
+    let stop_command = Arc::new(Mutex::new(stop_command));
 
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
@@ -63,11 +69,13 @@ pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
                     Ok(mut stream) => {
                         let mut stdin_clone = stdin.try_clone().unwrap();
                         let history = command_history.clone();
+                        let stop_command = stop_command.clone();
                         let status = status.clone();
 
                         thread::spawn(move || {
                             let mut history = history.lock().unwrap();
                             let status = status.lock().unwrap();
+                            let stop_command = stop_command.lock().unwrap();
                             let mut received = vec![0u8; 1024];
                             let mut read: usize = 0;
 
@@ -96,11 +104,6 @@ pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
                                                         break;
                                                     }
                                                 }
-                                                if let Err(err) = stdin_clone.flush() {
-                                                    error!(
-                                                        "Error flushing subprocess stdin: {err}."
-                                                    );
-                                                }
                                             }
                                             SocketEvent::CommandHistory(_) => {
                                                 let event = serde_json::to_vec(
@@ -108,20 +111,48 @@ pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
                                                 )
                                                 .unwrap();
                                                 stream.write_all(&event).unwrap();
-                                                stream.flush().unwrap();
                                             }
                                             SocketEvent::RetrieveStatus(_) => {
                                                 let event =
                                                     serde_json::to_vec(&status.clone()).unwrap();
                                                 stream.write_all(&event).unwrap();
-                                                stream.flush().unwrap();
                                             }
                                             SocketEvent::Ping() => {
                                                 let event =
                                                     serde_json::to_vec(&SocketEvent::Ping())
                                                         .unwrap();
                                                 stream.write_all(&event).unwrap();
-                                                stream.flush().unwrap();
+                                            }
+
+                                            SocketEvent::Stop() => {
+                                                info!("Received stop command.");
+
+                                                match stop_command.clone() {
+                                                    Some(stop_command) => {
+                                                        info!("Stop command was defined early, sending it to the subprocess.");
+
+                                                        if let Err(err) = stdin_clone
+                                                            .write_all(stop_command.as_bytes())
+                                                        {
+                                                            error!(
+                                                            "Error writing to subprocess stdin: {err}."
+                                                        );
+
+                                                            // Should any error here shutdown and exit?
+                                                            // Only exiting if the pipe is closed for now
+                                                            if err.kind() == ErrorKind::BrokenPipe {
+                                                                info!("Sending SIGTERM to subprocess.");
+                                                                terminate(&status.name, &pid);
+                                                                break;
+                                                            }
+                                                        }
+                                                    }
+                                                    None => {
+                                                        info!("Sending SIGTERM to subprocess.");
+                                                        terminate(&status.name, &pid);
+                                                        break;
+                                                    }
+                                                }
                                             }
                                         }
                                     }

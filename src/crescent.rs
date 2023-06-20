@@ -1,5 +1,20 @@
 use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
 use std::{env, fs, path::PathBuf};
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Profile {
+    // Not used
+    pub __comment: Option<String>,
+    // Not used
+    pub __version: Option<i8>,
+    pub file_path: Option<String>,
+    pub name: Option<String>,
+    pub interpreter: Option<String>,
+    pub interpreter_arguments: Option<Vec<String>>,
+    pub application_arguments: Option<Vec<String>>,
+    pub stop_command: Option<String>,
+}
 
 pub fn crescent_dir() -> Result<PathBuf> {
     let home = env::var("HOME").context("Error getting HOME env.")?;

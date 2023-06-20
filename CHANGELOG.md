@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+-   `profile` command, it simply outputs a prettified json of the provided profile.
+-   More helper functions like `get_socket_dir` and `check_app_exists`.
+
+### Changed
+
+-   Changed the way we verify if a process is from crescent, instead of env vars, all checks are made through the application socket.
+-   `stop`, `status` now uses a custom socket event.
+-   `stop` can now send a custom stop command if provided in a profile.
+-   `stop` now has a `--force`/`-f` flag to bypass a user defined stop command and send a SIGTERM signal.
+
+### Removed
+
+-   Enviroment vars.
+
 ## [0.4.2] - 2023-06-17
 
 ### Changed

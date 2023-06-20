@@ -1,5 +1,6 @@
 {
     "__comment": "Aikar's flags for Minecraft, 10G ram with GC logging, Java 11+. https://docs.papermc.io/paper/aikars-flags#recommended-jvm-startup-flags",
+    "version": 1,
     "name": "server",
     "interpreter": "java",
     "interpreter_arguments": [
@@ -28,5 +29,6 @@
         "-Xlog:gc*:logs/gc.log:time,uptime:filecount=5,filesize=1M",
         "-jar"
     ],
-    "application_arguments": ["--nogui"]
+    "application_arguments": ["--nogui"],
+    "stop_command": "stop\n"
 }

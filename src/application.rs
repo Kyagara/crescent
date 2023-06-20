@@ -10,25 +10,13 @@ use std::{
 };
 use sysinfo::Pid;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct ApplicationStatus {
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct ApplicationInfo {
     pub name: String,
     pub interpreter_args: Vec<String>,
     pub application_args: Vec<String>,
     pub profile: String,
     pub cmd: Vec<String>,
-}
-
-impl ApplicationStatus {
-    pub fn new() -> Self {
-        Self {
-            name: String::new(),
-            interpreter_args: vec![],
-            application_args: vec![],
-            profile: String::new(),
-            cmd: vec![],
-        }
-    }
 }
 
 pub fn check_app_exists(name: &String) -> Result<PathBuf> {
@@ -115,23 +103,27 @@ pub fn app_already_running(name: &String) -> Result<bool> {
     }
 }
 
-pub fn get_app_status(name: &String) -> Result<ApplicationStatus> {
+pub fn get_app_status(name: &String) -> Result<ApplicationInfo> {
     let socket_dir = get_app_socket(name)?;
 
     let mut stream = UnixStream::connect(socket_dir)
         .context(format!("Error connecting to '{}' socket.", name))?;
 
-    let event = serde_json::to_vec(&SocketEvent::RetrieveStatus(ApplicationStatus::new()))?;
+    let event = serde_json::to_vec(&SocketEvent::RetrieveStatus(ApplicationInfo::default()))?;
 
     stream.write_all(&event)?;
-    stream.flush()?;
 
-    let mut received = vec![0u8; 2024];
-    let read = stream.read(&mut received)?;
+    let mut received = vec![0u8; 1024];
 
-    Ok(serde_json::from_slice::<ApplicationStatus>(
-        &received[..read],
-    )?)
+    loop {
+        let read = stream.read(&mut received)?;
+
+        if read > 0 {
+            return Ok(serde_json::from_slice::<ApplicationInfo>(
+                &received[..read],
+            )?);
+        }
+    }
 }
 
 pub fn ping_app(name: &String) -> Result<SocketEvent> {
@@ -143,12 +135,16 @@ pub fn ping_app(name: &String) -> Result<SocketEvent> {
     let event = serde_json::to_vec(&SocketEvent::Ping())?;
 
     stream.write_all(&event)?;
-    stream.flush()?;
 
     let mut received = vec![0u8; 1024];
-    let read = stream.read(&mut received)?;
 
-    Ok(serde_json::from_slice::<SocketEvent>(&received[..read])?)
+    loop {
+        let read = stream.read(&mut received)?;
+
+        if read > 0 {
+            return Ok(serde_json::from_slice::<SocketEvent>(&received[..read])?);
+        }
+    }
 }
 
 #[cfg(test)]
