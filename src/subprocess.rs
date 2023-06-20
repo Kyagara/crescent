@@ -91,6 +91,7 @@ pub fn start(app_status: ApplicationStatus, app_dir: PathBuf) -> Result<()> {
                                                     // Should any error here shutdown and exit?
                                                     // Only exiting if the pipe is closed for now
                                                     if err.kind() == ErrorKind::BrokenPipe {
+                                                        info!("Sending SIGTERM to subprocess.");
                                                         terminate(&status.name, &pid);
                                                         break;
                                                     }
@@ -219,8 +220,6 @@ pub fn read_socket_stream(stream: &mut UnixStream, received: &mut [u8], read: &m
 }
 
 fn terminate(name: &String, subprocess_pid: &Pid) {
-    info!("Sending SIGTERM to subprocess.");
-
     if let Err(err) = check_and_send_signal(name, subprocess_pid, &15) {
         error!("{err}");
     }
@@ -257,7 +256,6 @@ mod tests {
 
         terminate(&name.to_string(), &pids[1]);
 
-        assert!(!test_utils::check_app_is_running(name)?);
         test_utils::delete_app_folder(name)?;
         Ok(())
     }

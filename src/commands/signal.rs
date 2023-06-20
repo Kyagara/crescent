@@ -13,17 +13,13 @@ pub struct SignalArgs {
 
 impl SignalArgs {
     pub fn run(self) -> Result<()> {
-        let app_dir = application::app_dir_by_name(&self.name)?;
+        application::check_app_exists(&self.name)?;
 
-        if !app_dir.exists() {
-            return Err(anyhow!("Application does not exist."));
+        if !application::app_already_running(&self.name)? {
+            return Err(anyhow!("Application not running."));
         }
 
         let pids = application::app_pids_by_name(&self.name)?;
-
-        if pids.len() < 2 {
-            return Err(anyhow!("Application not running."));
-        }
 
         match subprocess::check_and_send_signal(&self.name, &pids[1], &self.signal) {
             Ok(exists) => {
@@ -86,10 +82,7 @@ mod tests {
             signal: 0,
         };
         let err = command.run().unwrap_err();
-        assert_eq!(
-            format!("{}", err),
-            "Process did not return any crescent envs."
-        );
+        assert_eq!(format!("{}", err), "Application not running.");
 
         delete_app_folder("signal_run")?;
         Ok(())

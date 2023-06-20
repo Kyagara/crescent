@@ -1,5 +1,5 @@
 use crate::{application, util};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
 use crossterm::style::Stylize;
@@ -15,11 +15,9 @@ pub struct StatusArgs {
 
 impl StatusArgs {
     pub fn run(self) -> Result<()> {
-        let app_dir = application::app_dir_by_name(&self.name)?;
+        application::check_app_exists(&self.name)?;
 
-        if !app_dir.exists() {
-            return Err(anyhow!("Application does not exist."));
-        }
+        let status = application::get_app_status(&self.name)?;
 
         let pids = application::app_pids_by_name(&self.name)?;
 
@@ -33,8 +31,6 @@ impl StatusArgs {
         let mut system = System::new();
         system.refresh_process(subprocess_pid);
         system.refresh_memory();
-
-        let status = application::get_app_status(&self.name)?;
 
         println!("{}", "Application information:".bold().cyan());
         println!("{} {}", "Name:".white(), status.name);

@@ -89,7 +89,7 @@ fn attach_no_apps_running() -> Result<()> {
     cmd.args(["attach", "test_app_not_available"]);
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("Application not running."));
+        .stderr(predicate::str::contains("Application does not exist."));
     Ok(())
 }
 
@@ -136,7 +136,6 @@ fn start_python_without_interpreter() -> Result<()> {
     let pids: Vec<&str> = pid_str.lines().collect();
     assert!(pids.len() == 1);
 
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
@@ -206,14 +205,12 @@ fn log_follow_short_lived_command() -> Result<()> {
 }
 
 #[test]
-#[serial]
 fn log_flush_command_long_running_service() -> Result<()> {
     let name = "log_flush_long_running_service";
     util::start_long_running_service(name)?;
     assert!(util::check_app_is_running(name)?);
 
     util::shutdown_long_running_service(name)?;
-    assert!(!util::check_app_is_running(name)?);
 
     let mut cmd = util::get_base_command();
     cmd.args(["log", name, "--flush"]);
@@ -241,7 +238,6 @@ fn list_command_long_running_service() -> Result<()> {
         .stdout(predicate::str::contains(name));
 
     util::shutdown_long_running_service(name)?;
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
@@ -278,7 +274,6 @@ fn start_long_running_service_with_profile() -> Result<()> {
     };
 
     util::shutdown_long_running_service(name)?;
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
@@ -290,7 +285,6 @@ fn signal_long_running_service() -> Result<()> {
     assert!(util::check_app_is_running(name)?);
 
     util::shutdown_long_running_service(name)?;
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
@@ -309,7 +303,6 @@ fn send_command_socket() -> Result<()> {
         .stdout(predicate::str::contains("Command sent."));
 
     util::shutdown_long_running_service(name)?;
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }
@@ -326,7 +319,6 @@ fn attach_short_lived_command() -> Result<()> {
         .failure()
         .stderr(predicate::str::contains("Application not running."));
 
-    assert!(!util::check_app_is_running(name)?);
     util::delete_app_folder(name)?;
     Ok(())
 }

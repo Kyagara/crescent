@@ -27,11 +27,9 @@ pub struct LogArgs {
 
 impl LogArgs {
     pub fn run(self) -> Result<()> {
-        let mut app_dir = application::app_dir_by_name(&self.name)?;
+        application::check_app_exists(&self.name)?;
 
-        if !app_dir.exists() {
-            return Err(anyhow!("Application does not exist."));
-        }
+        let mut app_dir = application::app_dir_by_name(&self.name)?;
 
         app_dir.push(format!("{}.log", self.name));
 
