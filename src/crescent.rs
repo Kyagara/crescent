@@ -1,8 +1,13 @@
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{env, fs, path::PathBuf};
+use std::{
+    env,
+    fs::{self, File},
+    io::BufReader,
+    path::PathBuf,
+};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Profile {
     // Not used
     pub __comment: Option<String>,
@@ -18,32 +23,47 @@ pub struct Profile {
 
 pub fn crescent_dir() -> Result<PathBuf> {
     let home = env::var("HOME").context("Error getting HOME env.")?;
-
     let mut crescent_dir = PathBuf::from(home);
-
     crescent_dir.push(".crescent");
-
     if !crescent_dir.exists() {
         fs::create_dir_all(&crescent_dir).context("Error creating crescent directory.")?;
     }
-
     Ok(crescent_dir)
 }
 
-pub fn get_profile_path(profile: String) -> Result<PathBuf> {
-    match fs::canonicalize(&profile) {
-        Ok(path) => Ok(path),
-        Err(_) => {
-            let mut crescent_dir = crescent_dir()?;
-            crescent_dir.push("profiles");
-            crescent_dir.push(profile + ".json");
+pub fn get_apps_dir() -> Result<PathBuf> {
+    let mut apps_dir = crescent_dir()?;
+    apps_dir.push("apps");
+    if !apps_dir.exists() {
+        fs::create_dir_all(&apps_dir).context("Error creating apps directory.")?;
+    }
+    Ok(apps_dir)
+}
 
-            if crescent_dir.exists() && crescent_dir.is_file() {
-                return Ok(crescent_dir);
-            }
+pub fn get_profiles_dir() -> Result<PathBuf> {
+    let mut profiles_dir = crescent_dir()?;
+    profiles_dir.push("profiles");
+    if !profiles_dir.exists() {
+        fs::create_dir_all(&profiles_dir).context("Error creating profiles directory.")?;
+    }
+    Ok(profiles_dir)
+}
 
-            Err(anyhow!("Profile not found."))
+pub fn get_profile(profile: &str) -> Result<Profile> {
+    let mut profiles_dir = get_profiles_dir()?;
+    profiles_dir.push(profile.to_owned() + ".json");
+
+    if !profiles_dir.exists() || !profiles_dir.is_file() {
+        return Err(anyhow!("Profile not found."));
+    }
+
+    match File::open(profiles_dir) {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            let profile: Profile = serde_json::from_reader(reader)?;
+            Ok(profile)
         }
+        Err(err) => Err(anyhow!("Error opening profile file: {err}")),
     }
 }
 
@@ -65,15 +85,11 @@ mod tests {
 
     #[test]
     fn unit_get_profile_path() -> Result<()> {
-        let mut path = get_profile_path(String::from("example"))?;
-        assert!(path.exists());
-        assert!(path.is_file());
+        let profile = get_profile(&String::from("example"))?;
 
-        path = get_profile_path(String::from("./profiles/example.json"))?;
-        assert!(path.exists());
-        assert!(path.is_file());
+        assert!(profile.__comment.is_some());
 
-        let err = get_profile_path(String::from("profile/does/not/exist")).unwrap_err();
+        let err = get_profile(&String::from("does-not-exist")).unwrap_err();
 
         assert_eq!(format!("{}", err), "Profile not found.");
 

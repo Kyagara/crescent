@@ -2,7 +2,6 @@ use crate::{application, util};
 use anyhow::Result;
 use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
-use crossterm::style::Stylize;
 use std::println;
 use sysinfo::{ProcessExt, System, SystemExt};
 
@@ -32,20 +31,14 @@ impl StatusArgs {
         system.refresh_process(subprocess_pid);
         system.refresh_memory();
 
-        println!("{}", "Application information:".bold().cyan());
-        println!("{} {}", "Name:".white(), status.name);
-        println!(
-            "{} \"{}\"",
-            "Interpreter arguments:".white(),
-            status.interpreter_args.join(" ")
-        );
-        println!(
-            "{} \"{}\"",
-            "Application arguments:".white(),
-            status.application_args.join(" ")
-        );
-        println!("{} {}", "Profile:".white(), status.profile);
-        println!("{} {}", "crescent PID:".white(), pids[0]);
+        util::print_title_cyan("Application information");
+
+        util::println_field_white("Name", status.name);
+        util::println_field_white("Interpreter arguments", status.interpreter_args.join(" "));
+        util::println_field_white("Application arguments", status.application_args.join(" "));
+        util::println_field_white("Profile", status.profile);
+        util::println_field_white("crescent PID", pids[0]);
+
         println!();
 
         if let Some(process) = system.process(subprocess_pid) {
@@ -56,33 +49,21 @@ impl StatusArgs {
                 .unwrap();
             let start_time: DateTime<Local> = DateTime::from(utc);
 
-            println!("{}", "Subprocess information:".bold().cyan());
-            println!("{} {}", "Subprocess PID:".white(), subprocess_pid);
-            println!("{} {:?}", "CWD:".white(), process.cwd());
-            println!(
-                "{} \"{}\"",
-                "Full command line:".white(),
-                status.cmd.join(" ")
-            );
+            util::print_title_cyan("Subprocess information");
 
-            println!(
-                "{} {:.2}%",
-                "CPU usage:".white(),
-                process.cpu_usage() / cpu_count,
+            util::println_field_white("Subprocess PID", subprocess_pid);
+            util::println_field_white("CWD", process.cwd().to_string_lossy());
+            util::println_field_white("Full command line", status.cmd.join(" "));
+            util::println_field_white(
+                "CPU usage",
+                format!("{:.2}", process.cpu_usage() / cpu_count),
             );
-            println!(
-                "{} {:.2}% ({} Mb)",
-                "Memory usage:".white(),
-                memory,
-                process.memory() / 1024 / 1024
+            util::println_field_white(
+                "Memory usage",
+                format!("{:.2}% ({} Mb)", memory, process.memory() / 1024 / 1024),
             );
-
-            println!("{} {}", "Started at:".white(), start_time);
-            println!(
-                "{} {}",
-                "Uptime:".white(),
-                util::get_uptime_from_seconds(process.run_time())
-            );
+            util::println_field_white("Started at", start_time);
+            util::println_field_white("Uptime", util::get_uptime_from_seconds(process.run_time()));
         }
 
         Ok(())

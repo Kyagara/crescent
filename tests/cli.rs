@@ -94,6 +94,57 @@ fn attach_no_apps_running() -> Result<()> {
 }
 
 #[test]
+fn stop_force_long_running_service() -> Result<()> {
+    let name = "stop_force_long_running_service";
+    util::start_long_running_service(name)?;
+    assert!(util::check_app_is_running(name)?);
+
+    let mut cmd = util::get_base_command();
+    cmd.args(["stop", name, "-f"]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Signal sent."));
+
+    util::delete_app_folder(name)?;
+    Ok(())
+}
+
+#[test]
+fn stop_long_running_service() -> Result<()> {
+    let name = "stop_long_running_service";
+
+    let mut cmd = util::get_base_command();
+    cmd.args(["start", "-n", name, "-p", "example"]);
+    cmd.assert().success();
+
+    assert!(util::check_app_is_running(name)?);
+
+    let mut cmd = util::get_base_command();
+    cmd.args(["stop", name]);
+
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Stop command sent."));
+
+    // Sleeping to make sure the process shutdown
+    thread::sleep(std::time::Duration::from_secs(1));
+
+    util::delete_app_folder(name)?;
+    Ok(())
+}
+
+#[test]
+fn profile_example_profile() -> Result<()> {
+    let mut cmd = util::get_base_command();
+    cmd.args(["profile", "example"]);
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("tools"));
+    Ok(())
+}
+
+#[test]
 fn start_short_lived_command() -> Result<()> {
     let name = "start_echo";
     util::start_short_lived_command(name)?;

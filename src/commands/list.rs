@@ -13,7 +13,7 @@ pub struct ListArgs;
 struct ApplicationInfo {
     #[tabled(rename = "Name")]
     name: String,
-    #[tabled(rename = "Crescent PID")]
+    #[tabled(rename = "crescent PID")]
     crescent_pid: Pid,
     #[tabled(rename = "Subprocess PID")]
     subprocess_pid: String,
@@ -25,16 +25,14 @@ struct ApplicationInfo {
 
 impl ListArgs {
     pub fn run(self) -> Result<()> {
-        let mut crescent_pathbuf = crescent::crescent_dir()?;
+        let apps_dir = crescent::get_apps_dir()?;
 
-        crescent_pathbuf.push("apps");
-
-        let crescent_dir = crescent_pathbuf
+        let dirs = apps_dir
             .read_dir()
-            .context("Error reading crescent directory.")?
+            .context("Error reading apps directory.")?
             .flatten();
 
-        let apps = self.get_applications_info(crescent_dir)?;
+        let apps = self.get_applications_info(dirs)?;
 
         if apps.is_empty() {
             println!("No application running.");
@@ -116,18 +114,16 @@ mod tests {
         test_utils::start_long_running_service(name)?;
         assert!(test_utils::check_app_is_running(name)?);
 
-        let mut crescent_pathbuf = crescent::crescent_dir()?;
+        let apps_dir = crescent::get_apps_dir()?;
 
-        crescent_pathbuf.push("apps");
-
-        let crescent_dir = crescent_pathbuf
+        let dirs = apps_dir
             .read_dir()
             .context("Error reading crescent directory.")?
             .flatten();
 
         let list_command = ListArgs {};
 
-        let apps = list_command.get_applications_info(crescent_dir)?;
+        let apps = list_command.get_applications_info(dirs)?;
         let app = apps.into_iter().find(|app| app.name == name).unwrap();
 
         assert_eq!(&app.name, &name);

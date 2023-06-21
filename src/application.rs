@@ -117,7 +117,6 @@ pub fn get_app_status(name: &String) -> Result<ApplicationInfo> {
 
     loop {
         let read = stream.read(&mut received)?;
-
         if read > 0 {
             return Ok(serde_json::from_slice::<ApplicationInfo>(
                 &received[..read],
@@ -140,7 +139,6 @@ pub fn ping_app(name: &String) -> Result<SocketEvent> {
 
     loop {
         let read = stream.read(&mut received)?;
-
         if read > 0 {
             return Ok(serde_json::from_slice::<SocketEvent>(&received[..read])?);
         }
