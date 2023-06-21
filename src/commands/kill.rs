@@ -26,10 +26,9 @@ mod tests {
 
     #[test]
     fn unit_kill_run() -> Result<()> {
-        let command = KillArgs {
-            name: "kill_run".to_string(),
-        };
-        assert_eq!(command.name, "kill_run");
+        let name = "kill_run".to_string();
+        let command = KillArgs { name };
+
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application does not exist.");
         Ok(())

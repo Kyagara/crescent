@@ -84,7 +84,7 @@ mod tests {
     }
 
     #[test]
-    fn unit_get_profile_path() -> Result<()> {
+    fn unit_get_profile() -> Result<()> {
         let profile = get_profile(&String::from("example"))?;
 
         assert!(profile.__comment.is_some());

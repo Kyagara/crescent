@@ -37,3 +37,38 @@ impl SendArgs {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_util::test_utils;
+    use std::path::PathBuf;
+    use std::{env, fs};
+
+    #[test]
+    fn unit_send_run() -> Result<()> {
+        let name = "send_run".to_string();
+        let command = SendArgs {
+            name: name.clone(),
+            command: vec![],
+        };
+
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application does not exist.");
+
+        let home = env::var("HOME").context("Error getting HOME env.")?;
+        let mut crescent_dir = PathBuf::from(home);
+        crescent_dir.push(".crescent/apps/send_run");
+        fs::create_dir_all(&crescent_dir)?;
+
+        let command = SendArgs {
+            name,
+            command: vec![],
+        };
+
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Command empty.");
+        test_utils::delete_app_folder("send_run")?;
+        Ok(())
+    }
+}

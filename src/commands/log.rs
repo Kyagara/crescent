@@ -91,20 +91,16 @@ mod tests {
 
     #[test]
     fn unit_log_run() -> Result<()> {
+        let name = "log_run".to_string();
         let command = LogArgs {
-            name: "log_run".to_string(),
+            name,
             lines: 200,
             follow: false,
             flush: false,
         };
 
-        assert_eq!(command.name, "log_run");
-        assert!(!command.follow);
-        assert!(!command.flush);
-        assert_eq!(command.lines, 200);
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application does not exist.");
-
         Ok(())
     }
 }

@@ -92,6 +92,11 @@ pub fn app_already_running(name: &String) -> Result<bool> {
                 Ok(_) => Ok(true),
                 Err(err) => {
                     // This looks horrible
+                    // If the error contains 'Error connecting to'
+                    // it means that an error from socket has occurred.
+                    // This might happen if you kill the crescent process
+                    // which will not delete the socket file, and will
+                    // error out if you try connecting to it.
                     if err.to_string().contains("Error connecting to") {
                         return Ok(false);
                     }
@@ -125,7 +130,7 @@ pub fn get_app_status(name: &String) -> Result<ApplicationInfo> {
     }
 }
 
-pub fn ping_app(name: &String) -> Result<SocketEvent> {
+fn ping_app(name: &String) -> Result<SocketEvent> {
     let socket_dir = get_app_socket(name)?;
 
     let mut stream = UnixStream::connect(socket_dir)

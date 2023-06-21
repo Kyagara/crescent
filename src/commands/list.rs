@@ -108,6 +108,13 @@ mod tests {
     use std::assert_eq;
 
     #[test]
+    fn unit_list_run() -> Result<()> {
+        let command = ListArgs {};
+        command.run()?;
+        Ok(())
+    }
+
+    #[test]
     #[serial]
     fn unit_list_command_functions() -> Result<()> {
         let name = "list_command_application_info";
