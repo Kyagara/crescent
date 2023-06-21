@@ -1,3 +1,5 @@
+use crossterm::style::Stylize;
+
 pub fn get_uptime_from_seconds(secs: u64) -> String {
     // Laughing while writing this
     // It works at least
@@ -27,6 +29,14 @@ pub fn get_uptime_from_seconds(secs: u64) -> String {
     let days = hours / 24;
 
     format!("{days} {}", check_plural(days, "day"))
+}
+
+pub fn print_title_cyan(title: &str) {
+    println!("{}", title.bold().cyan())
+}
+
+pub fn println_field_white<T: std::fmt::Display>(name: &str, value: T) {
+    println!("{}: {value}", name.white())
 }
 
 #[cfg(test)]

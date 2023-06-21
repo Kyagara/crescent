@@ -1,6 +1,6 @@
 use crate::{
     application,
-    subprocess::{read_socket_stream, SocketEvent},
+    subprocess::{self, SocketEvent},
     tail,
 };
 use anyhow::{anyhow, Result};
@@ -269,7 +269,6 @@ fn socket_handler(
                 match event {
                     Ok(event) => {
                         s.write_all(&event).unwrap();
-                        s.flush().unwrap();
                     }
                     Err(err) => {
                         debug!("Error serializing event: {err}")
@@ -283,7 +282,7 @@ fn socket_handler(
     let mut read: usize = 0;
 
     thread::spawn(move || {
-        while read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
+        while subprocess::read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
             match serde_json::from_slice::<SocketEvent>(&received[..read]) {
                 Ok(message) => {
                     sender.send(TerminalEvent::SocketEvent(message)).unwrap();

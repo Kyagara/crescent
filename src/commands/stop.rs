@@ -1,10 +1,8 @@
-use std::{io::Write, os::unix::net::UnixStream};
-
-use crate::{application, subprocess::SocketEvent};
-
 use super::signal;
+use crate::{application, subprocess::SocketEvent};
 use anyhow::{Context, Result};
 use clap::Args;
+use std::{io::Write, os::unix::net::UnixStream};
 
 #[derive(Args)]
 #[command(about = "Send a stop command or a SIGTERM signal to the application subprocess.")]
@@ -41,9 +39,8 @@ impl StopArgs {
         let event = serde_json::to_vec(&SocketEvent::Stop())?;
 
         stream.write_all(&event)?;
-        stream.flush()?;
 
-        println!("Stop command event sent.");
+        println!("Stop command sent.");
 
         Ok(())
     }

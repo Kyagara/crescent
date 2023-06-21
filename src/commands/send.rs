@@ -31,7 +31,6 @@ impl SendArgs {
         let event = serde_json::to_vec(&SocketEvent::WriteStdin(self.command.join(" ")))?;
 
         stream.write_all(&event)?;
-        stream.flush()?;
 
         println!("Command sent.");
 

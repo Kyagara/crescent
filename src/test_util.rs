@@ -97,7 +97,7 @@ pub mod test_utils {
 
         let stdout = &output.stdout;
 
-        let usage_predicate = predicate::str::contains("Memory usage:");
+        let usage_predicate = predicate::str::contains("Memory usage");
         let name_predicate = predicate::str::contains(name);
 
         match from_utf8(stdout) {

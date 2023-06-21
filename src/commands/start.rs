@@ -81,9 +81,7 @@ impl StartArgs {
         let stop_command = match &self.profile {
             Some(profile_str) => {
                 profile_name = profile_str.clone();
-                let profile_path = crescent::get_profile_path(profile_str.to_string())?;
-                let string = fs::read_to_string(profile_path)?;
-                let profile: Profile = serde_json::from_str(&string)?;
+                let profile = crescent::get_profile(profile_str)?;
                 self = self.overwrite_args(profile.clone().into())?;
                 profile.stop_command
             }

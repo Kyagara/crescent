@@ -1,4 +1,4 @@
-use crate::application::{ping_app, ApplicationInfo};
+use crate::application::{self, ApplicationInfo};
 use anyhow::{anyhow, Result};
 use libc::pid_t;
 use log::{error, info};
@@ -67,7 +67,7 @@ pub fn start(
             for client in listener.incoming() {
                 match client {
                     Ok(mut stream) => {
-                        let mut stdin_clone = stdin.try_clone().unwrap();
+                        let mut stdin = stdin.try_clone().unwrap();
                         let history = command_history.clone();
                         let stop_command = stop_command.clone();
                         let status = status.clone();
@@ -76,86 +76,66 @@ pub fn start(
                             let mut history = history.lock().unwrap();
                             let status = status.lock().unwrap();
                             let stop_command = stop_command.lock().unwrap();
+
+                            let mut write_to_stdin = |cmd: String| {
+                                if let Err(err) = stdin.write_all(cmd.as_bytes()) {
+                                    error!("Error writing to subprocess stdin: {err}.");
+
+                                    // Should any error here shutdown and exit?
+                                    // Only exiting if the pipe is closed for now
+                                    if err.kind() == ErrorKind::BrokenPipe {
+                                        info!("Sending SIGTERM to subprocess.");
+                                        terminate(&status.name, &pid);
+                                    }
+                                }
+                            };
+
                             let mut received = vec![0u8; 1024];
                             let mut read: usize = 0;
 
                             while read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
                                 match serde_json::from_slice::<SocketEvent>(&received[..read]) {
-                                    Ok(message) => {
-                                        match message {
-                                            SocketEvent::WriteStdin(content) => {
-                                                info!("Command received: '{}'", &content);
-                                                history.insert(0, content.to_string());
+                                    Ok(message) => match message {
+                                        SocketEvent::WriteStdin(content) => {
+                                            info!("Command received: '{}'", &content);
+                                            history.insert(0, content.to_string());
+                                            let cmd = content.trim().to_owned() + "\n";
+                                            write_to_stdin(cmd)
+                                        }
+                                        SocketEvent::CommandHistory(_) => {
+                                            let event = serde_json::to_vec(
+                                                &SocketEvent::CommandHistory(history.clone()),
+                                            )
+                                            .unwrap();
+                                            stream.write_all(&event).unwrap();
+                                        }
+                                        SocketEvent::RetrieveStatus(_) => {
+                                            let event =
+                                                serde_json::to_vec(&status.clone()).unwrap();
+                                            stream.write_all(&event).unwrap();
+                                        }
+                                        SocketEvent::Ping() => {
+                                            let event =
+                                                serde_json::to_vec(&SocketEvent::Ping()).unwrap();
+                                            stream.write_all(&event).unwrap();
+                                        }
 
-                                                let cmd = content.trim().to_owned() + "\n";
+                                        SocketEvent::Stop() => {
+                                            info!("Received stop command.");
 
-                                                if let Err(err) =
-                                                    stdin_clone.write_all(cmd.as_bytes())
-                                                {
-                                                    error!(
-                                                        "Error writing to subprocess stdin: {err}."
-                                                    );
-
-                                                    // Should any error here shutdown and exit?
-                                                    // Only exiting if the pipe is closed for now
-                                                    if err.kind() == ErrorKind::BrokenPipe {
-                                                        info!("Sending SIGTERM to subprocess.");
-                                                        terminate(&status.name, &pid);
-                                                        break;
-                                                    }
+                                            match stop_command.clone() {
+                                                Some(stop_command) => {
+                                                    info!("Stop command found, forwarding it.");
+                                                    write_to_stdin(stop_command)
                                                 }
-                                            }
-                                            SocketEvent::CommandHistory(_) => {
-                                                let event = serde_json::to_vec(
-                                                    &SocketEvent::CommandHistory(history.clone()),
-                                                )
-                                                .unwrap();
-                                                stream.write_all(&event).unwrap();
-                                            }
-                                            SocketEvent::RetrieveStatus(_) => {
-                                                let event =
-                                                    serde_json::to_vec(&status.clone()).unwrap();
-                                                stream.write_all(&event).unwrap();
-                                            }
-                                            SocketEvent::Ping() => {
-                                                let event =
-                                                    serde_json::to_vec(&SocketEvent::Ping())
-                                                        .unwrap();
-                                                stream.write_all(&event).unwrap();
-                                            }
-
-                                            SocketEvent::Stop() => {
-                                                info!("Received stop command.");
-
-                                                match stop_command.clone() {
-                                                    Some(stop_command) => {
-                                                        info!("Stop command was defined early, sending it to the subprocess.");
-
-                                                        if let Err(err) = stdin_clone
-                                                            .write_all(stop_command.as_bytes())
-                                                        {
-                                                            error!(
-                                                            "Error writing to subprocess stdin: {err}."
-                                                        );
-
-                                                            // Should any error here shutdown and exit?
-                                                            // Only exiting if the pipe is closed for now
-                                                            if err.kind() == ErrorKind::BrokenPipe {
-                                                                info!("Sending SIGTERM to subprocess.");
-                                                                terminate(&status.name, &pid);
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
-                                                    None => {
-                                                        info!("Sending SIGTERM to subprocess.");
-                                                        terminate(&status.name, &pid);
-                                                        break;
-                                                    }
+                                                None => {
+                                                    info!("Sending SIGTERM to subprocess.");
+                                                    terminate(&status.name, &pid);
+                                                    break;
                                                 }
                                             }
                                         }
-                                    }
+                                    },
                                     Err(err) => {
                                         error!("Error converting event to struct: {err}")
                                     }
@@ -257,7 +237,7 @@ fn terminate(name: &String, subprocess_pid: &Pid) {
 }
 
 pub fn check_and_send_signal(name: &String, pid: &Pid, signal: &u8) -> Result<bool> {
-    match ping_app(name) {
+    match application::ping_app(name) {
         Ok(_) => {
             let subprocess_pid: usize = (*pid).into();
             let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
