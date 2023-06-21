@@ -1,4 +1,4 @@
-use crate::application::{self, ApplicationInfo};
+use crate::application::ApplicationInfo;
 use anyhow::{anyhow, Result};
 use libc::pid_t;
 use log::{error, info};
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::c_int,
     fs::{self, File},
-    io::{ErrorKind, Read, Write},
+    io::{Error, ErrorKind, Read, Write},
     os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
     sync::{Arc, Mutex},
@@ -85,7 +85,9 @@ pub fn start(
                                     // Only exiting if the pipe is closed for now
                                     if err.kind() == ErrorKind::BrokenPipe {
                                         info!("Sending SIGTERM to subprocess.");
-                                        terminate(&status.name, &pid);
+                                        if let Err(err) = send_unix_signal(pid, 15) {
+                                            error!("{err}");
+                                        }
                                     }
                                 }
                             };
@@ -130,7 +132,9 @@ pub fn start(
                                                 }
                                                 None => {
                                                     info!("Sending SIGTERM to subprocess.");
-                                                    terminate(&status.name, &pid);
+                                                    if let Err(err) = send_unix_signal(pid, 15) {
+                                                        error!("{err}");
+                                                    }
                                                     break;
                                                 }
                                             }
@@ -230,25 +234,31 @@ pub fn read_socket_stream(stream: &mut UnixStream, received: &mut [u8], read: &m
     *read
 }
 
-fn terminate(name: &String, subprocess_pid: &Pid) {
-    if let Err(err) = check_and_send_signal(name, subprocess_pid, &15) {
-        error!("{err}");
+pub fn send_unix_signal(pid: Pid, signal: u8) -> Result<()> {
+    let subprocess_pid: usize = pid.try_into()?;
+
+    let result = unsafe { libc::kill(subprocess_pid as pid_t, signal as c_int) };
+
+    if result == 0 {
+        return Ok(());
     }
-}
 
-pub fn check_and_send_signal(name: &String, pid: &Pid, signal: &u8) -> Result<bool> {
-    match application::ping_app(name) {
-        Ok(_) => {
-            let subprocess_pid: usize = (*pid).into();
-            let result = unsafe { libc::kill(subprocess_pid as pid_t, *signal as c_int) };
+    match Error::last_os_error().raw_os_error() {
+        Some(errno) => {
+            let error = match errno {
+                1 => "(1) EPERM - An invalid signal was specified.".to_string(),
+                3 => "(3) ESRCH - The calling process does not have permission to send the
+                signal to any of the target processes."
+                    .to_string(),
+                22 => {
+                    "(22) EINVAL - The target process or process group does not exist.".to_string()
+                }
+                _ => format!("({errno}) Unknown error - Error not documented by crescent."),
+            };
 
-            if result == 0 {
-                return Ok(true);
-            }
-
-            Err(anyhow!("Error sending signal: errno {result}."))
+            Err(anyhow!("Error sending signal: {error}"))
         }
-        Err(_) => Ok(false),
+        None => Ok(()),
     }
 }
 
@@ -265,7 +275,9 @@ mod tests {
 
         let pids = app_pids_by_name(&name.to_string())?;
 
-        terminate(&name.to_string(), &pids[1]);
+        if let Err(err) = send_unix_signal(pids[1], 15) {
+            error!("{err}");
+        }
 
         test_utils::delete_app_folder(name)?;
         Ok(())

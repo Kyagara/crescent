@@ -66,11 +66,12 @@ mod tests {
 
     #[test]
     fn unit_profile_run() -> Result<()> {
+        let name = "profile_not_found".to_string();
         let command = ProfileArgs {
-            profile: "profile_not_found".to_string(),
+            profile: name,
             json: false,
         };
-        assert_eq!(command.profile, "profile_not_found");
+
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Profile not found.");
         Ok(())

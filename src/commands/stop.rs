@@ -52,11 +52,9 @@ mod tests {
 
     #[test]
     fn unit_stop_run() -> Result<()> {
-        let command = StopArgs {
-            name: "stop_run".to_string(),
-            force: true,
-        };
-        assert_eq!(command.name, "stop_run");
+        let name = "stop_run".to_string();
+        let command = StopArgs { name, force: true };
+
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application does not exist.");
         Ok(())

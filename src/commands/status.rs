@@ -16,14 +16,9 @@ impl StatusArgs {
     pub fn run(self) -> Result<()> {
         application::check_app_exists(&self.name)?;
 
-        let status = application::get_app_status(&self.name)?;
-
         let pids = application::app_pids_by_name(&self.name)?;
 
-        if pids.len() < 2 {
-            println!("Application not running.");
-            return Ok(());
-        }
+        let status = application::get_app_status(&self.name)?;
 
         let subprocess_pid = pids[1];
 
@@ -66,6 +61,21 @@ impl StatusArgs {
             util::println_field_white("Uptime", util::get_uptime_from_seconds(process.run_time()));
         }
 
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_status_run() -> Result<()> {
+        let name = "status_run".to_string();
+        let command = StatusArgs { name };
+
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Application does not exist.");
         Ok(())
     }
 }

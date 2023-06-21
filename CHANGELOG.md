@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
--   `profile` command, it simply outputs a prettified json of the provided profile.
+-   `profile` command, prints the provided profile, accepts a `--json`/`-j` to print the profile as prettified json.
 -   More helper functions like `get_socket_dir` and `check_app_exists`.
 
 ### Changed
@@ -18,7 +18,7 @@ All notable changes to this project will be documented in this file.
 
 ### Removed
 
--   Enviroment vars.
+-   Enviroment variables.
 
 ## [0.4.2] - 2023-06-17
 

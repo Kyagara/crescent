@@ -22,21 +22,18 @@ impl SignalArgs {
 
         let pids = application::app_pids_by_name(&self.name)?;
 
-        match subprocess::check_and_send_signal(&self.name, &pids[1], &self.signal) {
-            Ok(_exists) => {
-                println!("Signal sent.");
-                Ok(())
-            }
-            Err(err) => Err(err),
-        }
+        subprocess::send_unix_signal(pids[1], self.signal)?;
+
+        println!("Signal sent.");
+
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::test_util::test_utils::delete_app_folder;
-
     use super::*;
+    use crate::test_util::test_utils;
     use anyhow::Context;
     use std::{
         env,
@@ -47,12 +44,12 @@ mod tests {
 
     #[test]
     fn unit_signal_run() -> Result<()> {
+        let name = "signal_run".to_string();
         let command = SignalArgs {
-            name: "signal_run".to_string(),
+            name: name.clone(),
             signal: 0,
         };
 
-        assert_eq!(command.name, "signal_run");
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application does not exist.");
 
@@ -64,9 +61,10 @@ mod tests {
         let mut file = File::create(path)?;
 
         let command = SignalArgs {
-            name: "signal_run".to_string(),
+            name: name.clone(),
             signal: 0,
         };
+
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application not running.");
 
@@ -75,13 +73,13 @@ mod tests {
         writeln!(&mut file, "{}", pid)?;
 
         let command = SignalArgs {
-            name: "signal_run".to_string(),
+            name: name.clone(),
             signal: 0,
         };
         let err = command.run().unwrap_err();
         assert_eq!(format!("{}", err), "Application not running.");
 
-        delete_app_folder("signal_run")?;
+        test_utils::delete_app_folder(&name)?;
         Ok(())
     }
 }
