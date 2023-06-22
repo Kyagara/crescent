@@ -312,7 +312,6 @@ pub fn start(app_info: Application) -> Result<()> {
 mod tests {
     use super::*;
     extern crate test_utils;
-    use predicates::prelude::predicate;
 
     #[test]
     fn unit_start_run() -> Result<()> {
@@ -375,9 +374,9 @@ mod tests {
 
         cmd.args(args);
 
-        cmd.assert().failure().stderr(predicate::str::contains(
-            "An application with the same name is already running.",
-        ));
+        cmd.assert()
+            .failure()
+            .stderr("Error: An application with the same name is already running.\n");
 
         test_utils::shutdown_long_running_service(name)?;
         test_utils::delete_app_folder(name)?;

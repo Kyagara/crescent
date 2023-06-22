@@ -262,17 +262,13 @@ mod tests {
     extern crate test_utils;
 
     #[test]
-    fn unit_subprocess_terminate() -> Result<()> {
-        let name = "subprocess_terminate";
+    fn unit_send_unix_signal() -> Result<()> {
+        let name = "unit_send_unix_signal";
         test_utils::start_long_running_service(name)?;
         assert!(test_utils::check_app_is_running(name)?);
 
         let pids = app_pids_by_name(&name.to_string())?;
-
-        if let Err(err) = send_unix_signal(pids[1], 15) {
-            error!("{err}");
-        }
-
+        send_unix_signal(pids[1], 15)?;
         test_utils::delete_app_folder(name)?;
         Ok(())
     }

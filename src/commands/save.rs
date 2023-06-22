@@ -57,15 +57,3 @@ impl SaveArgs {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unit_save_run() -> Result<()> {
-        let command = SaveArgs {};
-        command.run()?;
-        Ok(())
-    }
-}

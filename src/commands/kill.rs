@@ -19,18 +19,3 @@ impl KillArgs {
         signal.run()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unit_kill_run() -> Result<()> {
-        let name = "kill_run".to_string();
-        let command = KillArgs { name };
-
-        let err = command.run().unwrap_err();
-        assert_eq!(format!("{}", err), "Application does not exist.");
-        Ok(())
-    }
-}

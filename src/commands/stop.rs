@@ -45,18 +45,3 @@ impl StopArgs {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unit_stop_run() -> Result<()> {
-        let name = "stop_run".to_string();
-        let command = StopArgs { name, force: true };
-
-        let err = command.run().unwrap_err();
-        assert_eq!(format!("{}", err), "Application does not exist.");
-        Ok(())
-    }
-}

@@ -103,11 +103,9 @@ mod tests {
         let lines_read = file.read_lines(1)?;
 
         assert_eq!(lines_read.len(), 1);
-
         assert_eq!(lines_read.first().unwrap(), "LOG");
 
         remove_file(file_path)?;
-
         Ok(())
     }
 }

@@ -155,17 +155,14 @@ mod tests {
     use std::fs::remove_dir_all;
 
     #[test]
-    fn unit_application_dir_created() -> Result<()> {
+    fn unit_app_dir_by_name() -> Result<()> {
         let mut home_path = crescent_dir()?;
-        home_path.push("apps/test_app");
-        let app_name = String::from("test_app");
-
+        home_path.push("apps/test_app_dir_by_name");
+        let app_name = String::from("test_app_dir_by_name");
         fs::create_dir_all(home_path.clone())?;
 
         assert_eq!(app_dir_by_name(&app_name)?, home_path);
-
         remove_dir_all(home_path)?;
-
         Ok(())
     }
 }
