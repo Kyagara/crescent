@@ -102,7 +102,7 @@ impl ListArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::test_utils;
+    extern crate test_utils;
     use anyhow::Context;
     use serial_test::serial;
     use std::assert_eq;

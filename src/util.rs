@@ -1,4 +1,5 @@
 use crossterm::style::Stylize;
+use std::{env, path::PathBuf, process::Command};
 
 pub fn get_uptime_from_seconds(secs: u64) -> String {
     // Laughing while writing this
@@ -37,6 +38,50 @@ pub fn print_title_cyan(title: &str) {
 
 pub fn println_field_white<T: std::fmt::Display>(name: &str, value: T) {
     println!("{}: {value}", name.white())
+}
+
+pub fn get_exec_path() -> PathBuf {
+    let exe_path = env::current_exe()
+        .ok()
+        .map(|mut path| {
+            path.pop();
+            if path.ends_with("deps") {
+                path.pop();
+            }
+            path
+        })
+        .unwrap();
+
+    std::env::var_os("CARGO_BIN_EXE_cres")
+        .map(|p| p.into())
+        .unwrap_or_else(|| exe_path.join("cres"))
+}
+
+// Solves issues with assert_cmd not finding the binary when using cross.
+// https://github.com/assert-rs/assert_cmd/issues/139#issuecomment-1200146157
+pub fn get_base_command(path: PathBuf) -> Command {
+    let mut cmd;
+    if let Some(runner) = find_runner() {
+        let mut runner = runner.split_whitespace();
+        cmd = Command::new(runner.next().unwrap());
+        for arg in runner {
+            cmd.arg(arg);
+        }
+        cmd.arg(path);
+    } else {
+        cmd = Command::new(path);
+    }
+    cmd
+}
+
+// https://github.com/assert-rs/assert_cmd/issues/139#issuecomment-1200146157
+fn find_runner() -> Option<String> {
+    for (key, value) in std::env::vars() {
+        if key.starts_with("CARGO_TARGET_") && key.ends_with("_RUNNER") && !value.is_empty() {
+            return Some(value);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
