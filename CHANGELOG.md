@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 -   `profile` command, prints the provided profile, accepts a `--json`/`-j` to print the profile as prettified json.
+-   `save` command, saves all currently running applications to a `apps.json` file.
+-   `--saved` flag to `start`, will try to start all applications saved in the `apps.json` file.
 -   More helper functions like `get_socket_dir` and `check_app_exists`.
 
 ### Changed
@@ -15,6 +17,7 @@ All notable changes to this project will be documented in this file.
 -   `stop`, `status` now uses a custom socket event.
 -   `stop` can now send a custom stop command if provided in a profile.
 -   `stop` now has a `--force`/`-f` flag to bypass a user defined stop command and send a SIGTERM signal.
+-   Moved `test_utils` to a separate crate.
 
 ### Removed
 

@@ -41,7 +41,7 @@ impl SendArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::test_utils;
+    extern crate test_utils;
     use std::path::PathBuf;
     use std::{env, fs};
 

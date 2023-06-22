@@ -86,13 +86,10 @@ mod tests {
     #[test]
     fn unit_get_profile() -> Result<()> {
         let profile = get_profile(&String::from("example"))?;
-
         assert!(profile.__comment.is_some());
 
         let err = get_profile(&String::from("does-not-exist")).unwrap_err();
-
         assert_eq!(format!("{}", err), "Profile not found.");
-
         Ok(())
     }
 }

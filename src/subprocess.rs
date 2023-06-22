@@ -258,7 +258,8 @@ pub fn send_unix_signal(pid: Pid, signal: u8) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{application::app_pids_by_name, test_util::test_utils};
+    use crate::application::app_pids_by_name;
+    extern crate test_utils;
 
     #[test]
     fn unit_subprocess_terminate() -> Result<()> {

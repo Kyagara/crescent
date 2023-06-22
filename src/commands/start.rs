@@ -3,7 +3,7 @@ use crate::{
     application::{self, Application},
     crescent::{self, Profile},
     logger, subprocess,
-    util::print_title_cyan,
+    util::{self, print_title_cyan},
 };
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
@@ -11,10 +11,8 @@ use daemonize::Daemonize;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use std::{
-    env,
     fs::{self, File},
     path::Path,
-    process::Command,
 };
 
 #[derive(Args, Clone, Serialize, Deserialize, Default)]
@@ -245,8 +243,8 @@ fn start_saved() -> Result<()> {
             continue;
         }
 
-        let exec_path = env::current_exe()?;
-        let mut cmd = Command::new(exec_path);
+        let exec_path = util::get_exec_path();
+        let mut cmd = util::get_base_command(exec_path);
         let mut cmd_args = vec![];
 
         cmd_args.push("start".to_string());
@@ -313,7 +311,7 @@ pub fn start(app_info: Application) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::test_utils;
+    extern crate test_utils;
     use predicates::prelude::predicate;
 
     #[test]

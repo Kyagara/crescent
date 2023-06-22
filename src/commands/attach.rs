@@ -419,7 +419,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::test_utils;
+    extern crate test_utils;
     use predicates::Predicate;
     use std::{
         env::temp_dir,
