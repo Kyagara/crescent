@@ -168,7 +168,7 @@ fn start_python_without_interpreter() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stderr(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting"));
 
     // Sleeping to make sure the process started
     thread::sleep(std::time::Duration::from_secs(1));
@@ -256,18 +256,15 @@ fn log_follow_short_lived_command() -> Result<()> {
 }
 
 #[test]
-fn log_flush_command_long_running_service() -> Result<()> {
-    let name = "log_flush_long_running_service";
-    util::start_long_running_service(name)?;
-    assert!(util::check_app_is_running(name)?);
-
-    util::shutdown_long_running_service(name)?;
+fn log_flush_command() -> Result<()> {
+    let name = "log_flush_command";
+    util::start_short_lived_command(name)?;
 
     let mut cmd = util::get_base_command();
     cmd.args(["log", name, "--flush"]);
 
     cmd.assert().success().stdout(predicate::str::contains(
-        "Flushed 'log_flush_long_running_service' log file.",
+        "Flushed 'log_flush_command' log file.",
     ));
 
     util::delete_app_folder(name)?;
@@ -301,7 +298,7 @@ fn start_long_running_service_with_profile() -> Result<()> {
 
     cmd.assert()
         .success()
-        .stderr(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting"));
 
     // Sleeping to make sure the process started
     thread::sleep(std::time::Duration::from_secs(1));

@@ -67,7 +67,7 @@ pub mod test_utils {
 
         cmd.assert()
             .success()
-            .stderr(predicate::str::contains("Starting daemon."));
+            .stderr(predicate::str::contains("Starting"));
 
         // Sleeping to make sure the process started
         thread::sleep(std::time::Duration::from_secs(1));

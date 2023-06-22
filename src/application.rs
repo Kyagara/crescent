@@ -1,4 +1,4 @@
-use crate::{crescent, subprocess::SocketEvent};
+use crate::{commands::start::StartArgs, crescent, subprocess::SocketEvent};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -11,12 +11,12 @@ use std::{
 use sysinfo::Pid;
 
 #[derive(Serialize, Deserialize, Clone, Default)]
-pub struct ApplicationInfo {
+pub struct Application {
     pub name: String,
-    pub interpreter_args: Vec<String>,
-    pub application_args: Vec<String>,
-    pub profile: String,
+    pub file_path: PathBuf,
+    pub stop_command: Option<String>,
     pub cmd: Vec<String>,
+    pub start_args: StartArgs,
 }
 
 pub fn check_app_exists(name: &String) -> Result<PathBuf> {
@@ -108,13 +108,13 @@ pub fn app_already_running(name: &String) -> Result<bool> {
     }
 }
 
-pub fn get_app_status(name: &String) -> Result<ApplicationInfo> {
+pub fn get_app_info(name: &String) -> Result<Application> {
     let socket_dir = get_app_socket(name)?;
 
     let mut stream = UnixStream::connect(socket_dir)
         .context(format!("Error connecting to '{}' socket.", name))?;
 
-    let event = serde_json::to_vec(&SocketEvent::RetrieveStatus(ApplicationInfo::default()))?;
+    let event = serde_json::to_vec(&SocketEvent::RetrieveAppInfo(Box::default()))?;
 
     stream.write_all(&event)?;
 
@@ -123,9 +123,7 @@ pub fn get_app_status(name: &String) -> Result<ApplicationInfo> {
     loop {
         let read = stream.read(&mut received)?;
         if read > 0 {
-            return Ok(serde_json::from_slice::<ApplicationInfo>(
-                &received[..read],
-            )?);
+            return Ok(serde_json::from_slice::<Application>(&received[..read])?);
         }
     }
 }
@@ -136,7 +134,7 @@ fn ping_app(name: &String) -> Result<SocketEvent> {
     let mut stream = UnixStream::connect(socket_dir)
         .context(format!("Error connecting to '{}' socket.", name))?;
 
-    let event = serde_json::to_vec(&SocketEvent::Ping())?;
+    let event = serde_json::to_vec(&SocketEvent::Ping)?;
 
     stream.write_all(&event)?;
 

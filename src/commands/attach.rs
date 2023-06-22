@@ -430,6 +430,21 @@ mod tests {
     use tui::backend::TestBackend;
 
     #[test]
+    fn unit_attach_run() -> Result<()> {
+        let name = "attach_run".to_string();
+        test_utils::start_long_running_service(&name)?;
+        assert!(test_utils::check_app_is_running(&name)?);
+
+        let command_args = AttachArgs { name: name.clone() };
+
+        command_args.run()?;
+
+        test_utils::shutdown_long_running_service(&name)?;
+        test_utils::delete_app_folder(&name)?;
+        Ok(())
+    }
+
+    #[test]
     fn unit_attach_handlers() -> Result<()> {
         let temp_dir = temp_dir();
         let socket_dir = temp_dir.join("crescent_temp_attach_socket_handler.sock");
@@ -482,23 +497,6 @@ mod tests {
         let mut terminal = Terminal::new(backend)?;
 
         terminal.draw(|f| ui(f, &mut app, &stats_list))?;
-
-        test_utils::shutdown_long_running_service(name)?;
-        test_utils::delete_app_folder(name)?;
-        Ok(())
-    }
-
-    #[test]
-    fn unit_attach_run() -> Result<()> {
-        let name = "attach_run";
-        test_utils::start_long_running_service(name)?;
-        assert!(test_utils::check_app_is_running(name)?);
-
-        let command_args = AttachArgs {
-            name: "attach_run".to_string(),
-        };
-
-        command_args.run()?;
 
         test_utils::shutdown_long_running_service(name)?;
         test_utils::delete_app_folder(name)?;
