@@ -59,3 +59,21 @@ impl ProfileArgs {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_profile_run() -> Result<()> {
+        let name = "unit_profile_run".to_string();
+        let command = ProfileArgs {
+            profile: name,
+            json: false,
+        };
+
+        let err = command.run().unwrap_err();
+        assert_eq!(format!("{}", err), "Profile not found.");
+        Ok(())
+    }
+}
