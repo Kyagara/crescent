@@ -108,16 +108,9 @@ mod tests {
     use std::assert_eq;
 
     #[test]
-    fn unit_list_run() -> Result<()> {
-        let command = ListArgs {};
-        command.run()?;
-        Ok(())
-    }
-
-    #[test]
     #[serial]
     fn unit_list_command_functions() -> Result<()> {
-        let name = "list_command_application_info";
+        let name = "unit_list_command_functions";
         test_utils::start_long_running_service(name)?;
         assert!(test_utils::check_app_is_running(name)?);
 

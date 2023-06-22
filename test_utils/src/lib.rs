@@ -119,3 +119,12 @@ fn find_runner() -> Option<String> {
     }
     None
 }
+
+pub fn execute_against_app_not_exist(command: Vec<&str>) -> Result<()> {
+    let mut cmd = get_base_command();
+    cmd.args(command);
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Application does not exist."));
+    Ok(())
+}

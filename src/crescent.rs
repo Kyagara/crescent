@@ -73,13 +73,18 @@ mod tests {
     use std::path::PathBuf;
 
     #[test]
-    fn unit_crescent_dir_created() -> Result<()> {
+    fn unit_crescent_dir() -> Result<()> {
         let home = env::var("HOME")?;
         let mut home_path = PathBuf::from(home);
         home_path.push(".crescent");
 
         assert_eq!(crescent_dir()?, home_path);
+        Ok(())
+    }
 
+    #[test]
+    fn unit_get_profiles_dir() -> Result<()> {
+        get_profiles_dir()?;
         Ok(())
     }
 

@@ -420,7 +420,6 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
 mod tests {
     use super::*;
     extern crate test_utils;
-    use predicates::Predicate;
     use std::{
         env::temp_dir,
         fs::{remove_file, File},
@@ -431,7 +430,7 @@ mod tests {
 
     #[test]
     fn unit_attach_run() -> Result<()> {
-        let name = "attach_run".to_string();
+        let name = "unit_attach_run".to_string();
         test_utils::start_long_running_service(&name)?;
         assert!(test_utils::check_app_is_running(&name)?);
 
@@ -474,8 +473,7 @@ mod tests {
         socket_handler(socket_dir, sender, socket_receiver)?;
 
         if let TerminalEvent::Stats(a) = receiver.recv_timeout(Duration::from_secs(3))? {
-            let p = predicates::str::contains("load");
-            assert!(p.eval(&a));
+            assert!(a.contains("load"));
         }
 
         log_sender.send("log".to_string())?;

@@ -77,18 +77,3 @@ impl StatusArgs {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unit_status_run() -> Result<()> {
-        let name = "status_run".to_string();
-        let command = StatusArgs { name };
-
-        let err = command.run().unwrap_err();
-        assert_eq!(format!("{}", err), "Application does not exist.");
-        Ok(())
-    }
-}
