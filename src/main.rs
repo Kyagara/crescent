@@ -1,6 +1,7 @@
 use crate::commands::{
     attach::AttachArgs, kill::KillArgs, list::ListArgs, log::LogArgs, profile::ProfileArgs,
-    send::SendArgs, signal::SignalArgs, start::StartArgs, status::StatusArgs, stop::StopArgs,
+    save::SaveArgs, send::SendArgs, signal::SignalArgs, start::StartArgs, status::StatusArgs,
+    stop::StopArgs,
 };
 use crate::Commands::*;
 use anyhow::Result;
@@ -16,7 +17,7 @@ mod test_util;
 mod util;
 
 #[derive(Parser)]
-#[command(name = "Crescent", version, about)]
+#[command(name = "crescent", version, about)]
 struct Crescent {
     #[command(subcommand)]
     pub commands: Commands,
@@ -34,6 +35,7 @@ enum Commands {
     Kill(KillArgs),
     Status(StatusArgs),
     Profile(ProfileArgs),
+    Save(SaveArgs),
 }
 
 fn main() -> Result<()> {
@@ -50,6 +52,7 @@ fn main() -> Result<()> {
         Status(args) => StatusArgs::run(args),
         Kill(args) => KillArgs::run(args),
         Profile(args) => ProfileArgs::run(args),
+        Save(args) => SaveArgs::run(args),
     }?;
 
     Ok(())

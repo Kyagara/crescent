@@ -36,7 +36,7 @@ impl StopArgs {
         let mut stream = UnixStream::connect(app_dir)
             .context(format!("Error connecting to '{}' socket.", self.name))?;
 
-        let event = serde_json::to_vec(&SocketEvent::Stop())?;
+        let event = serde_json::to_vec(&SocketEvent::Stop)?;
 
         stream.write_all(&event)?;
 

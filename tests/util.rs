@@ -70,7 +70,7 @@ pub fn start_short_lived_command(name: &str) -> Result<()> {
 
     cmd.assert()
         .success()
-        .stderr(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting"));
 
     // Sleeping to make sure the process started
     thread::sleep(std::time::Duration::from_secs(1));
@@ -94,7 +94,7 @@ pub fn start_long_running_service(name: &str) -> Result<()> {
 
     cmd.assert()
         .success()
-        .stderr(predicate::str::contains("Starting daemon."));
+        .stderr(predicate::str::contains("Starting"));
 
     // Sleeping to make sure the process started
     thread::sleep(std::time::Duration::from_secs(1));

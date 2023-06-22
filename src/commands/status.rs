@@ -18,7 +18,7 @@ impl StatusArgs {
 
         let pids = application::app_pids_by_name(&self.name)?;
 
-        let status = application::get_app_status(&self.name)?;
+        let status = application::get_app_info(&self.name)?;
 
         let subprocess_pid = pids[1];
 
@@ -26,12 +26,25 @@ impl StatusArgs {
         system.refresh_process(subprocess_pid);
         system.refresh_memory();
 
+        let i_args = match status.start_args.interpreter_arguments {
+            Some(args) => args.join(" "),
+            None => String::new(),
+        };
+
+        let a_args = match status.start_args.application_arguments {
+            Some(args) => args.join(" "),
+            None => String::new(),
+        };
+
         util::print_title_cyan("Application information");
 
         util::println_field_white("Name", status.name);
-        util::println_field_white("Interpreter arguments", status.interpreter_args.join(" "));
-        util::println_field_white("Application arguments", status.application_args.join(" "));
-        util::println_field_white("Profile", status.profile);
+        util::println_field_white("Interpreter arguments", i_args);
+        util::println_field_white("Application arguments", a_args);
+        util::println_field_white(
+            "Profile",
+            status.start_args.profile.unwrap_or(String::new()),
+        );
         util::println_field_white("crescent PID", pids[0]);
 
         println!();

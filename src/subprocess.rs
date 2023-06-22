@@ -1,4 +1,4 @@
-use crate::application::ApplicationInfo;
+use crate::application::Application;
 use anyhow::{anyhow, Result};
 use libc::pid_t;
 use log::{error, info};
@@ -17,28 +17,24 @@ use sysinfo::Pid;
 
 #[derive(Serialize, Deserialize)]
 pub enum SocketEvent {
-    RetrieveStatus(ApplicationInfo),
+    RetrieveAppInfo(Box<Application>),
     CommandHistory(Vec<String>),
     WriteStdin(String),
-    Stop(),
-    Ping(),
+    Stop,
+    Ping,
 }
 
-pub fn start(
-    app_status: ApplicationInfo,
-    stop_command: Option<String>,
-    app_dir: PathBuf,
-) -> Result<()> {
-    info!("Subprocess arguments: '{}'", app_status.cmd.join(" "));
+pub fn start(app_info: Application, app_dir: PathBuf) -> Result<()> {
+    info!("Subprocess arguments: '{}'", app_info.cmd.join(" "));
 
-    let socket_address = app_dir.join(app_status.name.clone() + ".sock");
-    let pid_path = app_dir.join(app_status.name.clone() + ".pid");
+    let socket_address = app_dir.join(app_info.name.clone() + ".sock");
+    let pid_path = app_dir.join(app_info.name.clone() + ".pid");
 
     drop(app_dir);
 
     info!("Starting subprocess.");
 
-    let (mut subprocess, stdin, pid) = match exec_subprocess(pid_path, app_status.cmd.clone()) {
+    let (mut subprocess, stdin, pid) = match exec_subprocess(pid_path, app_info.cmd.clone()) {
         Ok(subprocess) => subprocess,
         Err(err) => {
             error!("{err}");
@@ -58,8 +54,7 @@ pub fn start(
     };
 
     let command_history = Arc::new(Mutex::new(Vec::new()));
-    let status = Arc::new(Mutex::new(app_status));
-    let stop_command = Arc::new(Mutex::new(stop_command));
+    let app_info = Arc::new(Mutex::new(app_info));
 
     thread::Builder::new()
         .name(String::from("subprocess_socket"))
@@ -69,13 +64,11 @@ pub fn start(
                     Ok(mut stream) => {
                         let mut stdin = stdin.try_clone().unwrap();
                         let history = command_history.clone();
-                        let stop_command = stop_command.clone();
-                        let status = status.clone();
+                        let app_info = app_info.clone();
 
                         thread::spawn(move || {
                             let mut history = history.lock().unwrap();
-                            let status = status.lock().unwrap();
-                            let stop_command = stop_command.lock().unwrap();
+                            let app_info = app_info.lock().unwrap();
 
                             let mut write_to_stdin = |cmd: String| {
                                 if let Err(err) = stdin.write_all(cmd.as_bytes()) {
@@ -111,21 +104,21 @@ pub fn start(
                                             .unwrap();
                                             stream.write_all(&event).unwrap();
                                         }
-                                        SocketEvent::RetrieveStatus(_) => {
+                                        SocketEvent::RetrieveAppInfo(_) => {
                                             let event =
-                                                serde_json::to_vec(&status.clone()).unwrap();
+                                                serde_json::to_vec(&app_info.clone()).unwrap();
                                             stream.write_all(&event).unwrap();
                                         }
-                                        SocketEvent::Ping() => {
+                                        SocketEvent::Ping => {
                                             let event =
-                                                serde_json::to_vec(&SocketEvent::Ping()).unwrap();
+                                                serde_json::to_vec(&SocketEvent::Ping).unwrap();
                                             stream.write_all(&event).unwrap();
                                         }
 
-                                        SocketEvent::Stop() => {
+                                        SocketEvent::Stop => {
                                             info!("Received stop command.");
 
-                                            match stop_command.clone() {
+                                            match app_info.stop_command.clone() {
                                                 Some(stop_command) => {
                                                     info!("Stop command found, forwarding it.");
                                                     write_to_stdin(stop_command)

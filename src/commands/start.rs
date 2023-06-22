@@ -1,18 +1,23 @@
+use super::save::SaveFile;
 use crate::{
-    application::{self, ApplicationInfo},
+    application::{self, Application},
     crescent::{self, Profile},
     logger, subprocess,
+    util::print_title_cyan,
 };
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
 use daemonize::Daemonize;
-use log::{info, LevelFilter};
+use log::LevelFilter;
+use serde::{Deserialize, Serialize};
 use std::{
+    env,
     fs::{self, File},
     path::Path,
+    process::Command,
 };
 
-#[derive(Args)]
+#[derive(Args, Clone, Serialize, Deserialize, Default)]
 #[command(about = "Start an application from the file path provided.")]
 pub struct StartArgs {
     pub file_path: Option<String>,
@@ -52,6 +57,9 @@ pub struct StartArgs {
         help = "Name or path to the profile to load fields from."
     )]
     pub profile: Option<String>,
+
+    #[arg(short, long, help = "Start all saved apps.")]
+    pub saved: bool,
 }
 
 impl From<Profile> for StartArgs {
@@ -63,6 +71,7 @@ impl From<Profile> for StartArgs {
             interpreter_arguments: profile.interpreter_arguments,
             application_arguments: profile.application_arguments,
             profile: None,
+            saved: false,
         }
     }
 }
@@ -76,11 +85,12 @@ impl StartArgs {
             log::set_max_level(LevelFilter::Info);
         }
 
-        let mut profile_name = String::new();
+        if self.saved {
+            return start_saved();
+        }
 
         let stop_command = match &self.profile {
             Some(profile_str) => {
-                profile_name = profile_str.clone();
                 let profile = crescent::get_profile(profile_str)?;
                 self = self.overwrite_args(profile.clone().into())?;
                 profile.stop_command
@@ -113,54 +123,27 @@ impl StartArgs {
             ));
         }
 
-        let app_dir = application::app_dir_by_name(&name)?;
-
-        if app_dir.exists() {
-            fs::remove_dir_all(&app_dir).context("Error resetting application directory.")?;
-        }
-
-        fs::create_dir_all(&app_dir).context("Error creating application directory.")?;
+        let start_args = self.clone();
 
         let (interpreter_args, application_args) = self.create_subprocess_arguments(&file_path);
 
-        info!("Starting application.");
-
-        {
-            let log = File::create(app_dir.join(name.clone() + ".log"))?;
-            let pid_path = app_dir.join(name.clone() + ".pid");
-            let work_dir = file_path.parent().unwrap().to_path_buf();
-
-            info!("Starting daemon.");
-
-            let daemonize = Daemonize::new()
-                .pid_file(pid_path)
-                .working_directory(work_dir)
-                .stderr(log);
-
-            daemonize.start()?;
-
-            info!("Daemon started.");
-        }
-
         let cmd: Vec<String>;
         {
-            let mut i_args = interpreter_args.clone();
-            let mut a_args = application_args.clone();
+            let mut i_args = interpreter_args;
+            let mut a_args = application_args;
             i_args.append(&mut a_args);
             cmd = i_args
         }
 
-        let app_status = ApplicationInfo {
+        let app_info = Application {
             name,
-            interpreter_args,
-            application_args,
             cmd,
-            profile: profile_name,
+            file_path,
+            stop_command,
+            start_args,
         };
 
-        subprocess::start(app_status, stop_command, app_dir)?;
-
-        Ok(())
+        start(app_info)
     }
 
     fn overwrite_args(self, loaded_args: StartArgs) -> Result<StartArgs> {
@@ -213,7 +196,8 @@ impl StartArgs {
             interpreter,
             interpreter_arguments,
             application_arguments,
-            profile: Some(self.profile.unwrap()),
+            profile: None,
+            saved: false,
         })
     }
 
@@ -239,6 +223,93 @@ impl StartArgs {
     }
 }
 
+fn start_saved() -> Result<()> {
+    let mut save_dir = crescent::crescent_dir()?;
+    save_dir.push("apps.json");
+    let file = File::open(save_dir)?;
+    let save_file: SaveFile = serde_json::from_reader(file)?;
+
+    if save_file.apps.is_empty() {
+        return Err(anyhow!("List of apps is empty."));
+    }
+
+    print_title_cyan("Starting applications.");
+
+    for app_info in save_file.apps {
+        if application::app_already_running(&app_info.name)? {
+            println!(
+                "An application with the name `{}` is already running. Skipping.",
+                app_info.name
+            );
+
+            continue;
+        }
+
+        let exec_path = env::current_exe()?;
+        let mut cmd = Command::new(exec_path);
+        let mut cmd_args = vec![];
+
+        cmd_args.push("start".to_string());
+        cmd_args.push(app_info.file_path.to_str().unwrap().to_string());
+
+        if let Some(name) = app_info.start_args.name {
+            cmd_args.push("--name".to_string());
+            cmd_args.push(name);
+        }
+
+        if let Some(interpreter) = app_info.start_args.interpreter {
+            cmd_args.push("--interpreter".to_string());
+            cmd_args.push(interpreter);
+        }
+
+        if let Some(args) = app_info.start_args.interpreter_arguments {
+            cmd_args.push("--interpreter-args".to_string());
+            cmd_args.push(args.join(" "));
+        }
+
+        if let Some(args) = app_info.start_args.application_arguments {
+            cmd_args.push("--arguments".to_string());
+            cmd_args.push(args.join(" "));
+        }
+
+        if let Some(profile) = app_info.start_args.profile {
+            cmd_args.push("--profile".to_string());
+            cmd_args.push(profile);
+        }
+
+        cmd.args(cmd_args).spawn()?;
+    }
+
+    Ok(())
+}
+
+pub fn start(app_info: Application) -> Result<()> {
+    let app_dir = application::app_dir_by_name(&app_info.name)?;
+
+    if app_dir.exists() {
+        fs::remove_dir_all(&app_dir).context("Error resetting application directory.")?;
+    }
+
+    fs::create_dir_all(&app_dir).context("Error creating application directory.")?;
+
+    eprintln!("Starting `{}` application.", app_info.name);
+
+    {
+        let log = File::create(app_dir.join(app_info.name.clone() + ".log"))?;
+        let pid_path = app_dir.join(app_info.name.clone() + ".pid");
+        let work_dir = app_info.file_path.parent().unwrap().to_path_buf();
+
+        let daemonize = Daemonize::new()
+            .pid_file(pid_path)
+            .working_directory(work_dir)
+            .stderr(log);
+
+        daemonize.start()?;
+    }
+
+    subprocess::start(app_info, app_dir)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -254,6 +325,7 @@ mod tests {
             interpreter_arguments: None,
             application_arguments: None,
             profile: None,
+            saved: false,
         };
 
         let err = start_command.run().unwrap_err();
@@ -266,6 +338,7 @@ mod tests {
             interpreter_arguments: None,
             application_arguments: None,
             profile: None,
+            saved: false,
         };
 
         let err = start_command.run().unwrap_err();
@@ -281,6 +354,7 @@ mod tests {
             interpreter_arguments: None,
             application_arguments: None,
             profile: None,
+            saved: false,
         };
 
         let err = start_command.run().unwrap_err();
