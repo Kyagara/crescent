@@ -46,6 +46,9 @@ serial_test.workspace = true
 predicates.workspace = true
 test_utils = { path = "test_utils" }
 
+[build-dependencies]
+anyhow.workspace = true
+
 [profile.release]
 strip = true
 lto = true

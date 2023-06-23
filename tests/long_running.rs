@@ -27,6 +27,9 @@ fn stop_long_running_service() -> Result<()> {
     cmd.args(["start", "-n", name, "-p", "example"]);
     cmd.assert().success();
 
+    // Sleeping to make sure the process started
+    thread::sleep(std::time::Duration::from_secs(1));
+
     assert!(test_utils::check_app_is_running(name)?);
 
     let mut cmd = test_utils::get_base_command();

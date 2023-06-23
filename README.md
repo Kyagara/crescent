@@ -1,6 +1,6 @@
 <div align="center">
 	<h1>🌙crescent</h1>
-    <p>A process manager for game servers and services.</p>
+	<p>A process manager for game servers and services.</p>
 	<p>
 		<a href="https://crates.io/crates/crescent-cli">
 			<img src="https://img.shields.io/crates/v/crescent-cli?style=flat-square"/>
@@ -8,7 +8,7 @@
 		<a href="https://github.com/Kyagara/crescent/actions?query=workflow">
 			<img src="https://img.shields.io/github/actions/workflow/status/Kyagara/crescent/ci.yaml?label=CI&style=flat-square"/>
 		</a>
-        <a href="https://codecov.io/gh/Kyagara/crescent">
+		<a href="https://codecov.io/gh/Kyagara/crescent">
 			<img src="https://img.shields.io/codecov/c/github/Kyagara/crescent?style=flat-square"/>
 		</a>
 	</p>
