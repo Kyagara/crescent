@@ -18,6 +18,8 @@ All notable changes to this project will be documented in this file.
 -   `stop` can now send a custom stop command if provided in a profile.
 -   `stop` now has a `--force`/`-f` flag to bypass a user defined stop command and send a SIGTERM signal.
 -   Moved `test_utils` to a separate crate.
+-   Refactored some tests.
+-   Improved a bit error handling on `build.rs`.
 
 ### Removed
 
