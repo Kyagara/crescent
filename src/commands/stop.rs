@@ -10,11 +10,7 @@ pub struct StopArgs {
     #[arg(help = "Application name.")]
     pub name: String,
 
-    #[arg(
-        short,
-        long,
-        help = "Ignore 'stop command' if defined and send a SIGTERM signal."
-    )]
+    #[arg(short, long, help = "Ignore 'stop_command' and send a SIGTERM signal.")]
     pub force: bool,
 }
 

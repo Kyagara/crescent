@@ -2,11 +2,10 @@ use super::save::SaveFile;
 use crate::{
     application::{self, Application},
     crescent::{self, Profile},
-    logger, subprocess,
-    util::{self, print_title_cyan},
+    logger, subprocess, util,
 };
 use anyhow::{anyhow, Context, Result};
-use clap::Args;
+use clap::{Args, ValueHint};
 use daemonize::Daemonize;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
@@ -18,6 +17,7 @@ use std::{
 #[derive(Args, Clone, Serialize, Deserialize, Default)]
 #[command(about = "Start an application from the file path provided.")]
 pub struct StartArgs {
+    #[arg(value_hint = ValueHint::AnyPath)]
     pub file_path: Option<String>,
 
     #[arg(
@@ -231,12 +231,12 @@ fn start_saved() -> Result<()> {
         return Err(anyhow!("List of apps is empty."));
     }
 
-    print_title_cyan("Starting applications.");
+    util::print_title_cyan("Starting applications.");
 
     for app_info in save_file.apps {
         if application::app_already_running(&app_info.name)? {
             println!(
-                "An application with the name `{}` is already running. Skipping.",
+                "An application with the name '{}' is already running. Skipping.",
                 app_info.name
             );
 
@@ -290,7 +290,7 @@ pub fn start(app_info: Application) -> Result<()> {
 
     fs::create_dir_all(&app_dir).context("Error creating application directory.")?;
 
-    eprintln!("Starting `{}` application.", app_info.name);
+    eprintln!("Starting '{}' application.", app_info.name);
 
     {
         let log = File::create(app_dir.join(app_info.name.clone() + ".log"))?;

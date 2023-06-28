@@ -5,7 +5,9 @@ use crate::commands::{
 };
 use crate::Commands::*;
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
+use std::io;
 
 mod application;
 mod commands;
@@ -35,6 +37,10 @@ enum Commands {
     Status(StatusArgs),
     Profile(ProfileArgs),
     Save(SaveArgs),
+    #[command(about = "Print a completions file for the specified shell.")]
+    Complete {
+        shell: Shell,
+    },
 }
 
 fn main() -> Result<()> {
@@ -52,7 +58,9 @@ fn main() -> Result<()> {
         Kill(args) => KillArgs::run(args),
         Profile(args) => ProfileArgs::run(args),
         Save(args) => SaveArgs::run(args),
-    }?;
-
-    Ok(())
+        Complete { shell } => {
+            clap_complete::generate(shell, &mut Crescent::command(), "cres", &mut io::stdout());
+            Ok(())
+        }
+    }
 }

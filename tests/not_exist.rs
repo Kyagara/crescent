@@ -1,6 +1,14 @@
 use anyhow::Result;
 
 #[test]
+fn create_completions() -> Result<()> {
+    let mut cmd = test_utils::get_base_command();
+    cmd.args(vec!["complete", "bash"]);
+    cmd.assert().success();
+    Ok(())
+}
+
+#[test]
 fn log_no_apps_running() -> Result<()> {
     test_utils::execute_against_app_not_exist(vec!["log", "test_app_not_exist"])
 }
@@ -27,10 +35,10 @@ fn stop_no_apps_running() -> Result<()> {
 
 #[test]
 fn kill_no_apps_running() -> Result<()> {
-    test_utils::execute_against_app_not_exist(vec!["kill", "test_app_not_available"])
+    test_utils::execute_against_app_not_exist(vec!["kill", "test_app_not_exist"])
 }
 
 #[test]
 fn attach_no_apps_running() -> Result<()> {
-    test_utils::execute_against_app_not_exist(vec!["attach", "test_app_not_available"])
+    test_utils::execute_against_app_not_exist(vec!["attach", "test_app_not_exist"])
 }
