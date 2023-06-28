@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+-   `complete <terminal>` command to create a basic completions file for the selected terminal. `cres complete > /usr/share/bash-completion/completions/cres`.
+
 ## [0.5.0] - 2023-06-23
 
 ### Added
