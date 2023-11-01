@@ -12,6 +12,14 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use log::{debug, LevelFilter};
+use ratatui::{
+    backend::CrosstermBackend,
+    layout::{Alignment, Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::Span,
+    widgets::{Block, Borders, Paragraph},
+    Frame, Terminal,
+};
 use std::{
     io::{self, Write},
     os::unix::net::UnixStream,
@@ -22,14 +30,6 @@ use std::{
     vec,
 };
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
-use tui::{
-    backend::{Backend, CrosstermBackend},
-    layout::{Alignment, Constraint, Direction, Layout},
-    style::{Color, Modifier, Style},
-    text::Span,
-    widgets::{Block, Borders, Paragraph},
-    Frame, Terminal,
-};
 use tui_input::Input;
 use tui_logger::{init_logger, set_default_level, TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
 
@@ -200,7 +200,8 @@ impl AttachArgs {
                             continue;
                         }
 
-                        debug!("{line}");
+                        let strip = strip_ansi_escapes::strip_str(line);
+                        debug!("{strip}");
                     }
 
                     terminal.draw(|f| ui(f, &mut app, &stats_list))?;
@@ -365,7 +366,7 @@ fn stats_handler(pid: Pid, sender: Sender<TerminalEvent>) {
     });
 }
 
-fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &String) {
+fn ui(f: &mut Frame, app: &mut AttachTerminal, stats_list: &String) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Max(3), Constraint::Max(3)].as_ref())
@@ -420,13 +421,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &mut AttachTerminal, stats_list: &Strin
 mod tests {
     use super::*;
     extern crate test_utils;
+    use ratatui::backend::TestBackend;
     use std::{
         env::temp_dir,
         fs::{remove_file, File},
         io::Write,
         os::unix::net::UnixListener,
     };
-    use tui::backend::TestBackend;
 
     #[test]
     fn unit_attach_run() -> Result<()> {

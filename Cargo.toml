@@ -9,37 +9,40 @@ keywords = ["process-manager", "minecraft", "socket", "tui"]
 repository = "https://github.com/Kyagara/crescent"
 homepage = "https://github.com/Kyagara/crescent"
 license = "Apache-2.0"
-rust-version = "1.65"
+rust-version = "1.70"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace]
 members = ["test_utils"]
 
 [workspace.dependencies]
-anyhow = "1.0.70"
+anyhow = "1.0.75"
 serial_test = "2.0.0"
-predicates = "3.0.3"
+predicates = "3.0.4"
 assert_cmd = "2.0.11"
 
 [dependencies]
 anyhow.workspace = true
-clap = { version = "4.3.3", features = ["derive"] }
+clap = { version = "4.4.7", features = ["derive"] }
 crossbeam = "0.8.2"
-crossterm = { version = "0.26.1", default-features = false }
+crossterm = { version = "0.27.0", default-features = false }
 daemonize = "0.5.0"
-log = "0.4.19"
-notify = "5.2.0"
-tui = { version = "0.21.0", package = "ratatui" }
+log = "0.4.20"
+notify = "6.1.1"
+ratatui = "0.24.0"
 subprocess = "0.2.9"
-sysinfo = "0.28.4"
-tabled = { version = "0.12.2", features = ["derive"], default-features = false }
-tui-input = "0.7.1"
-tui-logger = { version = "0.9.2", features = ["ratatui-support"], default-features = false }
-chrono = { version = "0.4.26", default-features = false }
-libc = { version = "0.2.146" }
-serde = { version = "1.0.164", features = ["derive"] }
-serde_json = "1.0.96"
-clap_complete = "4.3.1"
+sysinfo = "0.29.10"
+tabled = { version = "0.14.0", features = ["derive"], default-features = false }
+tui-input = "0.8.0"
+tui-logger = { git = "https://github.com/gin66/tui-logger.git", rev = "b9460de320b25a9862d54d151519487f414579d3", version = "0.9.6", default-features = false, features = [
+    "crossterm",
+] }
+chrono = { version = "0.4.31", default-features = false }
+libc = { version = "0.2.149" }
+serde = { version = "1.0.190", features = ["derive"] }
+serde_json = "1.0.108"
+clap_complete = "4.4.4"
+strip-ansi-escapes = "0.2.0"
 
 [dev-dependencies]
 anyhow.workspace = true
