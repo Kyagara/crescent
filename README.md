@@ -8,6 +8,8 @@
 	</p>
 </div>
 
+## Wiki
+
 Check the [wiki](https://github.com/Kyagara/crescent/wiki) for available commands and a lot more info!
 
 ## Install:
@@ -16,7 +18,6 @@ You can either get artifacts from recent [workflows](https://github.com/Kyagara/
 
 ```bash
 cargo install crescent-cli
-
 ## or
 cargo install --git https://github.com/Kyagara/crescent
 ```
