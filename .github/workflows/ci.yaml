@@ -1,202 +1,47 @@
-name: Continuous integration
+name: CI
 
 on:
-    push:
-        branches: '**'
-        paths:
-            - '**.rs'
-            - '.github/workflows/ci.yaml'
-            - 'Cargo.lock'
-    workflow_dispatch:
+  push:
+    branches:
+      - "**"
+    paths:
+      - "**.rs"
+      - ".github/workflows/ci.yaml"
+      - "Cargo.lock"
+  workflow_dispatch:
 
 env:
-    CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Cargo cache
-              uses: actions/cache@v3
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: test-cargo-registry-linux
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: "clippy"
 
-            - name: Clippy
-              run: cargo clippy
+      - name: Clippy
+        run: cargo clippy
 
-            - name: Format
-              run: cargo fmt --check
+  coverage:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    test_linux:
-        needs: lint
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
-            - name: Cargo cache
-              uses: actions/cache@v3
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: test-cargo-registry-linux
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
-            - name: Run tests
-              run: cargo test
+      - name: Generate code coverage
+        run: cargo llvm-cov --lcov --output-path lcov.info
 
-    test_macos:
-        needs: lint
-        runs-on: macos-latest
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: Cargo cache
-              uses: actions/cache@v3
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: test-cargo-registry-macos
-
-            - name: Run tests
-              run: cargo test
-
-    coverage:
-        needs: lint
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: Cargo cache
-              uses: actions/cache@v3
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: test-cargo-registry-linux
-
-            - name: Install cargo-llvm-cov
-              uses: taiki-e/install-action@cargo-llvm-cov
-
-            - name: Generate code coverage
-              run: cargo llvm-cov --lcov --output-path lcov.info
-
-            - name: Upload to codecov.io
-              uses: codecov/codecov-action@v3
-              with:
-                  files: lcov.info
-                  fail_ci_if_error: false
-
-    build_linux:
-        needs: test_linux
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                target:
-                    [
-                        x86_64-unknown-linux-gnu,
-                        x86_64-unknown-linux-musl,
-                        aarch64-unknown-linux-gnu,
-                        aarch64-unknown-linux-musl,
-                        armv7-unknown-linux-gnueabihf,
-                        armv7-unknown-linux-musleabihf,
-                        arm-unknown-linux-gnueabihf,
-                        arm-unknown-linux-musleabihf,
-                    ]
-        env:
-            TARGET: ${{ matrix.target }}
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: Cargo cache
-              uses: actions/cache@v3
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: build-cargo-registry-${{matrix.target}}
-
-            - name: Install Linux dependencies
-              run: |
-                  sudo apt-get update
-                  sudo apt-get install -qq crossbuild-essential-arm64 crossbuild-essential-armhf
-
-            - name: Add Linux targets configurations
-              run: |
-                  cat >>~/.cargo/config <<EOF
-                  [target.aarch64-unknown-linux-gnu]
-                  linker = "aarch64-linux-gnu-gcc"
-                  [target.aarch64-unknown-linux-musl]
-                  linker = "aarch64-linux-gnu-gcc"
-                  [target.armv7-unknown-linux-gnueabihf]
-                  linker = "arm-linux-gnueabihf-gcc"
-                  [target.armv7-unknown-linux-musleabihf]
-                  linker = "arm-linux-gnueabihf-gcc"
-                  [target.arm-unknown-linux-gnueabihf]
-                  linker = "arm-linux-gnueabihf-gcc"
-                  [target.arm-unknown-linux-musleabihf]
-                  linker = "arm-linux-gnueabihf-gcc"
-                  EOF
-
-            - name: Install rust target
-              run: rustup target add $TARGET
-
-            - name: Build binary
-              run: cargo build --release --verbose --target $TARGET
-
-            - name: Zip binary
-              run: |
-                  mkdir -p ./artifacts
-                  mv ./target/$TARGET/release/cres ./cres
-                  zip -r ./artifacts/cres-$TARGET.zip -j cres
-
-            - name: Upload artifact
-              uses: actions/upload-artifact@v3
-              with:
-                  name: cres-${{matrix.target}}.zip
-                  path: ./artifacts/cres-${{matrix.target}}.zip
-
-    build_macos:
-        needs: test_macos
-        runs-on: macos-latest
-        strategy:
-            fail-fast: false
-            matrix:
-                target: [aarch64-apple-darwin, x86_64-apple-darwin]
-        env:
-            TARGET: ${{ matrix.target }}
-        steps:
-            - uses: actions/checkout@v3
-
-            - name: Cargo cache
-              uses: actions/cache@v3
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ./target
-                  key: build-cargo-registry-${{matrix.target}}
-
-            - name: Install rust target
-              run: rustup target add $TARGET
-
-            - name: Build binary
-              run: SDKROOT=$(xcrun -sdk macosx --show-sdk-path) MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version) cargo build --release --verbose --target=$TARGET
-
-            - name: Zip binary
-              run: |
-                  mkdir -p ./artifacts
-                  mv ./target/$TARGET/release/cres ./cres
-                  zip -r ./artifacts/cres-$TARGET.zip -j cres
-
-            - name: Upload artifact
-              uses: actions/upload-artifact@v3
-              with:
-                  name: cres-${{matrix.target}}.zip
-                  path: ./artifacts/cres-${{matrix.target}}.zip
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v4
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
