@@ -228,7 +228,7 @@ pub fn read_socket_stream(stream: &mut UnixStream, received: &mut [u8], read: &m
 }
 
 pub fn send_unix_signal(pid: Pid, signal: u8) -> Result<()> {
-    let subprocess_pid: usize = pid.try_into()?;
+    let subprocess_pid: usize = pid.into();
 
     let result = unsafe { libc::kill(subprocess_pid as pid_t, signal as c_int) };
 
