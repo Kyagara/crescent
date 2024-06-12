@@ -31,7 +31,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
 };
-use sysinfo::{Pid, ProcessExt, System, SystemExt};
+use sysinfo::{Pid, System};
 use tui_input::Input;
 use tui_logger::{init_logger, set_default_level, TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
 
@@ -135,13 +135,13 @@ impl AttachArgs {
                                 app.history.insert(0, content.clone());
                                 history_pos = -1;
                                 socket_sender.send(SocketEvent::WriteStdin(content))?;
-                                app.logger.transition(&TuiWidgetEvent::EscapeKey);
+                                app.logger.transition(TuiWidgetEvent::EscapeKey);
                             }
                             KeyCode::PageUp => {
-                                app.logger.transition(&TuiWidgetEvent::PrevPageKey);
+                                app.logger.transition(TuiWidgetEvent::PrevPageKey);
                             }
                             KeyCode::PageDown => {
-                                app.logger.transition(&TuiWidgetEvent::NextPageKey);
+                                app.logger.transition(TuiWidgetEvent::NextPageKey);
                             }
                             KeyCode::Up => {
                                 if history_pos < app.history.len() as i16 - 1 {
@@ -175,10 +175,10 @@ impl AttachArgs {
                     Event::Mouse(mouse) => {
                         match mouse.kind {
                             MouseEventKind::ScrollDown => {
-                                app.logger.transition(&TuiWidgetEvent::NextPageKey);
+                                app.logger.transition(TuiWidgetEvent::NextPageKey);
                             }
                             MouseEventKind::ScrollUp => {
-                                app.logger.transition(&TuiWidgetEvent::PrevPageKey);
+                                app.logger.transition(TuiWidgetEvent::PrevPageKey);
                             }
                             _ => {}
                         };
@@ -351,7 +351,7 @@ fn stats_handler(pid: Pid, sender: Sender<TerminalEvent>) {
 
             let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
 
-            let load = system.load_average();
+            let load = sysinfo::System::load_average();
 
             let info = format!(
                 "cpu: {:.2}% | mem: {:.2}% ({} Mb) | system load: {}, {}, {}",

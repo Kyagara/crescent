@@ -4,7 +4,7 @@ use crate::{application, crescent, util};
 
 use anyhow::{Context, Result};
 use clap::Args;
-use sysinfo::{Pid, ProcessExt, System, SystemExt};
+use sysinfo::{Pid, System};
 use tabled::{settings::Style, Table, Tabled};
 
 #[derive(Args)]
@@ -85,11 +85,16 @@ impl ListArgs {
             };
 
             if let Some(process) = system.process(pids[0]) {
+                let cwd = match process.cwd() {
+                    Some(cwd) => cwd.to_string_lossy().to_string(),
+                    None => String::from("N/A"),
+                };
+
                 let app = ApplicationInfo {
                     name: app_name,
                     crescent_pid: pids[0],
                     subprocess_pid,
-                    cwd: process.cwd().display().to_string(),
+                    cwd,
                     uptime: util::get_uptime_from_seconds(process.run_time()),
                 };
 
