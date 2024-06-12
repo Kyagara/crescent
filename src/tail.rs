@@ -1,11 +1,12 @@
-use anyhow::{anyhow, Result};
-use crossbeam::channel::{unbounded, Sender};
-use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{
     fs::File,
     io::{Read, Seek, SeekFrom},
     path::PathBuf,
 };
+
+use anyhow::{anyhow, Result};
+use crossbeam::channel::{unbounded, Sender};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 
 pub struct Tail {
     pub file: File,

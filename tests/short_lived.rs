@@ -1,6 +1,7 @@
+use std::{env, fs, path::PathBuf, str::from_utf8};
+
 use anyhow::{anyhow, Context, Result};
 use predicates::{prelude::predicate, Predicate};
-use std::{env, fs, path::PathBuf, str::from_utf8};
 
 #[test]
 fn start_short_lived() -> Result<()> {

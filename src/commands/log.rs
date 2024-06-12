@@ -1,8 +1,10 @@
+use std::{fs::OpenOptions, thread};
+
 use crate::{application, tail};
+
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::unbounded;
-use std::{fs::OpenOptions, thread};
 
 #[derive(Args)]
 #[command(about = "Print, watch or flush the log file from an application.")]

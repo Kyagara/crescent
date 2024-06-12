@@ -1,8 +1,19 @@
+use std::{
+    io::{self, Write},
+    os::unix::net::UnixStream,
+    path::PathBuf,
+    sync::Mutex,
+    thread,
+    time::Duration,
+    vec,
+};
+
 use crate::{
     application,
     subprocess::{self, SocketEvent},
     tail,
 };
+
 use anyhow::{anyhow, Result};
 use clap::Args;
 use crossbeam::channel::{tick, unbounded, Receiver, Sender};
@@ -19,15 +30,6 @@ use ratatui::{
     text::Span,
     widgets::{Block, Borders, Paragraph},
     Frame, Terminal,
-};
-use std::{
-    io::{self, Write},
-    os::unix::net::UnixStream,
-    path::PathBuf,
-    sync::Mutex,
-    thread,
-    time::Duration,
-    vec,
 };
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tui_input::Input;

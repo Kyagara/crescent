@@ -1,8 +1,10 @@
+use std::println;
+
 use crate::{application, util};
+
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
-use std::println;
 use sysinfo::{ProcessExt, System, SystemExt};
 
 #[derive(Args)]

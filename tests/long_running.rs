@@ -1,6 +1,7 @@
+use std::{env, fs::File, io::Read, path::PathBuf, str::from_utf8, thread};
+
 use anyhow::{anyhow, Context, Result};
 use predicates::{prelude::predicate, Predicate};
-use std::{env, fs::File, io::Read, path::PathBuf, str::from_utf8, thread};
 
 #[test]
 fn stop_force_long_running_service() -> Result<()> {

@@ -1,7 +1,8 @@
+use std::thread;
+
 use anyhow::Result;
 use predicates::prelude::predicate;
 use serial_test::serial;
-use std::thread;
 
 #[test]
 #[serial]

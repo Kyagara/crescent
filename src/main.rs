@@ -1,13 +1,21 @@
+use std::io;
+
 use crate::commands::{
-    attach::AttachArgs, kill::KillArgs, list::ListArgs, log::LogArgs, profile::ProfileArgs,
-    save::SaveArgs, send::SendArgs, signal::SignalArgs, start::StartArgs, status::StatusArgs,
-    stop::StopArgs,
+    attach::AttachArgs,
+    list::ListArgs,
+    log::LogArgs,
+    profile::ProfileArgs,
+    save::SaveArgs,
+    send::SendArgs,
+    signals::{KillArgs, SignalArgs, StopArgs},
+    start::StartArgs,
+    status::StatusArgs,
 };
 use crate::Commands::*;
+
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
-use std::io;
 
 mod application;
 mod commands;
