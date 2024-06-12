@@ -7,12 +7,19 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - `complete <terminal>` command to create a basic completions file for the selected terminal. `cres complete bash > /usr/share/bash-completion/completions/cres`.
-
 - `strip-ansi-escapes` as a dependency.
+- Added `actions-rust-lang/setup-rust-toolchain` to the CI.
 
 ### Changed
 
 - Log lines from the `attach` command with ANSI code are now escaped using `strip-ansi-escapes`.
+- Updated CI.
+- Updated all dependencies.
+
+### Removed
+
+- Builds for other linux targets.
+- Mac builds and tests from the CI.
 
 ## [0.5.0] - 2023-06-23
 
