@@ -1,7 +1,8 @@
+use std::{env, fs, path::PathBuf, str::from_utf8, thread};
+
 use anyhow::{anyhow, Context, Result};
 use assert_cmd::Command;
 use predicates::{prelude::predicate, Predicate};
-use std::{env, fs, path::PathBuf, str::from_utf8, thread};
 
 pub fn start_short_lived_command(name: &str) -> Result<()> {
     let mut cmd = get_base_command();

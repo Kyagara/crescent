@@ -1,11 +1,12 @@
-use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
 use std::{
     env,
     fs::{self, File},
     io::BufReader,
     path::PathBuf,
 };
+
+use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Profile {

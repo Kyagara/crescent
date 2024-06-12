@@ -1,8 +1,3 @@
-use crate::application::Application;
-use anyhow::{anyhow, Result};
-use libc::pid_t;
-use log::{error, info};
-use serde::{Deserialize, Serialize};
 use std::{
     ffi::c_int,
     fs::{self, File},
@@ -12,6 +7,13 @@ use std::{
     sync::{Arc, Mutex},
     thread,
 };
+
+use crate::application::Application;
+
+use anyhow::{anyhow, Result};
+use libc::pid_t;
+use log::{error, info};
+use serde::{Deserialize, Serialize};
 use subprocess::{Popen, PopenConfig, Redirection};
 use sysinfo::Pid;
 

@@ -1,5 +1,6 @@
-use crossterm::style::Stylize;
 use std::{env, path::PathBuf, process::Command};
+
+use crossterm::style::Stylize;
 
 pub fn get_uptime_from_seconds(secs: u64) -> String {
     // Laughing while writing this

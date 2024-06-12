@@ -1,6 +1,3 @@
-use crate::{commands::start::StartArgs, crescent, subprocess::SocketEvent};
-use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::{Read, Write},
@@ -8,6 +5,11 @@ use std::{
     path::PathBuf,
     str::FromStr,
 };
+
+use crate::{commands::start::StartArgs, crescent, subprocess::SocketEvent};
+
+use anyhow::{anyhow, Context, Result};
+use serde::{Deserialize, Serialize};
 use sysinfo::Pid;
 
 #[derive(Serialize, Deserialize, Clone, Default)]

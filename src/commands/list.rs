@@ -1,7 +1,9 @@
+use std::{fs::ReadDir, iter::Flatten, vec};
+
 use crate::{application, crescent, util};
+
 use anyhow::{Context, Result};
 use clap::Args;
-use std::{fs::ReadDir, iter::Flatten, vec};
 use sysinfo::{Pid, ProcessExt, System, SystemExt};
 use tabled::{settings::Style, Table, Tabled};
 

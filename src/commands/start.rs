@@ -1,18 +1,20 @@
+use std::{
+    fs::{self, File},
+    path::Path,
+};
+
 use super::save::SaveFile;
 use crate::{
     application::{self, Application},
     crescent::{self, Profile},
     logger, subprocess, util,
 };
+
 use anyhow::{anyhow, Context, Result};
 use clap::{Args, ValueHint};
 use daemonize::Daemonize;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::{self, File},
-    path::Path,
-};
 
 #[derive(Args, Clone, Serialize, Deserialize, Default)]
 #[command(about = "Start an application from the file path provided.")]

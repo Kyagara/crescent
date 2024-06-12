@@ -1,7 +1,9 @@
+use std::{io::Write, os::unix::net::UnixStream};
+
 use crate::{application, subprocess::SocketEvent};
+
 use anyhow::{anyhow, Context, Result};
 use clap::Args;
-use std::{io::Write, os::unix::net::UnixStream};
 
 #[derive(Args)]
 #[command(about = "Send a command to an application.")]

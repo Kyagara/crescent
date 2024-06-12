@@ -1,13 +1,15 @@
+use std::fs::File;
+
 use crate::{
     application::{self, Application},
     crescent,
     util::print_title_cyan,
 };
+
 use anyhow::{Context, Result};
 use clap::Args;
 use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
 
 #[derive(Serialize, Deserialize)]
 pub struct SaveFile {

@@ -1,5 +1,6 @@
-use anyhow::{anyhow, Result};
 use std::{env, fs, path::PathBuf};
+
+use anyhow::{anyhow, Result};
 
 // This build file creates the ~/.crescent/profiles directories and
 // copies the default profiles in ./profiles to ~/.crescent/profiles.
