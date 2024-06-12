@@ -5,7 +5,7 @@ use crate::{application, util};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::System;
 
 #[derive(Args)]
 #[command(about = "Print information about an application.")]
@@ -64,7 +64,12 @@ impl StatusArgs {
                     .unwrap();
                 let start_time: DateTime<Local> = DateTime::from(utc);
 
-                util::println_field_white("CWD", process.cwd().to_string_lossy());
+                let cwd = match process.cwd() {
+                    Some(cwd) => cwd.to_string_lossy().to_string(),
+                    None => String::from("N/A"),
+                };
+
+                util::println_field_white("CWD", cwd);
                 util::println_field_white(
                     "CPU usage",
                     format!("{:.2}", process.cpu_usage() / cpu_count),
