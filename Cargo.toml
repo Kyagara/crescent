@@ -1,6 +1,6 @@
 [package]
 name = "crescent-cli"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 exclude = [".github", "tests", "tools"]
 categories = ["command-line-utilities"]
