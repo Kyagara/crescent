@@ -1,9 +1,0 @@
-{
-    "__comment": "Simple profile to execute the python code in the tools folder.",
-    "__version": 1,
-    "file_path": "./tools/long_running_service.py",
-    "name": "example",
-    "interpreter": "python3",
-    "application_arguments": ["arguments", "must", "be", "in", "multiple", "elements"],
-    "stop_command": "stop\n"
-}

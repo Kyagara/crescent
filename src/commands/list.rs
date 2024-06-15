@@ -1,146 +1,73 @@
-use std::{fs::ReadDir, iter::Flatten, vec};
+use std::vec;
 
-use crate::{application, crescent, util};
+use crate::{
+    service::{InitSystem, Service},
+    util,
+};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Args;
 use sysinfo::{Pid, System};
-use tabled::{settings::Style, Table, Tabled};
+use tabled::{Table, Tabled};
 
 #[derive(Args)]
-#[command(about = "List all running applications.")]
+#[command(about = "List services created")]
 pub struct ListArgs;
 
 #[derive(Tabled)]
-struct ApplicationInfo {
+struct Row {
     #[tabled(rename = "Name")]
     name: String,
-    #[tabled(rename = "crescent PID")]
-    crescent_pid: Pid,
-    #[tabled(rename = "Subprocess PID")]
-    subprocess_pid: String,
-    #[tabled(rename = "CWD")]
-    cwd: String,
+    #[tabled(rename = "PID")]
+    pid: u32,
+    #[tabled(rename = "Status")]
+    status: String,
     #[tabled(rename = "Uptime")]
     uptime: String,
 }
 
 impl ListArgs {
-    pub fn run(self) -> Result<()> {
-        let apps_dir = crescent::get_apps_dir()?;
+    pub fn run() -> Result<()> {
+        let mut init_system = Service::get_init_system();
+        let list = init_system.list()?;
 
-        let dirs = apps_dir
-            .read_dir()
-            .context("Error reading apps directory.")?
-            .flatten();
-
-        let apps = self.get_applications_info(dirs)?;
-
-        if apps.is_empty() {
-            println!("No application running.");
-            return Ok(());
-        }
-
-        let table = self.create_table(apps)?;
-        println!("{table}");
-        Ok(())
-    }
-
-    fn create_table(&self, apps: Vec<ApplicationInfo>) -> Result<Table> {
-        let mut table = Table::new(apps);
-        table.with(Style::modern());
-        Ok(table)
-    }
-
-    fn get_applications_info(
-        &self,
-        crescent_dir: Flatten<ReadDir>,
-    ) -> Result<Vec<ApplicationInfo>> {
         let mut system = System::new();
         system.refresh_processes();
 
-        let mut apps = vec![];
+        let mut services = vec![];
 
-        for app_dir in crescent_dir {
-            let app_name = app_dir
-                .file_name()
-                .to_str()
-                .context("Error converting OsStr to str.")?
+        for service in list {
+            let service = service
+                .trim_start_matches("cres.")
+                .trim_end_matches(".service")
                 .to_string();
 
-            if !application::app_already_running(&app_name)? {
-                continue;
-            }
-
-            let pids = application::app_pids_by_name(&app_name)?;
-
-            if pids.is_empty() {
-                continue;
-            }
-
-            let subprocess_pid = if pids.len() == 2 {
-                pids[1].to_string()
-            } else {
-                String::from("Not running.")
+            let mut app = Row {
+                name: service.clone(),
+                pid: 0,
+                status: String::from("N/A"),
+                uptime: String::from("N/A"),
             };
 
-            if let Some(process) = system.process(pids[0]) {
-                let cwd = match process.cwd() {
-                    Some(cwd) => cwd.to_string_lossy().to_string(),
-                    None => String::from("N/A"),
-                };
+            init_system.set_service_name(&service);
+            let status = init_system.status(false)?;
 
-                let app = ApplicationInfo {
-                    name: app_name,
-                    crescent_pid: pids[0],
-                    subprocess_pid,
-                    cwd,
-                    uptime: util::get_uptime_from_seconds(process.run_time()),
-                };
+            let process = system.process(Pid::from_u32(status.pid));
 
-                apps.push(app);
-            }
+            let uptime = match process {
+                Some(process) => util::get_uptime_from_seconds(process.run_time()),
+                None => String::from("N/A"),
+            };
+
+            app.pid = status.pid;
+            app.status = status.active;
+            app.uptime = uptime;
+
+            services.push(app);
         }
 
-        Ok(apps)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    extern crate test_utils;
-    use anyhow::Context;
-    use serial_test::serial;
-    use std::assert_eq;
-
-    #[test]
-    #[serial]
-    fn unit_list_command_functions() -> Result<()> {
-        let name = "unit_list_command_functions";
-        test_utils::start_long_running_service(name)?;
-        assert!(test_utils::check_app_is_running(name)?);
-
-        let apps_dir = crescent::get_apps_dir()?;
-
-        let dirs = apps_dir
-            .read_dir()
-            .context("Error reading crescent directory.")?
-            .flatten();
-
-        let list_command = ListArgs {};
-
-        let apps = list_command.get_applications_info(dirs)?;
-        let app = apps.into_iter().find(|app| app.name == name).unwrap();
-
-        assert_eq!(&app.name, &name);
-
-        let table = list_command.create_table(vec![app])?;
-        assert!(!table.is_empty());
-        assert_eq!(table.shape(), (2, 5));
-
-        test_utils::shutdown_long_running_service(name)?;
-        test_utils::delete_app_folder(name)?;
+        let table = Table::new(services);
+        println!("{table}");
         Ok(())
     }
 }
