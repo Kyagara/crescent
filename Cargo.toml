@@ -12,46 +12,6 @@ license = "Apache-2.0"
 rust-version = "1.70"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[workspace]
-members = ["test_utils"]
-
-[workspace.dependencies]
-anyhow = "1.0.75"
-serial_test = "2.0.0"
-predicates = "3.0.4"
-assert_cmd = "2.0.11"
-
-[dependencies]
-anyhow.workspace = true
-clap = { version = "4.5.7", features = ["derive"] }
-crossbeam = "0.8.4"
-crossterm = { version = "0.27.0", default-features = false }
-daemonize = "0.5.0"
-log = "0.4.21"
-notify = "6.1.1"
-ratatui = "0.26.3"
-subprocess = "0.2.9"
-sysinfo = "0.30.12"
-tabled = { version = "0.15.0", features = ["derive"], default-features = false }
-tui-input = "0.8.0"
-tui-logger = { version = "0.11.1", default-features = false, features = [
-    "crossterm",
-] }
-chrono = { version = "0.4.38", default-features = false }
-libc = { version = "0.2.155" }
-serde = { version = "1.0.203", features = ["derive"] }
-serde_json = "1.0.117"
-clap_complete = "4.5.5"
-strip-ansi-escapes = "0.2.0"
-
-[dev-dependencies]
-anyhow.workspace = true
-serial_test.workspace = true
-predicates.workspace = true
-test_utils = { path = "test_utils" }
-
-[build-dependencies]
-anyhow.workspace = true
 
 [profile.release]
 strip = true
@@ -61,3 +21,24 @@ codegen-units = 1
 [[bin]]
 name = "cres"
 path = "src/main.rs"
+
+[workspace.dependencies]
+anyhow = "1.0.75"
+
+[dependencies]
+anyhow.workspace = true
+clap = { version = "4.5.7", features = ["derive"] }
+crossbeam = "0.8.4"
+crossterm = { version = "0.27.0", default-features = false }
+ratatui = "0.26.3"
+sysinfo = { version = "0.30.12", default-features = false }
+tabled = { version = "0.15.0", features = ["derive"], default-features = false }
+tui-input = "0.8.0"
+tui-logger = { version = "0.11.1", default-features = false, features = [
+    "crossterm",
+] }
+chrono = { version = "0.4.38", default-features = false }
+clap_complete = "4.5.5"
+
+[build-dependencies]
+anyhow.workspace = true

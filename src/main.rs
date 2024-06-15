@@ -1,28 +1,34 @@
-use std::io;
+use std::path::PathBuf;
+use std::{fs, io};
 
 use crate::commands::{
-    attach::AttachArgs,
-    list::ListArgs,
-    log::LogArgs,
-    profile::ProfileArgs,
-    save::SaveArgs,
-    send::SendArgs,
-    signals::{KillArgs, SignalArgs, StopArgs},
-    start::StartArgs,
+    list::ListArgs, log::LogArgs, profile::ProfileArgs, send::SendArgs, start::StartArgs,
     status::StatusArgs,
 };
-use crate::Commands::*;
+use crate::Commands::{Complete, List, Log, Profile, Send, Start, Status};
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
-mod application;
+pub const HOME_DIR: &str = env!("HOME", "Error retrieving HOME directory.");
+
+pub const PROFILES_DIR: &str = concat!(
+    env!("HOME", "Error retrieving HOME directory."),
+    "/.crescent/profiles/"
+);
+
+pub const APPS_DIR: &str = concat!(
+    env!("HOME", "Error retrieving HOME directory."),
+    "/.crescent/apps/"
+);
+
 mod commands;
-mod crescent;
 mod logger;
-mod subprocess;
-mod tail;
+mod loggers;
+mod profile;
+mod service;
+mod services;
 mod util;
 
 #[derive(Parser)]
@@ -38,34 +44,28 @@ enum Commands {
     List(ListArgs),
     Send(SendArgs),
     Log(LogArgs),
-    Attach(AttachArgs),
-    Signal(SignalArgs),
-    Stop(StopArgs),
-    Kill(KillArgs),
     Status(StatusArgs),
     Profile(ProfileArgs),
-    Save(SaveArgs),
-    #[command(about = "Print a completions file for the specified shell.")]
+    #[command(about = "Print a completions file for the specified shell")]
     Complete {
         shell: Shell,
     },
 }
 
 fn main() -> Result<()> {
+    // Create directories if they don't exist
+    fs::create_dir_all(PathBuf::from(APPS_DIR))?;
+    fs::create_dir_all(PathBuf::from(PROFILES_DIR))?;
+
     let cli = Crescent::parse();
 
     match cli.commands {
         Start(args) => StartArgs::run(args),
-        List(args) => ListArgs::run(args),
+        List(_) => ListArgs::run(),
         Send(args) => SendArgs::run(args),
         Log(args) => LogArgs::run(args),
-        Attach(args) => AttachArgs::run(args),
-        Signal(args) => SignalArgs::run(args),
-        Stop(args) => StopArgs::run(args),
         Status(args) => StatusArgs::run(args),
-        Kill(args) => KillArgs::run(args),
         Profile(args) => ProfileArgs::run(args),
-        Save(args) => SaveArgs::run(args),
         Complete { shell } => {
             clap_complete::generate(shell, &mut Crescent::command(), "cres", &mut io::stdout());
             Ok(())

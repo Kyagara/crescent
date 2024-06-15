@@ -1,9 +1,6 @@
-pub mod attach;
 pub mod list;
 pub mod log;
 pub mod profile;
-pub mod save;
 pub mod send;
-pub mod signals;
 pub mod start;
 pub mod status;

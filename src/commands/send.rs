@@ -1,41 +1,48 @@
-use std::{io::Write, os::unix::net::UnixStream};
+use std::{fs::OpenOptions, io::Write, path::PathBuf};
 
-use crate::{application, subprocess::SocketEvent};
+use crate::APPS_DIR;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::Args;
 
 #[derive(Args)]
-#[command(about = "Send a command to an application.")]
+#[command(about = "Send a command to a service")]
 pub struct SendArgs {
-    #[arg(help = "Application name.")]
+    #[arg(help = "Service name")]
     pub name: String,
 
-    #[arg(help = "Command to send.", allow_hyphen_values = true)]
+    #[arg(help = "Command to send", allow_hyphen_values = true)]
     pub command: Vec<String>,
 }
 
 impl SendArgs {
     pub fn run(self) -> Result<()> {
-        application::check_app_exists(&self.name)?;
+        let path = PathBuf::from(APPS_DIR).join(&self.name);
+        if !path.exists() {
+            return Err(anyhow!("Application does not exist."));
+        }
+
+        let stdin = path.join("stdin");
+
+        let stdin = if stdin.exists() { Some(stdin) } else { None };
+
+        if stdin.is_none() {
+            return Err(anyhow!("'{}' stdin does not exist.", self.name));
+        }
+
+        let mut stdin = OpenOptions::new().write(true).open(stdin.unwrap())?;
 
         if self.command.join(" ").trim().is_empty() {
             return Err(anyhow!("Command empty."));
         }
 
-        let mut app_dir = application::app_dir_by_name(&self.name)?;
+        let mut cmd = self.command.join(" ");
+        println!("Sending command to application '{}'.", self.name);
+        println!("Command: {cmd}");
 
-        app_dir.push(self.name.clone() + ".sock");
-
-        let mut stream = UnixStream::connect(app_dir)
-            .context(format!("Error connecting to '{}' socket.", self.name))?;
-
-        let event = serde_json::to_vec(&SocketEvent::WriteStdin(self.command.join(" ")))?;
-
-        stream.write_all(&event)?;
-
+        cmd += "\n";
+        stdin.write_all(cmd.as_bytes())?;
         println!("Command sent.");
-
         Ok(())
     }
 }

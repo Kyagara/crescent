@@ -14,7 +14,7 @@ Check the [wiki](https://github.com/Kyagara/crescent/wiki) for available command
 
 ## Install:
 
-You can either get artifacts from recent [workflows](https://github.com/Kyagara/crescent/actions), binaries from [releases](https://github.com/Kyagara/crescent/releases) or install using cargo (recommended):
+When installing crescent using cargo, default profiles will be created in crescent's main directory: `<home>/.crescent/`.
 
 ```bash
 cargo install crescent-cli
@@ -22,15 +22,18 @@ cargo install crescent-cli
 cargo install --git https://github.com/Kyagara/crescent
 ```
 
-When installing crescent using cargo, default profiles will be created in crescent's main directory: `<home>/.crescent/`.
-
-> Applications files, profiles and any important file is located in crescent's main directory.
-
 ## Todo
 
-- More tests, 85% target.
-- Reduce unwraps
-- Restart command
-- Async
-- Attach/Log command watches the log file with the `notify` crate, it could use the application socket to receive new lines instead
-- Log rotation
+Reimplementation of features already in `crescent`:
+
+> Not sure of adding back `save` command, there are other priorities for now.
+
+- Reimplement tests.
+- Reimplement `stop` and `kill` commands.
+- Rewrite `attach` command.
+- Reimplement `stop_command` on `start` command and profile.
+
+- Add `restart`, `edit`, `delete` commands
+- Finish implementing `Logger`, theres no logic of selecting a logging system.
+- Add methods for checking services running, many places are doing the same checks.
+- Use enums on returns from services and loggers.

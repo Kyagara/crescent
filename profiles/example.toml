@@ -1,0 +1,6 @@
+# Example profile that executes a long running service with an interpreter
+name = "example"
+# interpreter accepts arguments
+interpreter = "python3 -O"
+exec_path = "./tools/long_running_service.py"
+arguments = "--log=info -a b"

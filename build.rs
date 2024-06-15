@@ -2,33 +2,21 @@ use std::{env, fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 
-// This build file creates the ~/.crescent/profiles directories and
-// copies the default profiles in ./profiles to ~/.crescent/profiles.
+// This build file creates the required `HOME/.crescent` directories and
+// copies the default profiles in the project folder to ~/.crescent/profiles.
 fn main() -> Result<()> {
-    let home_dir = match env::var("HOME") {
-        Ok(dir) => dir,
-        Err(err) => return Err(anyhow!("Error retrieving HOME directory: {err}")),
-    };
+    let home_dir = env!("HOME", "Error retrieving HOME directory.");
 
-    let mut crescent_dir = PathBuf::from(home_dir);
-    crescent_dir.push(".crescent/profiles");
+    fs::create_dir_all(PathBuf::from(home_dir).join(".crescent/apps/"))?;
+    let profiles_dir = PathBuf::from(home_dir).join(".crescent/profiles/");
 
-    if !crescent_dir.exists() {
-        if let Err(err) = fs::create_dir_all(&crescent_dir) {
-            return Err(anyhow!(
-                "Error creating crescent and profiles directory: {err}"
-            ));
-        }
-    }
-
-    let default_profiles_dir = PathBuf::from("./profiles");
-    let default_profiles = match default_profiles_dir.read_dir() {
+    let default_profiles = match PathBuf::from("./profiles").read_dir() {
         Ok(dir) => dir.flatten(),
         Err(err) => return Err(anyhow!("Error reading default profiles directory: {err}")),
     };
 
     'base_loop: for default_profile in default_profiles {
-        let user_profiles = match crescent_dir.read_dir() {
+        let user_profiles = match profiles_dir.read_dir() {
             Ok(dir) => dir.flatten(),
             Err(err) => return Err(anyhow!("Error reading default user directory: {err}")),
         };
@@ -41,7 +29,7 @@ fn main() -> Result<()> {
 
         if let Err(err) = fs::copy(
             default_profile.path(),
-            crescent_dir.join(default_profile.file_name()),
+            profiles_dir.join(default_profile.file_name()),
         ) {
             return Err(anyhow!("Error copying profile: {err}"));
         }

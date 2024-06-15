@@ -8,11 +8,7 @@ use std::{
     vec,
 };
 
-use crate::{
-    application,
-    subprocess::{self, SocketEvent},
-    tail,
-};
+use crate::application;
 
 use anyhow::{anyhow, Result};
 use clap::Args;
@@ -22,7 +18,6 @@ use crossterm::{
     execute,
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use log::{debug, LevelFilter};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
@@ -33,12 +28,12 @@ use ratatui::{
 };
 use sysinfo::{Pid, System};
 use tui_input::Input;
-use tui_logger::{init_logger, set_default_level, TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
+use tui_logger::{TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
 
 #[derive(Args)]
 #[command(about = "Attach to an application.")]
 pub struct AttachArgs {
-    #[arg(help = "Application name.")]
+    #[arg(help = "Service name.")]
     pub name: String,
 }
 
@@ -75,11 +70,6 @@ impl AttachArgs {
 
         if !application::app_already_running(&self.name)? {
             return Err(anyhow!("Application not running."));
-        }
-
-        if !cfg!(test) {
-            init_logger(LevelFilter::Debug).unwrap();
-            set_default_level(LevelFilter::Debug);
         }
 
         let pids = application::app_pids_by_name(&self.name)?;
@@ -203,7 +193,7 @@ impl AttachArgs {
                         }
 
                         let strip = strip_ansi_escapes::strip_str(line);
-                        debug!("{strip}");
+                        eprintln!("{strip}");
                     }
 
                     terminal.draw(|f| ui(f, &mut app, &stats_list))?;
@@ -274,7 +264,7 @@ fn socket_handler(
                         s.write_all(&event).unwrap();
                     }
                     Err(err) => {
-                        debug!("Error serializing event: {err}")
+                        eprintln!("Error serializing event: {err}")
                     }
                 }
             }
@@ -291,7 +281,7 @@ fn socket_handler(
                     sender.send(TerminalEvent::SocketEvent(message)).unwrap();
                 }
                 Err(err) => {
-                    debug!("Error converting socket message to struct: {err}")
+                    eprintln!("Error converting socket message to struct: {err}")
                 }
             };
         }
@@ -306,7 +296,7 @@ fn log_handler(
     log_sender: Sender<String>,
     log_receiver: Receiver<String>,
 ) -> Result<(), anyhow::Error> {
-    let mut log = tail::Tail::new(log_dir)?;
+    /*   let mut log = tail::Tail::new(log_dir)?;
 
     let lines = log.read_lines(200)?;
 
@@ -318,7 +308,7 @@ fn log_handler(
         for line in log_receiver {
             sender.send(TerminalEvent::Log([line].to_vec())).unwrap();
         }
-    });
+    }); */
 
     Ok(())
 }
