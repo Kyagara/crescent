@@ -2,23 +2,28 @@ use std::{env, fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 
-// This build file creates the required `HOME/.crescent` directories and
-// copies the default profiles in the project folder to ~/.crescent/profiles.
+// This build file copies the default profiles in the project folder to ~/.crescent/profiles.
 fn main() -> Result<()> {
     let home_dir = env!("HOME", "Error retrieving HOME directory.");
 
-    fs::create_dir_all(PathBuf::from(home_dir).join(".crescent/apps/"))?;
+    // User profiles: $HOME/.crescent/profiles/
     let profiles_dir = PathBuf::from(home_dir).join(".crescent/profiles/");
+    fs::create_dir_all(&profiles_dir)?;
 
+    // Base profiles: ./profiles/
     let default_profiles = match PathBuf::from("./profiles").read_dir() {
         Ok(dir) => dir.flatten(),
-        Err(err) => return Err(anyhow!("Error reading default profiles directory: {err}")),
+        Err(err) => {
+            return Err(anyhow!(
+                "Error reading project root profiles directory: {err}"
+            ))
+        }
     };
 
     'base_loop: for default_profile in default_profiles {
         let user_profiles = match profiles_dir.read_dir() {
             Ok(dir) => dir.flatten(),
-            Err(err) => return Err(anyhow!("Error reading default user directory: {err}")),
+            Err(err) => return Err(anyhow!("Error reading user profiles directory: {err}")),
         };
 
         for user_profile in user_profiles {

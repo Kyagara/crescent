@@ -1,6 +1,6 @@
 <div align="center">
 	<h1>🌙crescent</h1>
-	<p>A process manager for game servers and services.</p>
+	<p>A wrapper for init systems to help quickly create and manage services.</p>
 	<p>
 		<a href="https://crates.io/crates/crescent-cli"><img src="https://img.shields.io/crates/v/crescent-cli?style=flat-square"/></a>
 		<a href="https://github.com/Kyagara/crescent/actions?query=workflow"><img src="https://img.shields.io/github/actions/workflow/status/Kyagara/crescent/ci.yaml?label=CI&style=flat-square"/></a>
@@ -14,7 +14,7 @@ Check the [wiki](https://github.com/Kyagara/crescent/wiki) for available command
 
 ## Install:
 
-When installing crescent using cargo, default profiles will be created in crescent's main directory: `<home>/.crescent/`.
+When installing crescent using cargo, default profiles will be created in crescent's main directory: `$HOME/.crescent/`.
 
 ```bash
 cargo install crescent-cli
@@ -29,11 +29,15 @@ Reimplementation of features already in `crescent`:
 > Not sure of adding back `save` command, there are other priorities for now.
 
 - Reimplement tests.
-- Reimplement `stop` and `kill` commands.
+- Reimplement `stop` (partial) and `kill` commands.
 - Rewrite `attach` command.
 - Reimplement `stop_command` on `start` command and profile.
 
-- Add `restart`, `edit`, `delete` commands
+New features:
+
+- Add `edit`, `delete` commands.
 - Finish implementing `Logger`, theres no logic of selecting a logging system.
 - Add methods for checking services running, many places are doing the same checks.
-- Use enums on returns from services and loggers.
+- Use enums on returns from `Service` and `Logger`.
+- Make copying base profiles a prompt when installing/launching for the first time.
+- Improve code, looks horrible.
