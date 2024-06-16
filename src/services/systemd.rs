@@ -132,7 +132,7 @@ impl InitSystem for Systemd {
     }
 
     fn stop(&self) -> Result<()> {
-        self.run_command(vec!["stop", &self.service_name])?;
+        self.run_command(vec!["stop", &self.socket_name])?;
         Ok(())
     }
 

@@ -35,7 +35,7 @@ impl StatusArgs {
             eprintln!("Script: {}", status.script);
             eprintln!("Status: {}", status.active);
             return Err(anyhow!(
-                "Service 'cres.{}service' is not running.",
+                "Service 'cres.{}service' is not running",
                 self.name
             ));
         }

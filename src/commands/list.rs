@@ -8,23 +8,11 @@ use crate::{
 use anyhow::Result;
 use clap::Args;
 use sysinfo::{Pid, System};
-use tabled::{Table, Tabled};
+use tabled::builder::Builder;
 
 #[derive(Args)]
 #[command(about = "List services created")]
 pub struct ListArgs;
-
-#[derive(Tabled)]
-struct Row {
-    #[tabled(rename = "Name")]
-    name: String,
-    #[tabled(rename = "PID")]
-    pid: u32,
-    #[tabled(rename = "Status")]
-    status: String,
-    #[tabled(rename = "Uptime")]
-    uptime: String,
-}
 
 impl ListArgs {
     pub fn run() -> Result<()> {
@@ -34,7 +22,8 @@ impl ListArgs {
         let mut system = System::new();
         system.refresh_processes();
 
-        let mut services = vec![];
+        let mut builder = Builder::default();
+        builder.push_record(["Name", "PID", "Status", "Uptime"]);
 
         for service in list {
             let service = service
@@ -42,12 +31,12 @@ impl ListArgs {
                 .trim_end_matches(".service")
                 .to_string();
 
-            let mut app = Row {
-                name: service.clone(),
-                pid: 0,
-                status: String::from("N/A"),
-                uptime: String::from("N/A"),
-            };
+            let mut row = vec![
+                service.clone(),
+                String::from("N/A"),
+                String::from("N/A"),
+                String::from("N/A"),
+            ];
 
             init_system.set_service_name(&service);
             let status = init_system.status(false)?;
@@ -59,14 +48,14 @@ impl ListArgs {
                 None => String::from("N/A"),
             };
 
-            app.pid = status.pid;
-            app.status = status.active;
-            app.uptime = uptime;
+            row[1] = status.pid.to_string();
+            row[2] = status.active;
+            row[3] = uptime;
 
-            services.push(app);
+            builder.push_record(row);
         }
 
-        let table = Table::new(services);
+        let table = builder.build();
         println!("{table}");
         Ok(())
     }
