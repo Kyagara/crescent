@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Rewrite using `init` systems instead of subprocess logic.
+
+## [0.5.1] - 2024-06-12
+
 ### Added
 
 - `complete <terminal>` command to create a basic completions file for the selected terminal. `cres complete bash > /usr/share/bash-completion/completions/cres`.
