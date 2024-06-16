@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use std::{fs, io};
 
 use crate::commands::{
-    list::ListArgs, log::LogArgs, profile::ProfileArgs, send::SendArgs, start::StartArgs,
-    status::StatusArgs,
+    list::ListArgs, log::LogArgs, profile::ProfileArgs, restart::RestartArgs, send::SendArgs,
+    start::StartArgs, status::StatusArgs, stop::StopArgs,
 };
-use crate::Commands::{Complete, List, Log, Profile, Send, Start, Status};
+use crate::Commands::{Complete, List, Log, Profile, Restart, Send, Start, Status, Stop};
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
@@ -42,6 +42,8 @@ struct Crescent {
 enum Commands {
     Start(StartArgs),
     List(ListArgs),
+    Stop(StopArgs),
+    Restart(RestartArgs),
     Send(SendArgs),
     Log(LogArgs),
     Status(StatusArgs),
@@ -62,6 +64,8 @@ fn main() -> Result<()> {
     match cli.commands {
         Start(args) => StartArgs::run(args),
         List(_) => ListArgs::run(),
+        Stop(args) => StopArgs::run(args),
+        Restart(args) => RestartArgs::run(args),
         Send(args) => SendArgs::run(args),
         Log(args) => LogArgs::run(args),
         Status(args) => StatusArgs::run(args),

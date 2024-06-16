@@ -3,6 +3,7 @@ use std::process::{Command, Output};
 use crate::logger::LogSystem;
 
 use anyhow::Result;
+use crossterm::style::Stylize;
 
 /// Journald implementation.
 pub struct Journald {
@@ -22,6 +23,7 @@ impl Journald {
             .arg("--user")
             .arg("--unit")
             .arg(&self.service_name)
+            .arg("--no-pager")
             .args(args)
             .output()?;
         Ok(cmd)
@@ -48,7 +50,8 @@ impl LogSystem for Journald {
         for line in lines {
             eprintln!("{line}");
         }
-        eprintln!("Following logs...");
+
+        eprintln!("{}", "Following logs... Press Ctrl+C to stop".white());
         self.run_command(vec!["--follow"])?;
         Ok(())
     }

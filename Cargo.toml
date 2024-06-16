@@ -28,17 +28,15 @@ anyhow = "1.0.75"
 [dependencies]
 anyhow.workspace = true
 clap = { version = "4.5.7", features = ["derive"] }
-crossbeam = "0.8.4"
-crossterm = { version = "0.27.0", default-features = false }
-ratatui = "0.26.3"
-sysinfo = { version = "0.30.12", default-features = false }
-tabled = { version = "0.15.0", features = ["derive"], default-features = false }
-tui-input = "0.8.0"
-tui-logger = { version = "0.11.1", default-features = false, features = [
-    "crossterm",
-] }
-chrono = { version = "0.4.38", default-features = false }
 clap_complete = "4.5.5"
+ratatui = "0.26.3"
+crossterm = "0.27.0"
+tui-input = "0.8.0"
+tui-logger = { version = "0.11.1", features = ["crossterm"] }
+chrono = { version = "0.4.38", default-features = false }
+crossbeam = "0.8.4"
+tabled = { version = "0.15.0", features = ["std"], default-features = false }
+sysinfo = { version = "0.30.12", default-features = false }
 
 [build-dependencies]
 anyhow.workspace = true
