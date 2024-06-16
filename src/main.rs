@@ -41,12 +41,12 @@ struct Crescent {
 #[derive(Subcommand)]
 enum Commands {
     Start(StartArgs),
-    List(ListArgs),
     Stop(StopArgs),
     Restart(RestartArgs),
     Send(SendArgs),
     Log(LogArgs),
     Status(StatusArgs),
+    List(ListArgs),
     Profile(ProfileArgs),
     #[command(about = "Print a completions file for the specified shell")]
     Complete {

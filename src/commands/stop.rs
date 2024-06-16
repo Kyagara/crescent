@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use clap::Args;
 
 #[derive(Args)]
-#[command(about = "")]
+#[command(about = "Stop a service")]
 pub struct StopArgs {
     #[arg(help = "Service name")]
     pub name: String,

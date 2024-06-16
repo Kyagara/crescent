@@ -2,7 +2,7 @@ use std::{env, fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 
-// This build file copies the default profiles in the project folder to ~/.crescent/profiles.
+// This build file copies the default profiles in the project folder to $HOME/.crescent/profiles.
 fn main() -> Result<()> {
     let home_dir = env!("HOME", "Error retrieving HOME directory.");
 
