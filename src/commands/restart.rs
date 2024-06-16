@@ -23,6 +23,7 @@ impl RestartArgs {
 
         eprintln!("Restarting '{service_name}'");
         init_system.restart()?;
+
         println!("Sent restart command to '{service_name}'");
         Ok(())
     }

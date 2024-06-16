@@ -37,11 +37,12 @@ impl SendArgs {
         }
 
         let mut cmd = self.command.join(" ");
-        println!("Sending command to application '{}'", self.name);
-        println!("Command: {cmd}");
+        eprintln!("Sending command to application '{}'", self.name);
+        eprintln!("Command: {cmd}");
 
         cmd += "\n";
         stdin.write_all(cmd.as_bytes())?;
+
         println!("Command sent");
         Ok(())
     }

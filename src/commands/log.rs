@@ -29,7 +29,7 @@ impl LogArgs {
         let lines = logger.log(self.lines)?;
 
         for line in lines {
-            eprintln!("{line}");
+            println!("{line}");
         }
 
         Ok(())

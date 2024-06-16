@@ -23,6 +23,7 @@ impl StopArgs {
 
         eprintln!("Stopping '{service_name}'");
         init_system.stop()?;
+
         println!("Sent stop command to '{service_name}'");
         Ok(())
     }
