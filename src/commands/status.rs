@@ -32,10 +32,10 @@ impl StatusArgs {
         }
 
         if !status.active.starts_with("active") {
-            eprintln!("Script: {}", status.script);
-            eprintln!("Status: {}", status.active);
+            println!("Script: {}", status.script);
+            println!("Status: {}", status.active);
             return Err(anyhow!(
-                "Service 'cres.{}service' is not running",
+                "Service 'cres.{}.service' is not running",
                 self.name
             ));
         }

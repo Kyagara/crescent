@@ -78,8 +78,10 @@ impl StartArgs {
             }
         };
 
+        let name = &self.name.clone();
+
         // If name is not provided, use the file name.
-        let service_name = match &self.name {
+        let service_name = match name {
             Some(name) => name,
             None => file_path.file_stem().unwrap().to_str().unwrap(),
         };
@@ -106,7 +108,10 @@ impl StartArgs {
         let exec_cmd = self.format_exec_cmd(&file_path);
 
         eprintln!("CMD: '{exec_cmd}'");
-        init_system.start(&exec_cmd)
+        init_system.start(&exec_cmd)?;
+
+        println!("Service '{service_name}' started");
+        Ok(())
     }
 
     fn overwrite_args(self, loaded_args: Self) -> Self {
