@@ -18,8 +18,10 @@ impl Logger {
 pub trait LogSystem {
     /// Log `n` lines from the service.
     fn log(&self, n: u64) -> Result<String>;
+
     /// Follow the log for any new lines.
     fn follow(&self) -> Result<()>;
+
     /// Set the service name being queried.
     fn set_service_name(&mut self, name: &str);
 }

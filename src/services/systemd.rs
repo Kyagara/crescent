@@ -11,17 +11,18 @@ use crate::{
 
 use anyhow::{Context, Result};
 
+const SCRIPTS_DIR: &str = concat!(
+    env!("HOME", "Error retrieving HOME directory."),
+    "/.config/systemd/user/"
+);
+
 /// `systemd` implementation.
-///
-/// Units paths:
-/// - Service: $HOME/.config/systemd/user/cres.example.service
-/// - Socket: $HOME/.config/systemd/user/cres.example.socket
 pub struct Systemd {
-    /// `example`
+    /// `<name>`
     name: String,
-    /// `cres.example.service`
+    /// `cres.<name>.service`
     service_name: String,
-    /// `cres.example.socket`
+    /// `cres.<name>.socket`
     socket_name: String,
 }
 
@@ -109,11 +110,23 @@ impl InitSystem for Systemd {
         self.socket_name = format!("cres.{name}.socket");
     }
 
+    fn get_scripts_paths(&self) -> Vec<String> {
+        vec![
+            SCRIPTS_DIR.to_string() + &self.service_name,
+            SCRIPTS_DIR.to_string() + &self.socket_name,
+        ]
+    }
+
     fn is_running(&self) -> Result<bool> {
         let output = self.run_command(vec!["is-active", &self.service_name])?;
         let stdout = String::from_utf8(output.stdout)?;
         let is_running = stdout.trim().to_string();
         Ok(is_running == "active")
+    }
+
+    fn reload(&self) -> Result<()> {
+        self.run_command(vec!["daemon-reload"])?;
+        Ok(())
     }
 
     fn create(&self, cmd: &str) -> Result<()> {
@@ -132,7 +145,7 @@ impl InitSystem for Systemd {
 
     fn start(&self) -> Result<()> {
         eprintln!("Reloading systemd daemon");
-        self.run_command(vec!["daemon-reload"])?;
+        self.reload()?;
 
         eprintln!("Starting '{}'", self.service_name);
         self.run_command(vec!["start", &self.service_name])?;

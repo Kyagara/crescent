@@ -18,6 +18,8 @@ pub struct LogArgs {
 
 impl LogArgs {
     pub fn run(self) -> Result<()> {
+        // Not checking if a service exists/is_running for log commands is probably better
+
         let mut logger = Logger::get_log_system();
         logger.set_service_name(&self.name);
 

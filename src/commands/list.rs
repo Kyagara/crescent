@@ -16,7 +16,7 @@ pub struct ListArgs;
 
 impl ListArgs {
     pub fn run() -> Result<()> {
-        let mut init_system = Service::get_init_system();
+        let mut init_system = Service::get();
         let list = init_system.list()?;
 
         let mut system = System::new();
