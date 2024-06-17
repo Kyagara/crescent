@@ -35,7 +35,9 @@ Reimplementation of features already in `crescent`:
 
 New features:
 
-- Add `edit`, `delete` commands.
+- Maybe start using subcommand logic for some commands.
+- Add `edit` service and profile command.
+- Add `delete` service command.
 - Finish implementing `Logger`, theres no logic of selecting a logging system.
 - Add methods for checking services running, many places are doing the same checks.
 - Use enums on returns from `Service` and `Logger`.
