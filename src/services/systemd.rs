@@ -11,19 +11,17 @@ use crate::{
 
 use anyhow::{Context, Result};
 
-/// Systemd implementation.
+/// `systemd` implementation.
 ///
 /// Units paths:
-///
-/// Service: $HOME/.config/systemd/user/cres.example.service
-///
-/// Socket: $HOME/.config/systemd/user/cres.example.socket
+/// - Service: $HOME/.config/systemd/user/cres.example.service
+/// - Socket: $HOME/.config/systemd/user/cres.example.socket
 pub struct Systemd {
-    /// 'example'
+    /// `example`
     name: String,
-    /// 'cres.example.service'
+    /// `cres.example.service`
     service_name: String,
-    /// 'cres.example.socket'
+    /// `cres.example.socket`
     socket_name: String,
 }
 
@@ -36,7 +34,7 @@ impl Systemd {
         }
     }
 
-    /// Run a systemctl command as the user.
+    /// Run a `systemctl` command as the user.
     fn run_command(&self, args: Vec<&str>) -> Result<Output> {
         let cmd = Command::new("systemctl")
             .arg("--user")
@@ -111,7 +109,14 @@ impl InitSystem for Systemd {
         self.socket_name = format!("cres.{name}.socket");
     }
 
-    fn start(&self, cmd: &str) -> Result<()> {
+    fn is_running(&self) -> Result<bool> {
+        let output = self.run_command(vec!["is-active", &self.service_name])?;
+        let out = String::from_utf8(output.stdout)?;
+        let is_running = out.trim().to_string();
+        Ok(is_running == "active")
+    }
+
+    fn create(&self, cmd: &str) -> Result<()> {
         let path_str = HOME_DIR.to_string() + "/.config/systemd/user/";
         let path = PathBuf::from(path_str);
 
@@ -122,7 +127,10 @@ impl InitSystem for Systemd {
         eprintln!("Writing '{}' unit", self.socket_name);
         let socket_path = path.join(self.socket_name.clone());
         self.write_socket_unit(socket_path)?;
+        Ok(())
+    }
 
+    fn start(&self) -> Result<()> {
         eprintln!("Reloading systemd daemon");
         self.run_command(vec!["daemon-reload"])?;
 
@@ -246,12 +254,5 @@ impl InitSystem for Systemd {
             .map(|s| s.split_whitespace().next().unwrap_or("").to_string())
             .collect();
         Ok(names)
-    }
-
-    fn is_running(&self) -> Result<bool> {
-        let output = self.run_command(vec!["is-active", &self.service_name])?;
-        let out = String::from_utf8(output.stdout)?;
-        let is_running = out.trim().to_string();
-        Ok(is_running == "active")
     }
 }
