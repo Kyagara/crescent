@@ -8,15 +8,6 @@ pub struct Profiles {
     profiles: HashMap<String, Profile>,
 }
 
-#[derive(Clone)]
-pub struct Profile {
-    pub exec_path: Option<PathBuf>,
-    pub name: Option<String>,
-    pub interpreter: Option<String>,
-    pub arguments: Option<String>,
-    pub stop_command: Option<String>,
-}
-
 impl Profiles {
     pub fn new() -> Self {
         Self {
@@ -58,8 +49,9 @@ impl Profiles {
                 continue;
             }
 
-            let profile_str = fs::read_to_string(path)?;
-            let profile = self.parse_profile(&profile_str)?;
+            let profile = Profile::new();
+            let profile_content = fs::read_to_string(path)?;
+            profile.parse_profile(&profile_content)?;
 
             let name = name.to_string_lossy().replace(".toml", "");
             self.profiles.insert(name, profile);
@@ -68,7 +60,56 @@ impl Profiles {
         Ok(())
     }
 
-    fn parse_profile(&self, profile_str: &str) -> Result<Profile> {
+    // Copies all profiles in the project root `./profiles` to `$HOME/.crescent/profiles/`
+    pub fn install_default_profiles(&self) -> Result<()> {
+        let profiles_dir = PathBuf::from(PROFILES_DIR);
+
+        // No need to check if paths exists, they were created at startup.
+
+        let default_profiles = match PathBuf::from("./profiles").read_dir() {
+            Ok(dir) => dir.flatten(),
+            Err(err) => {
+                return Err(anyhow!(
+                    "Error reading project root profiles directory: {err}"
+                ))
+            }
+        };
+
+        for default_profile in default_profiles {
+            eprintln!("Copying profile {:?}", default_profile.file_name());
+            if let Err(err) = fs::copy(
+                default_profile.path(),
+                profiles_dir.join(default_profile.file_name()),
+            ) {
+                return Err(anyhow!("Error copying profile: {err}"));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone)]
+pub struct Profile {
+    pub exec_path: Option<PathBuf>,
+    pub name: Option<String>,
+    pub interpreter: Option<String>,
+    pub arguments: Option<String>,
+    pub stop_command: Option<String>,
+}
+
+impl Profile {
+    pub fn new() -> Self {
+        Self {
+            exec_path: None,
+            name: None,
+            interpreter: None,
+            arguments: None,
+            stop_command: None,
+        }
+    }
+
+    fn parse_profile(&self, profile_content: &str) -> Result<Profile> {
         let mut profile = Profile {
             exec_path: None,
             name: None,
@@ -77,7 +118,7 @@ impl Profiles {
             stop_command: None,
         };
 
-        for line in profile_str.lines() {
+        for line in profile_content.lines() {
             let line = line.trim();
 
             if line.is_empty() || line.starts_with('#') {

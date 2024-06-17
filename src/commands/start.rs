@@ -62,7 +62,7 @@ impl StartArgs {
         if let Some(name) = &self.profile {
             let mut profiles = Profiles::new();
             let profile = profiles.get_profile(name)?;
-            self = self.overwrite_args(profile.clone().into());
+            self = self.overwrite_args(profile.into());
         }
 
         let Some(path) = &self.exec_path else {
