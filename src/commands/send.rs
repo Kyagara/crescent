@@ -11,7 +11,7 @@ pub struct SendArgs {
     #[arg(help = "Service name")]
     pub name: String,
 
-    #[arg(help = "Command to send", allow_hyphen_values = true)]
+    #[arg(help = "Command", allow_hyphen_values = true)]
     pub command: Vec<String>,
 }
 
@@ -23,9 +23,7 @@ impl SendArgs {
         }
 
         let stdin = path.join("stdin");
-
         let stdin = if stdin.exists() { Some(stdin) } else { None };
-
         if stdin.is_none() {
             return Err(anyhow!("'{}' stdin does not exist", self.name));
         }

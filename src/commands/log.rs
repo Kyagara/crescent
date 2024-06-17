@@ -9,10 +9,10 @@ pub struct LogArgs {
     #[arg(help = "Service name")]
     pub name: String,
 
-    #[arg(short, long, help = "Lines to print", default_value_t = 200)]
+    #[arg(help = "Lines to print", short, long, default_value_t = 200)]
     pub lines: u64,
 
-    #[arg(short, long, help = "Follow the log for any new lines")]
+    #[arg(help = "Follow the log for any new lines", short, long)]
     pub follow: bool,
 }
 
@@ -26,12 +26,8 @@ impl LogArgs {
             return Ok(());
         }
 
-        let lines = logger.log(self.lines)?;
-
-        for line in lines {
-            println!("{line}");
-        }
-
+        let stdout = logger.log(self.lines)?;
+        print!("{stdout}");
         Ok(())
     }
 }

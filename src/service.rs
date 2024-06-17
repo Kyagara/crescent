@@ -21,6 +21,11 @@ pub struct Status {
     pub cmd: String,
 }
 
+pub enum StatusOutput {
+    Pretty(Status),
+    Raw(String),
+}
+
 /// Init system interface.
 ///
 /// For now, only [`Systemd`] is supported.
@@ -38,7 +43,7 @@ pub trait InitSystem {
     /// Restart the service.
     fn restart(&self) -> Result<()>;
     /// Request the status of the service.
-    fn status(&self, raw: bool) -> Result<Status>;
+    fn status(&self, raw: bool) -> Result<StatusOutput>;
     /// List basic infomation of all services.
     ///
     /// Does not require [`InitSystem::set_service_name`].

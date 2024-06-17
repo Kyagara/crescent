@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    service::{InitSystem, Status},
+    service::{InitSystem, Status, StatusOutput},
     APPS_DIR, HOME_DIR,
 };
 
@@ -111,8 +111,8 @@ impl InitSystem for Systemd {
 
     fn is_running(&self) -> Result<bool> {
         let output = self.run_command(vec!["is-active", &self.service_name])?;
-        let out = String::from_utf8(output.stdout)?;
-        let is_running = out.trim().to_string();
+        let stdout = String::from_utf8(output.stdout)?;
+        let is_running = stdout.trim().to_string();
         Ok(is_running == "active")
     }
 
@@ -149,30 +149,21 @@ impl InitSystem for Systemd {
         Ok(())
     }
 
-    fn status(&self, raw: bool) -> Result<Status> {
+    fn status(&self, raw: bool) -> Result<StatusOutput> {
         let output = match self.run_command(vec!["status", &self.service_name]) {
             Ok(output) => output,
             Err(err) => return Err(err),
         };
 
-        let out = String::from_utf8(output.stdout)?;
-
+        let stdout = String::from_utf8(output.stdout)?;
         if raw {
-            // Print the output without any modification
-            println!("{out}");
-            return Ok(Status {
-                script: String::new(),
-                stdin: String::new(),
-                active: String::new(),
-                pid: 0,
-                cmd: String::new(),
-            });
+            return Ok(StatusOutput::Raw(stdout));
         }
 
-        let result: Vec<&str> = out.lines().collect::<Vec<&str>>();
+        let result: Vec<&str> = stdout.lines().collect();
+        let mut iter = result.iter();
 
-        let script = result
-            .iter()
+        let script = iter
             .find(|line| line.contains("Loaded:"))
             .context("Error finding Loaded line.")?
             .split('(')
@@ -182,8 +173,7 @@ impl InitSystem for Systemd {
             .trim()
             .to_string();
 
-        let status = result
-            .iter()
+        let status = iter
             .find(|line| line.contains("Active:"))
             .context("Error parsing status.")?
             .split(':')
@@ -193,13 +183,7 @@ impl InitSystem for Systemd {
             .to_string();
 
         if !status.starts_with("active") {
-            return Ok(Status {
-                script,
-                stdin: String::new(),
-                active: status,
-                pid: 0,
-                cmd: String::new(),
-            });
+            return Ok(StatusOutput::Raw(stdout));
         }
 
         let stdin = APPS_DIR.to_string() + &self.name + "/" + &self.name + ".stdin";
@@ -211,8 +195,7 @@ impl InitSystem for Systemd {
             .trim()
             .to_string();
 
-        let pid = result
-            .iter()
+        let pid = iter
             .find(|line| line.contains("Main PID:"))
             .context("Error finding PID.")?
             .split(':')
@@ -222,8 +205,7 @@ impl InitSystem for Systemd {
             .to_string()
             .parse()?;
 
-        let cgroup_index = result
-            .iter()
+        let cgroup_index = iter
             .position(|line| line.contains("CGroup:"))
             .context("Error parsing CGroup.")?;
 
@@ -235,13 +217,13 @@ impl InitSystem for Systemd {
             .collect::<Vec<&str>>()
             .join(" ");
 
-        Ok(Status {
+        Ok(StatusOutput::Pretty(Status {
             script,
             stdin,
             pid,
             active,
             cmd,
-        })
+        }))
     }
 
     fn list(&self) -> Result<Vec<String>> {

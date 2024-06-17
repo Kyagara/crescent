@@ -3,7 +3,6 @@ use std::process::{Command, Output};
 use crate::logger::LogSystem;
 
 use anyhow::Result;
-use crossterm::style::Stylize;
 
 /// `journald` implementation.
 pub struct Journald {
@@ -35,24 +34,22 @@ impl LogSystem for Journald {
         self.service_name = format!("cres.{name}.service");
     }
 
-    fn log(&self, n: u64) -> Result<Vec<String>> {
+    fn log(&self, n: u64) -> Result<String> {
         let output = self.run_command(vec!["--lines", &format!("{n}")])?;
-
-        let out = String::from_utf8(output.stdout)?;
-        let output_lines = out.lines().collect::<Vec<&str>>();
-        let lines = output_lines.iter().map(ToString::to_string).collect();
-
-        Ok(lines)
+        let stdout = String::from_utf8(output.stdout)?;
+        Ok(stdout)
     }
 
     fn follow(&self) -> Result<()> {
-        let lines = self.log(10)?;
-        for line in lines {
-            eprintln!("{line}");
-        }
+        let mut cmd = Command::new("journalctl")
+            .arg("--user")
+            .arg("--unit")
+            .arg(&self.service_name)
+            .arg("--no-pager")
+            .arg("--follow")
+            .spawn()?;
 
-        eprintln!("{}", "Following logs... Press Ctrl+C to stop".white());
-        self.run_command(vec!["--follow"])?;
+        cmd.wait()?;
         Ok(())
     }
 }
