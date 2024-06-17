@@ -60,29 +60,14 @@ impl Profiles {
         Ok(())
     }
 
-    // Copies all profiles in the project root `./profiles` to `$HOME/.crescent/profiles/`
+    // Write all default profiles to `$HOME/.crescent/profiles/`
     pub fn install_default_profiles(&self) -> Result<()> {
         let profiles_dir = PathBuf::from(PROFILES_DIR);
 
-        // No need to check if paths exists, they were created at startup.
-
-        let default_profiles = match PathBuf::from("./profiles").read_dir() {
-            Ok(dir) => dir.flatten(),
-            Err(err) => {
-                return Err(anyhow!(
-                    "Error reading project root profiles directory: {err}"
-                ))
-            }
-        };
-
-        for default_profile in default_profiles {
-            eprintln!("Copying profile {:?}", default_profile.file_name());
-            if let Err(err) = fs::copy(
-                default_profile.path(),
-                profiles_dir.join(default_profile.file_name()),
-            ) {
-                return Err(anyhow!("Error copying profile: {err}"));
-            }
+        for (name, profile) in DEFAULT_PROFILES {
+            let profile_path = profiles_dir.join(format!("{name}.toml"));
+            eprintln!("Copying profile '{name}'");
+            fs::write(profile_path, profile)?;
         }
 
         Ok(())
@@ -145,3 +130,29 @@ impl Profile {
         Ok(profile)
     }
 }
+
+const DEFAULT_PROFILES: [(&str, &str); 3] = [
+    ("example", EXAMPLE_PROFILE),
+    ("mc-10g", MC_10G_SERVER_PROFILE),
+    ("velocity", VELOCITY_PROXY_PROFILE),
+];
+
+const EXAMPLE_PROFILE: &str = r#"# Example profile that executes a long running service with an interpreter
+name = "example"
+# Provide the interpreter if necessary and optionally pass arguments to it
+interpreter = "python3 -O"
+exec_path = "./tools/long_running_service.py"
+# Arguments passed to the executable
+arguments = "--log=info -a b
+"#;
+
+const MC_10G_SERVER_PROFILE: &str = r#"# Aikar's flags for Minecraft servers, 10G ram with GC logging, Java 11+. Works well for Fabric and Paper servers. https://docs.papermc.io/paper/aikars-flags#recommended-jvm-startup-flags
+name = "minecraft"
+interpreter = "java -Xms10G -Xmx10G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true -jar"
+arguments = "--nogui"
+"#;
+
+const VELOCITY_PROXY_PROFILE: &str = r#"# Recommended flags for Velocity. https://docs.papermc.io/velocity/tuning
+name = "velocity"
+interpreter = "java -Xms1024M -Xmx1024M -XX:+UseG1GC -XX:G1HeapRegionSize=4M -XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:+AlwaysPreTouch -XX:MaxInlineLevel=15 -jar"
+"#;
