@@ -5,7 +5,7 @@ use crate::logger::LogSystem;
 use anyhow::Result;
 use crossterm::style::Stylize;
 
-/// Journald implementation.
+/// `journald` implementation.
 pub struct Journald {
     service_name: String,
 }
@@ -35,8 +35,8 @@ impl LogSystem for Journald {
         self.service_name = format!("cres.{name}.service");
     }
 
-    fn log(&self, lines: u64) -> Result<Vec<String>> {
-        let output = self.run_command(vec!["--lines", &format!("{lines}")])?;
+    fn log(&self, n: u64) -> Result<Vec<String>> {
+        let output = self.run_command(vec!["--lines", &format!("{n}")])?;
 
         let out = String::from_utf8(output.stdout)?;
         let output_lines = out.lines().collect::<Vec<&str>>();

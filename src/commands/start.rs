@@ -106,10 +106,12 @@ impl StartArgs {
         }
 
         let exec_cmd = self.format_exec_cmd(&file_path);
-
         eprintln!("CMD: '{exec_cmd}'");
-        init_system.start(&exec_cmd)?;
 
+        init_system.create(&exec_cmd)?;
+        eprintln!("Service '{service_name}' created");
+
+        init_system.start()?;
         println!("Service '{service_name}' started");
         Ok(())
     }
