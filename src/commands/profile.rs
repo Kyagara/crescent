@@ -1,21 +1,37 @@
 use crate::{profile::Profiles, util};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Args;
 
 #[derive(Args)]
-#[command(about = "Verify and print a profile")]
+#[command(about = "Manage profiles")]
 pub struct ProfileArgs {
     #[arg(help = "Profile name")]
-    pub profile_name: String,
+    pub profile_name: Option<String>,
+
+    #[arg(short, long, help = "Installs default profiles")]
+    pub default: bool,
 }
 
 impl ProfileArgs {
     pub fn run(self) -> Result<()> {
         let mut profiles = Profiles::new();
-        let profile = profiles.get_profile(&self.profile_name)?;
 
-        util::print_title_cyan(&format!("Profile: {}", self.profile_name));
+        if self.default {
+            profiles.install_default_profiles()?;
+            println!("Installed default profiles.");
+            return Ok(());
+        }
+
+        let profile_name = if let Some(name) = self.profile_name {
+            name
+        } else {
+            return Err(anyhow!("No profile name provided."));
+        };
+
+        let profile = profiles.get_profile(&profile_name)?;
+
+        util::print_title_cyan(&format!("Profile: {profile_name}"));
 
         if let Some(exec_path) = profile.exec_path {
             util::println_field_white("exec_path", exec_path.to_string_lossy());
