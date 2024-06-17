@@ -24,7 +24,7 @@ pub struct StatusArgs {
 
 impl StatusArgs {
     pub fn run(self) -> Result<()> {
-        let mut init_system = Service::get_init_system();
+        let mut init_system = Service::get();
         init_system.set_service_name(&self.name);
 
         let status = init_system.status(self.raw)?;

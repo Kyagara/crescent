@@ -8,9 +8,8 @@
 	</p>
 </div>
 
-## Wiki
-
-Check the [wiki](https://github.com/Kyagara/crescent/wiki) for available commands and a lot more info!
+> [!WARNING]
+> This branch is still in development and may be unstable. Only `systemd` and `journald` is supported at the moment.
 
 ## Install:
 
@@ -26,20 +25,17 @@ cargo install --git https://github.com/Kyagara/crescent
 
 Reimplementation of features already in `crescent`:
 
-> Not sure of adding back `save` command, there are other priorities for now.
-
 - Reimplement tests.
-- Reimplement `stop` (partial) and `kill` commands.
+- Reimplement `kill` command.
 - Rewrite `attach` command.
 - Reimplement `stop_command` on `start` command and profile.
 
 New features:
 
-- Maybe start using subcommand logic for some commands.
-- Add `edit` service and profile command.
-- Add `delete` service command.
-- Finish implementing `Logger`, theres no logic of selecting a logging system.
-- Add methods for checking services running, many places are doing the same checks.
-- Use enums on returns from `Service` and `Logger`.
-- Make copying base profiles a prompt when installing/launching for the first time.
+- Detection method for `init` systems and logging systems.
+- Avoid recreating a service script if it already exists. Should have a `force` flag to override this.
+- Add `enable`/`disable` service command.
+- Add `delete` service/profile command.
+- Finish implementing `Logger`, theres no logic of selecting a logging system and setting it for a service.
+- Maybe use more enums on returns.
 - Improve code, looks horrible.

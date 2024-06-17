@@ -90,7 +90,7 @@ impl StartArgs {
             return Err(anyhow!("Name contains whitespace."));
         }
 
-        let mut init_system = Service::get_init_system();
+        let mut init_system = Service::get();
         init_system.set_service_name(service_name);
 
         let stdin = PathBuf::from(APPS_DIR).join(service_name).join("stdin");
