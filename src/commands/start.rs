@@ -15,32 +15,32 @@ use clap::{Args, ValueHint};
 #[derive(Args)]
 #[command(about = "Starts an executable as a background service")]
 pub struct StartArgs {
-    #[arg(value_hint = ValueHint::AnyPath)]
+    #[arg(help = "Path to the executable", value_hint = ValueHint::AnyPath)]
     pub exec_path: Option<PathBuf>,
 
     #[arg(
+        help = "Defaults to the executable name. Service will be named \"cres.*.service\"",
         short,
-        long,
-        help = "Defaults to the executable name. Service will be named 'cres.*.service'"
+        long
     )]
     pub name: Option<String>,
 
     #[arg(
+        help = "node, java, etc. Accepts arguments, example: \"java -Xmx512m -jar\"",
         short,
-        long,
-        help = "node, java, etc. Accepts arguments, example: 'java -Xmx512m -jar'"
+        long
     )]
     pub interpreter: Option<String>,
 
     #[arg(
+        help = "Arguments for the executable",
         short,
         long,
-        help = "Arguments for the executable",
         allow_hyphen_values = true
     )]
     pub arguments: Option<String>,
 
-    #[arg(short, long, help = "Name of the profile to load fields from")]
+    #[arg(help = "Name of the profile to load fields from", short, long)]
     pub profile: Option<String>,
 }
 

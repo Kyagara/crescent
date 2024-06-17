@@ -32,13 +32,7 @@ impl Profiles {
 
     fn load_profiles(&mut self) -> Result<()> {
         let profiles_dir = PathBuf::from(PROFILES_DIR);
-
-        if !profiles_dir.is_dir() {
-            fs::create_dir(&profiles_dir)?;
-            return Ok(());
-        }
-
-        let files = fs::read_dir(&profiles_dir)?;
+        let files = fs::read_dir(profiles_dir)?;
 
         for file in files {
             let file_dir = file?;
@@ -49,7 +43,7 @@ impl Profiles {
                 continue;
             }
 
-            let profile = Profile::new();
+            let mut profile = Profile::new();
             let profile_content = fs::read_to_string(path)?;
             profile.parse_profile(&profile_content)?;
 
@@ -74,7 +68,7 @@ impl Profiles {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Profile {
     pub exec_path: Option<PathBuf>,
     pub name: Option<String>,
@@ -94,15 +88,7 @@ impl Profile {
         }
     }
 
-    fn parse_profile(&self, profile_content: &str) -> Result<Profile> {
-        let mut profile = Profile {
-            exec_path: None,
-            name: None,
-            interpreter: None,
-            arguments: None,
-            stop_command: None,
-        };
-
+    fn parse_profile(&mut self, profile_content: &str) -> Result<()> {
         for line in profile_content.lines() {
             let line = line.trim();
 
@@ -116,18 +102,18 @@ impl Profile {
 
                 if !value.is_empty() {
                     match key {
-                        "exec_path" => profile.exec_path = Some(PathBuf::from(value)),
-                        "name" => profile.name = Some(value),
-                        "interpreter" => profile.interpreter = Some(value),
-                        "arguments" => profile.arguments = Some(value),
-                        "stop_command" => profile.stop_command = Some(value),
+                        "exec_path" => self.exec_path = Some(PathBuf::from(value)),
+                        "name" => self.name = Some(value),
+                        "interpreter" => self.interpreter = Some(value),
+                        "arguments" => self.arguments = Some(value),
+                        "stop_command" => self.stop_command = Some(value),
                         _ => {}
                     }
                 }
             }
         }
 
-        Ok(profile)
+        Ok(())
     }
 }
 

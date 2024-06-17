@@ -9,7 +9,7 @@ pub struct ProfileArgs {
     #[arg(help = "Profile name")]
     pub profile_name: Option<String>,
 
-    #[arg(short, long, help = "Installs default profiles")]
+    #[arg(help = "Installs default profiles", short, long)]
     pub default: bool,
 }
 

@@ -17,7 +17,7 @@ impl Logger {
 /// For now, only [`Journald`] is supported and few methods supported.
 pub trait LogSystem {
     /// Log `n` lines from the service.
-    fn log(&self, n: u64) -> Result<Vec<String>>;
+    fn log(&self, n: u64) -> Result<String>;
     /// Follow the log for any new lines.
     fn follow(&self) -> Result<()>;
     /// Set the service name being queried.
