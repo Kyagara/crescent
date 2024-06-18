@@ -95,8 +95,8 @@ impl StartArgs {
 
         let stdin = PathBuf::from(APPS_DIR).join(service_name).join("stdin");
         if stdin.exists() {
-            // An application with the same name 'example' has a stdin file created.
-            // Check if a service with the name 'cres.example.service' is already running.
+            // An application with the same '<name>' has a stdin file created.
+            // Check if a service with the name 'cres.<name>.service' is already running.
             if init_system.is_running()? {
                 // If running, avoid creating/starting a new service.
                 return Err(anyhow!(
