@@ -49,10 +49,6 @@ impl ProfileArgs {
             util::println_field_white("arguments", arguments);
         }
 
-        if let Some(stop_command) = profile.stop_command {
-            util::println_field_white("stop_command", stop_command);
-        }
-
         Ok(())
     }
 }

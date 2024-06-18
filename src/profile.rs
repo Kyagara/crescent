@@ -74,7 +74,6 @@ pub struct Profile {
     pub name: Option<String>,
     pub interpreter: Option<String>,
     pub arguments: Option<String>,
-    pub stop_command: Option<String>,
 }
 
 impl Profile {
@@ -84,7 +83,6 @@ impl Profile {
             name: None,
             interpreter: None,
             arguments: None,
-            stop_command: None,
         }
     }
 
@@ -106,7 +104,6 @@ impl Profile {
                         "name" => self.name = Some(value),
                         "interpreter" => self.interpreter = Some(value),
                         "arguments" => self.arguments = Some(value),
-                        "stop_command" => self.stop_command = Some(value),
                         _ => {}
                     }
                 }

@@ -40,6 +40,9 @@ pub struct StartArgs {
     )]
     pub arguments: Option<String>,
 
+    #[arg(help = "Overwrite existing service file(s)", short, long)]
+    pub force: bool,
+
     #[arg(help = "Name of the profile to load fields from", short, long)]
     pub profile: Option<String>,
 }
@@ -51,6 +54,9 @@ impl From<Profile> for StartArgs {
             name: profile.name,
             interpreter: profile.interpreter,
             arguments: profile.arguments,
+
+            // Ignored
+            force: false,
             profile: None,
         }
     }
@@ -62,7 +68,9 @@ impl StartArgs {
         if let Some(name) = &self.profile {
             let mut profiles = Profiles::new();
             let profile = profiles.get_profile(name)?;
+            let force = self.force;
             self = self.overwrite_args(profile.into());
+            self.force = force;
         }
 
         let Some(path) = &self.exec_path else {
@@ -81,38 +89,42 @@ impl StartArgs {
         let name = &self.name.clone();
 
         // If name is not provided, use the file name.
-        let service_name = match name {
+        let name = match name {
             Some(name) => name,
             None => file_path.file_stem().unwrap().to_str().unwrap(),
         };
 
-        if service_name.contains(char::is_whitespace) {
+        if name.contains(char::is_whitespace) {
             return Err(anyhow!("Name contains whitespace."));
         }
 
         let mut init_system = Service::get();
-        init_system.set_service_name(service_name);
+        init_system.set_service_name(name);
 
-        let stdin = PathBuf::from(APPS_DIR).join(service_name).join("stdin");
+        let stdin = PathBuf::from(APPS_DIR).join(name).join("stdin");
         if stdin.exists() {
             // An application with the same '<name>' has a stdin file created.
             // Check if a service with the name 'cres.<name>.service' is already running.
             if init_system.is_running()? {
                 // If running, avoid creating/starting a new service.
                 return Err(anyhow!(
-                    "A service with the same name '{service_name}' is already running."
+                    "A service with the same name '{name}' is already running."
                 ));
             }
         }
 
-        let exec_cmd = self.format_exec_cmd(&file_path);
-        eprintln!("CMD: '{exec_cmd}'");
+        let script = init_system.get_scripts_paths();
+        let script_path = Path::new(&script[0]);
+        if !script_path.exists() || self.force {
+            let exec_cmd = self.format_exec_cmd(&file_path);
+            eprintln!("CMD: '{exec_cmd}'");
 
-        init_system.create(&exec_cmd)?;
-        eprintln!("Service '{service_name}' created");
+            init_system.create(&exec_cmd)?;
+            eprintln!("Service '{name}' created");
+        }
 
         init_system.start()?;
-        println!("Service '{service_name}' started");
+        println!("Service '{name}' started");
         Ok(())
     }
 
@@ -127,6 +139,9 @@ impl StartArgs {
             name: service_name,
             interpreter,
             arguments,
+
+            // Ignored
+            force: false,
             profile: None,
         }
     }

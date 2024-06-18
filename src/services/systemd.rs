@@ -46,14 +46,12 @@ impl Systemd {
     }
 
     fn write_service_unit(&self, path: PathBuf, cmd: &str) -> Result<()> {
-        let description = format!("Description=Service unit for '{}'", self.name);
         let requires = format!("Requires={}", self.socket_name);
         let after = format!("After=network.target {}", self.socket_name);
         let exec_start = format!("ExecStart={cmd}");
 
         let service = [
             "[Unit]",
-            &description,
             &requires,
             &after,
             "",
@@ -77,16 +75,12 @@ impl Systemd {
     }
 
     fn write_socket_unit(&self, path: PathBuf) -> Result<()> {
-        let description = format!("Description=Socket unit for '{}'", self.service_name);
         let listen_fifo = format!(
             "ListenFIFO={}/stdin",
             APPS_DIR.to_string() + "/" + &self.name
         );
 
         let socket = [
-            "[Unit]",
-            &description,
-            "",
             "[Socket]",
             &listen_fifo,
             "",
