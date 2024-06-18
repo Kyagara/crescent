@@ -4,6 +4,7 @@ use std::{fs, io};
 use crate::commands::{
     edit::EditArgs,
     enable::{DisableArgs, EnableArgs},
+    kill::KillArgs,
     list::ListArgs,
     log::LogArgs,
     profile::ProfileArgs,
@@ -15,7 +16,8 @@ use crate::commands::{
     stop::StopArgs,
 };
 use crate::Commands::{
-    Complete, Disable, Edit, Enable, List, Log, Profile, Reload, Restart, Send, Start, Status, Stop,
+    Complete, Disable, Edit, Enable, Kill, List, Log, Profile, Reload, Restart, Send, Start,
+    Status, Stop,
 };
 
 use anyhow::Result;
@@ -53,6 +55,7 @@ struct Crescent {
 enum Commands {
     Start(StartArgs),
     Stop(StopArgs),
+    Kill(KillArgs),
     Restart(RestartArgs),
     Send(SendArgs),
     Log(LogArgs),
@@ -80,6 +83,7 @@ fn main() -> Result<()> {
         Start(args) => StartArgs::run(args),
         List(_) => ListArgs::run(),
         Stop(args) => StopArgs::run(args),
+        Kill(args) => KillArgs::run(args),
         Restart(args) => RestartArgs::run(args),
         Send(args) => SendArgs::run(args),
         Log(args) => LogArgs::run(args),
