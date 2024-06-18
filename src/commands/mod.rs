@@ -1,4 +1,5 @@
 pub mod edit;
+pub mod enable;
 pub mod list;
 pub mod log;
 pub mod profile;

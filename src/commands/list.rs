@@ -23,7 +23,7 @@ impl ListArgs {
         system.refresh_processes();
 
         let mut builder = Builder::default();
-        builder.push_record(["Name", "PID", "Status", "Uptime"]);
+        builder.push_record(["Name", "PID", "Status", "Uptime", "Enabled"]);
 
         let mut index = 0;
         for service in list {
@@ -34,6 +34,7 @@ impl ListArgs {
 
             let mut row = vec![
                 service.clone(),
+                String::from("N/A"),
                 String::from("N/A"),
                 String::from("N/A"),
                 String::from("N/A"),
@@ -55,6 +56,8 @@ impl ListArgs {
                 row[2] = status.active;
                 row[3] = uptime;
             }
+
+            row[4] = init_system.is_enabled()?.to_string();
 
             builder.push_record(row);
             index += 1;
