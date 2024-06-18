@@ -38,12 +38,15 @@ impl StatusArgs {
                 system.refresh_process(pid);
                 system.refresh_memory();
 
+                let enabled = init_system.is_enabled()?;
+
                 util::print_title_cyan("Application information");
 
                 util::println_field_white("Name", self.name);
                 util::println_field_white("Status", status.active);
                 util::println_field_white("Script", status.script);
                 util::println_field_white("Stdin", status.stdin);
+                util::println_field_white("Enabled", enabled);
 
                 println!();
 

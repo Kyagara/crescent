@@ -2,11 +2,20 @@ use std::path::PathBuf;
 use std::{fs, io};
 
 use crate::commands::{
-    edit::EditArgs, list::ListArgs, log::LogArgs, profile::ProfileArgs, reload::ReloadArgs,
-    restart::RestartArgs, send::SendArgs, start::StartArgs, status::StatusArgs, stop::StopArgs,
+    edit::EditArgs,
+    enable::{DisableArgs, EnableArgs},
+    list::ListArgs,
+    log::LogArgs,
+    profile::ProfileArgs,
+    reload::ReloadArgs,
+    restart::RestartArgs,
+    send::SendArgs,
+    start::StartArgs,
+    status::StatusArgs,
+    stop::StopArgs,
 };
 use crate::Commands::{
-    Complete, Edit, List, Log, Profile, Reload, Restart, Send, Start, Status, Stop,
+    Complete, Disable, Edit, Enable, List, Log, Profile, Reload, Restart, Send, Start, Status, Stop,
 };
 
 use anyhow::Result;
@@ -52,6 +61,8 @@ enum Commands {
     Profile(ProfileArgs),
     Edit(EditArgs),
     Reload(ReloadArgs),
+    Enable(EnableArgs),
+    Disable(DisableArgs),
     #[command(about = "Print a completions file for the specified shell")]
     Complete {
         shell: Shell,
@@ -76,6 +87,8 @@ fn main() -> Result<()> {
         Profile(args) => ProfileArgs::run(args),
         Edit(args) => EditArgs::run(args),
         Reload(_) => ReloadArgs::run(),
+        Enable(args) => EnableArgs::run(args),
+        Disable(args) => DisableArgs::run(args),
         Complete { shell } => {
             clap_complete::generate(shell, &mut Crescent::command(), "cres", &mut io::stdout());
             Ok(())

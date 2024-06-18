@@ -124,6 +124,13 @@ impl InitSystem for Systemd {
         Ok(is_running == "active")
     }
 
+    fn is_enabled(&self) -> Result<bool> {
+        let output = self.run_command(vec!["is-enabled", &self.service_name])?;
+        let stdout = String::from_utf8(output.stdout)?;
+        let is_enabled = stdout.trim().to_string();
+        Ok(is_enabled == "enabled")
+    }
+
     fn reload(&self) -> Result<()> {
         self.run_command(vec!["daemon-reload"])?;
         Ok(())
@@ -159,6 +166,16 @@ impl InitSystem for Systemd {
 
     fn restart(&self) -> Result<()> {
         self.run_command(vec!["restart", &self.service_name])?;
+        Ok(())
+    }
+
+    fn enable(&self) -> Result<()> {
+        self.run_command(vec!["enable", &self.service_name])?;
+        Ok(())
+    }
+
+    fn disable(&self) -> Result<()> {
+        self.run_command(vec!["disable", &self.service_name])?;
         Ok(())
     }
 

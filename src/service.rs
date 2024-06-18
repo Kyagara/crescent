@@ -30,20 +30,28 @@ pub enum StatusOutput {
 ///
 /// For now, only [`Systemd`] is supported.
 pub trait InitSystem {
-    /// Reload the init system.
-    fn reload(&self) -> Result<()>;
-
     /// Set the service name being queried. Not required if only using [`InitSystem::list`].
     fn set_service_name(&mut self, name: &str);
 
-    /// Returns the absolute path of all required scripts.
+    /// Returns the absolute paths of all generated scripts.
     ///
-    /// - `systemd`: "$HOME/.config/systemd/user/cres.<name>.service" and "$HOME/.config/systemd/user/cres.<name>.socket"
+    /// - [`Systemd`]: "$HOME/.config/systemd/user/cres.<name>.service" and "$HOME/.config/systemd/user/cres.<name>.socket"
     fn get_scripts_paths(&self) -> Vec<String>;
+
+    /// Reload the init system.
+    ///
+    /// - [`Systemd`]: runs `daemon-reload`.
+    fn reload(&self) -> Result<()>;
+
+    /// Checks if the service is running.
+    fn is_running(&self) -> Result<bool>;
+
+    /// Checks if the service is enabled for startup.
+    fn is_enabled(&self) -> Result<bool>;
 
     /// Create necessary file(s) for the service.
     ///
-    /// - `systemd`: create service and socket units.
+    /// - [`Systemd`]: generates the service and socket units.
     fn create(&self, cmd: &str) -> Result<()>;
 
     /// Start the service.
@@ -51,11 +59,17 @@ pub trait InitSystem {
 
     /// Stop the service.
     ///
-    /// - `systemd`: sends `stop` to the socket.
+    /// - [`Systemd`]: sends `stop` to the socket.
     fn stop(&self) -> Result<()>;
 
     /// Restart the service.
     fn restart(&self) -> Result<()>;
+
+    /// Enable the service for startup.
+    fn enable(&self) -> Result<()>;
+
+    /// Disable the service for startup.
+    fn disable(&self) -> Result<()>;
 
     /// Request the status of the service.
     fn status(&self, raw: bool) -> Result<StatusOutput>;
@@ -63,9 +77,5 @@ pub trait InitSystem {
     /// List basic infomation of all services.
     ///
     /// Does not require [`InitSystem::set_service_name`].
-    ///
     fn list(&self) -> Result<Vec<String>>;
-
-    /// Checks if the service is running.
-    fn is_running(&self) -> Result<bool>;
 }
