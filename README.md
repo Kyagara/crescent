@@ -28,7 +28,6 @@ Reimplementation of features already in `crescent`:
 - Reimplement tests.
 - Reimplement `kill` command.
 - Rewrite `attach` command.
-- Reimplement `stop_command` on `start` command and profile.
 
 New features:
 
