@@ -158,6 +158,15 @@ impl InitSystem for Systemd {
         Ok(())
     }
 
+    fn kill(&self, signal: i32) -> Result<()> {
+        self.run_command(vec![
+            "kill",
+            &self.service_name,
+            format!("--signal={signal}").as_str(),
+        ])?;
+        Ok(())
+    }
+
     fn restart(&self) -> Result<()> {
         self.run_command(vec!["restart", &self.service_name])?;
         Ok(())

@@ -62,6 +62,9 @@ pub trait InitSystem {
     /// - [`Systemd`]: sends `stop` to the socket.
     fn stop(&self) -> Result<()>;
 
+    /// Send a signal to the service.
+    fn kill(&self, signal: i32) -> Result<()>;
+
     /// Restart the service.
     fn restart(&self) -> Result<()>;
 

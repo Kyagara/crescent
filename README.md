@@ -26,7 +26,6 @@ cargo install --git https://github.com/Kyagara/crescent
 Reimplementation of features already in `crescent`:
 
 - Reimplement tests.
-- Reimplement `kill` command.
 - Rewrite `attach` command.
 
 New features:

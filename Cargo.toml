@@ -23,7 +23,7 @@ name = "cres"
 path = "src/main.rs"
 
 [workspace.dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.86"
 
 [dependencies]
 anyhow.workspace = true

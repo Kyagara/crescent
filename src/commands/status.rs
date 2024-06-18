@@ -30,7 +30,7 @@ impl StatusArgs {
         let status = init_system.status(self.raw)?;
 
         match status {
-            StatusOutput::Raw(output) => println!("{output}"),
+            StatusOutput::Raw(output) => print!("{output}"),
             StatusOutput::Pretty(status) => {
                 let pid = Pid::from_u32(status.pid);
 
