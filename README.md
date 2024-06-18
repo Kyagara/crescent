@@ -32,7 +32,6 @@ Reimplementation of features already in `crescent`:
 New features:
 
 - Detection method for `init` systems and logging systems.
-- Avoid recreating a service script if it already exists. Should have a `force` flag to override this.
 - Add `delete` service/profile command.
 - Finish implementing `Logger`, theres no logic of selecting a logging system and setting it for a service.
 - Maybe use more enums on returns.

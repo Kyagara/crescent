@@ -55,7 +55,7 @@ impl From<Profile> for StartArgs {
             interpreter: profile.interpreter,
             arguments: profile.arguments,
 
-            // Ignored
+            // Ignored.
             force: false,
             profile: None,
         }
@@ -140,7 +140,7 @@ impl StartArgs {
             interpreter,
             arguments,
 
-            // Ignored
+            // Ignored.
             force: false,
             profile: None,
         }

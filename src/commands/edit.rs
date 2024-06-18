@@ -9,7 +9,7 @@ use anyhow::{anyhow, Result};
 use clap::{Args, ValueEnum};
 
 #[derive(Args)]
-#[command(about = "Edit service units or a profile")]
+#[command(about = "Edit service scripts or a profile. Creates a new profile if it does not exist")]
 pub struct EditArgs {
     #[arg(help = "Edit service or profile", value_enum)]
     pub kind: EditKind,
@@ -26,16 +26,9 @@ pub enum EditKind {
 
 impl EditArgs {
     pub fn run(self) -> Result<()> {
-        let path = PathBuf::from(APPS_DIR).join(&self.name);
-        if !path.exists() {
-            return Err(anyhow!("Application does not exist"));
-        }
-
         if self.kind == EditKind::Profile {
             let path = PathBuf::from(PROFILES_DIR).join(self.name.clone() + ".toml");
-            if !path.exists() {
-                return Err(anyhow!("Profile does not exist"));
-            }
+            // If the profile does not exist, let the user create one.
 
             let mut editor = Command::new("nano").arg(&path).spawn()?;
             let _ = editor.wait();
@@ -43,11 +36,18 @@ impl EditArgs {
             return Ok(());
         }
 
-        let init_system = Service::get();
+        let path = PathBuf::from(APPS_DIR).join(&self.name);
+        if !path.exists() {
+            return Err(anyhow!("Application does not exist"));
+        }
+
+        let mut init_system = Service::get();
+        init_system.set_service_name(&self.name);
+
         let scripts = init_system.get_scripts_paths();
 
         for script in scripts {
-            println!("Opened '{}' using nano", path.display());
+            println!("Opened '{}' using nano", script);
             let mut editor = Command::new("nano").arg(script).spawn()?;
             let _ = editor.wait();
         }
