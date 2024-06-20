@@ -9,7 +9,7 @@ pub struct ReloadArgs;
 
 impl ReloadArgs {
     pub fn run() -> Result<()> {
-        let init_system = Service::get();
+        let init_system = Service::get(None);
 
         init_system.reload()?;
 

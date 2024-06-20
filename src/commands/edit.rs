@@ -1,11 +1,12 @@
 use std::{path::PathBuf, process::Command};
 
 use crate::{
+    application::Application,
     service::{InitSystem, Service},
-    APPS_DIR, PROFILES_DIR,
+    PROFILES_DIR,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{Args, ValueEnum};
 
 #[derive(Args)]
@@ -27,22 +28,20 @@ pub enum EditKind {
 impl EditArgs {
     pub fn run(self) -> Result<()> {
         if self.kind == EditKind::Profile {
-            let path = PathBuf::from(PROFILES_DIR).join(self.name.clone() + ".toml");
             // If the profile does not exist, let the user create one.
 
+            let path = PathBuf::from(PROFILES_DIR).join(self.name.clone() + ".toml");
             let mut editor = Command::new("nano").arg(&path).spawn()?;
             let _ = editor.wait();
+
             println!("Opened '{}' using nano", path.display());
             return Ok(());
         }
 
-        let path = PathBuf::from(APPS_DIR).join(&self.name);
-        if !path.exists() {
-            return Err(anyhow!("Application does not exist"));
-        }
+        let application = Application::from(&self.name);
+        application.exists()?;
 
-        let mut init_system = Service::get();
-        init_system.set_service_name(&self.name);
+        let init_system = Service::get(Some(&self.name));
 
         let scripts = init_system.get_scripts_paths();
 
@@ -52,6 +51,7 @@ impl EditArgs {
             let _ = editor.wait();
         }
 
+        println!("Make sure to 'reload' if any changes were made");
         Ok(())
     }
 }

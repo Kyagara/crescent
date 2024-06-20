@@ -13,7 +13,7 @@
 
 ## Install:
 
-When installing crescent using cargo, default profiles will be created in crescent's main directory: `$HOME/.crescent/`.
+> The main directory for profiles and applications is `$HOME/.crescent/`.
 
 ```bash
 cargo install crescent-cli
@@ -26,12 +26,17 @@ cargo install --git https://github.com/Kyagara/crescent
 Reimplementation of features already in `crescent`:
 
 - Reimplement tests.
-- Rewrite `attach` command.
+- `stop` field on profiles and `start` command, a command to be sent when triggering a shutdown.
 
 New features:
 
+- Turn the python test program to a rust binary.
+- Improve service scripts, also allow for more customization.
+- Might look for another TUI library.
 - Detection method for `init` systems and logging systems.
 - Add `delete` service/profile command.
 - Finish implementing `Logger`, theres no logic of selecting a logging system and setting it for a service.
+- Add more arguments/commands to `log`.
 - Maybe use more enums on returns.
+- Decrease amount of crates.
 - Improve code, looks horrible.

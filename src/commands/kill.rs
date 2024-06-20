@@ -1,4 +1,7 @@
-use crate::service::{InitSystem, Service};
+use crate::{
+    application::Application,
+    service::{InitSystem, Service},
+};
 
 use anyhow::{anyhow, Result};
 use clap::Args;
@@ -9,27 +12,29 @@ pub struct KillArgs {
     #[arg(help = "Service name")]
     pub name: String,
 
-    #[arg(help = "Signal to send")]
-    pub signal: Option<i32>,
+    #[arg(help = "Signal to send", default_value_t = 15)]
+    pub signal: i32,
 }
 
 impl KillArgs {
     pub fn run(self) -> Result<()> {
-        let mut init_system = Service::get();
-        init_system.set_service_name(&self.name);
+        let application = Application::from(&self.name);
+        application.exists()?;
 
-        let service_name = format!("cres.{}.service", self.name);
+        let init_system = Service::get(Some(&application.name));
 
         if !init_system.is_running()? {
-            return Err(anyhow!("Service '{service_name}' is not running"));
+            return Err(anyhow!(
+                "Service '{}' is not running",
+                application.service_name
+            ));
         }
 
-        let signal = self.signal.unwrap_or(15);
+        eprintln!("Sending signal '{}'", application.service_name);
+        eprintln!("Signal: '{}'", self.signal);
+        init_system.kill(self.signal)?;
 
-        eprintln!("Sending signal '{service_name}'");
-        init_system.kill(signal)?;
-
-        println!("Sent signal '{signal}' to '{service_name}'");
+        println!("Sent signal to '{}'", application.service_name);
         Ok(())
     }
 }
