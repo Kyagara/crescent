@@ -1,7 +1,7 @@
-use std::path::PathBuf;
-use std::{fs, io};
+use std::{fs, io, path::PathBuf};
 
 use crate::commands::{
+    attach::AttachArgs,
     edit::EditArgs,
     enable::{DisableArgs, EnableArgs},
     kill::KillArgs,
@@ -16,8 +16,8 @@ use crate::commands::{
     stop::StopArgs,
 };
 use crate::Commands::{
-    Complete, Disable, Edit, Enable, Kill, List, Log, Profile, Reload, Restart, Send, Start,
-    Status, Stop,
+    Attach, Complete, Disable, Edit, Enable, Kill, List, Log, Profile, Reload, Restart, Send,
+    Start, Status, Stop,
 };
 
 use anyhow::Result;
@@ -36,6 +36,7 @@ pub const APPS_DIR: &str = concat!(
     "/.crescent/apps/"
 );
 
+mod application;
 mod commands;
 mod logger;
 mod loggers;
@@ -53,6 +54,7 @@ struct Crescent {
 
 #[derive(Subcommand)]
 enum Commands {
+    Attach(AttachArgs),
     Start(StartArgs),
     Stop(StopArgs),
     Kill(KillArgs),
@@ -60,10 +62,10 @@ enum Commands {
     Send(SendArgs),
     Log(LogArgs),
     Status(StatusArgs),
-    List(ListArgs),
+    List,
     Profile(ProfileArgs),
     Edit(EditArgs),
-    Reload(ReloadArgs),
+    Reload,
     Enable(EnableArgs),
     Disable(DisableArgs),
     #[command(about = "Print a completions file for the specified shell")]
@@ -80,8 +82,9 @@ fn main() -> Result<()> {
     let cli = Crescent::parse();
 
     match cli.commands {
+        Attach(args) => AttachArgs::run(args),
         Start(args) => StartArgs::run(args),
-        List(_) => ListArgs::run(),
+        List => ListArgs::run(),
         Stop(args) => StopArgs::run(args),
         Kill(args) => KillArgs::run(args),
         Restart(args) => RestartArgs::run(args),
@@ -90,7 +93,7 @@ fn main() -> Result<()> {
         Status(args) => StatusArgs::run(args),
         Profile(args) => ProfileArgs::run(args),
         Edit(args) => EditArgs::run(args),
-        Reload(_) => ReloadArgs::run(),
+        Reload => ReloadArgs::run(),
         Enable(args) => EnableArgs::run(args),
         Disable(args) => DisableArgs::run(args),
         Complete { shell } => {

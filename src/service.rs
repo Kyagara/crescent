@@ -7,8 +7,8 @@ pub struct Service;
 
 impl Service {
     /// Get the current `init` system.
-    pub fn get() -> impl InitSystem {
-        Systemd::new()
+    pub fn get(application_name: Option<&str>) -> impl InitSystem {
+        Systemd::new(application_name)
     }
 }
 
@@ -30,8 +30,8 @@ pub enum StatusOutput {
 ///
 /// For now, only [`Systemd`] is supported.
 pub trait InitSystem {
-    /// Set the service name being queried. Not required if only using [`InitSystem::list`].
-    fn set_service_name(&mut self, name: &str);
+    /// Updates the service name being queried.
+    fn update_application_name(&mut self, name: &str);
 
     /// Returns the absolute paths of all generated scripts.
     ///
@@ -78,7 +78,5 @@ pub trait InitSystem {
     fn status(&self, raw: bool) -> Result<StatusOutput>;
 
     /// List basic infomation of all services.
-    ///
-    /// Does not require [`InitSystem::set_service_name`].
     fn list(&self) -> Result<Vec<String>>;
 }

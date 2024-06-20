@@ -1,3 +1,4 @@
+pub mod attach;
 pub mod edit;
 pub mod enable;
 pub mod kill;

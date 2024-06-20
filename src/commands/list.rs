@@ -16,7 +16,7 @@ pub struct ListArgs;
 
 impl ListArgs {
     pub fn run() -> Result<()> {
-        let mut init_system = Service::get();
+        let mut init_system = Service::get(None);
         let list = init_system.list()?;
 
         let mut system = System::new();
@@ -40,7 +40,7 @@ impl ListArgs {
                 String::from("N/A"),
             ];
 
-            init_system.set_service_name(&service);
+            init_system.update_application_name(&service);
             let status = init_system.status(false)?;
 
             // No need to check other types of output.

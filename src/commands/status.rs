@@ -1,10 +1,12 @@
+use std::process::Command;
+
 use crate::{
+    application::Application,
     service::{InitSystem, Service, StatusOutput},
     util,
 };
 
 use anyhow::{anyhow, Result};
-use chrono::{DateTime, Local, TimeZone, Utc};
 use clap::Args;
 use sysinfo::{Pid, System};
 
@@ -24,8 +26,10 @@ pub struct StatusArgs {
 
 impl StatusArgs {
     pub fn run(self) -> Result<()> {
-        let mut init_system = Service::get();
-        init_system.set_service_name(&self.name);
+        let application = Application::from(&self.name);
+        application.exists()?;
+
+        let init_system = Service::get(Some(&application.name));
 
         let status = init_system.status(self.raw)?;
 
@@ -42,7 +46,7 @@ impl StatusArgs {
 
                 util::print_title_cyan("Application information");
 
-                util::println_field_white("Name", self.name);
+                util::println_field_white("Name", application.name);
                 util::println_field_white("Status", status.active);
                 util::println_field_white("Script", status.script);
                 util::println_field_white("Stdin", status.stdin);
@@ -56,12 +60,17 @@ impl StatusArgs {
 
                 match system.process(pid) {
                     Some(process) => {
-                        let utc = Utc
-                            .timestamp_opt(process.start_time().try_into().unwrap(), 0)
-                            .unwrap();
-                        let start_time: DateTime<Local> = DateTime::from(utc);
+                        // Using date to convert the start time into a human readable format
+                        let output = Command::new("date")
+                            .arg("-d")
+                            .arg(format!("@{}", process.start_time()))
+                            .arg("+%Y-%m-%d %H:%M:%S")
+                            .output()
+                            .expect("Failed to execute command");
 
-                        util::println_field_white("Started", start_time);
+                        let started = String::from_utf8(output.stdout).unwrap();
+
+                        util::println_field_white("Started", started);
 
                         util::println_field_white(
                             "Uptime",

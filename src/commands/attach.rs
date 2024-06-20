@@ -1,23 +1,28 @@
 use std::{
-    io::{self, Write},
-    os::unix::net::UnixStream,
-    path::PathBuf,
-    sync::Mutex,
+    fs::OpenOptions,
+    io::{self, BufRead, BufReader, Write},
+    sync::{
+        mpsc::{self, Receiver, Sender},
+        Mutex,
+    },
     thread,
     time::Duration,
-    vec,
 };
 
-use crate::application;
+use crate::{
+    application::Application,
+    logger::{LogSystem, Logger},
+    service::{InitSystem, Service, StatusOutput},
+};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Args;
-use crossbeam::channel::{tick, unbounded, Receiver, Sender};
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind},
     execute,
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use log::{debug, LevelFilter};
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Direction, Layout},
@@ -40,6 +45,7 @@ pub struct AttachArgs {
 struct AttachTerminal {
     app_name: String,
     logger: TuiWidgetState,
+    stats: String,
     input: Mutex<Input>,
     running: bool,
     history: Vec<String>,
@@ -50,6 +56,7 @@ impl AttachTerminal {
         AttachTerminal {
             app_name,
             logger: TuiWidgetState::new(),
+            stats: String::from("Waiting for stats."),
             running: true,
             input: Mutex::new(Input::default()),
             history: Vec::new(),
@@ -59,39 +66,53 @@ impl AttachTerminal {
 
 enum TerminalEvent {
     CrosstermEvent(Event),
-    Log(Vec<String>),
+    Log(String),
     Stats(String),
-    SocketEvent(SocketEvent),
+    Stdin,
 }
 
 impl AttachArgs {
     pub fn run(self) -> Result<()> {
-        application::check_app_exists(&self.name)?;
+        let application = Application::from(&self.name);
+        application.exists()?;
 
-        if !application::app_already_running(&self.name)? {
-            return Err(anyhow!("Application not running."));
+        if !cfg!(test) {
+            tui_logger::init_logger(LevelFilter::Debug).unwrap();
+            tui_logger::set_default_level(LevelFilter::Debug);
         }
 
-        let pids = application::app_pids_by_name(&self.name)?;
+        let (terminal_sender, terminal_receiver) = mpsc::channel();
+        let (stdin_sender, stdin_receiver): (Sender<String>, Receiver<String>) = mpsc::channel();
 
-        let (sender, receiver) = unbounded();
-        let (socket_sender, socket_receiver): (Sender<SocketEvent>, Receiver<SocketEvent>) =
-            unbounded();
-        let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
+        let mut attach = AttachTerminal::new(application.name.clone());
 
-        let app_dir = application::app_dir_by_name(&self.name)?;
-        let log_dir = app_dir.join(self.name.clone() + ".log");
-        let socket_dir = app_dir.join(self.name.clone() + ".sock");
+        let init_system = Service::get(Some(&self.name));
 
-        let mut app = AttachTerminal::new(self.name);
-        let mut stats_list = String::from("Waiting for stats.");
+        let pid = match init_system.status(false)? {
+            StatusOutput::Pretty(status) => Some(status.pid),
+            StatusOutput::Raw(_) => None,
+        };
 
-        event_read_handler(sender.clone());
-        log_handler(log_dir, sender.clone(), log_sender, log_receiver)?;
-        stats_handler(pids[1], sender.clone());
-        socket_handler(socket_dir, sender, socket_receiver)?;
+        attach.history = application.read_command_history()?;
 
-        socket_sender.send(SocketEvent::CommandHistory(vec![]))?;
+        // Handle reading crossterm events.
+        event_read_handler(terminal_sender.clone());
+
+        // Handles sending logs to the terminal.
+        log_handler(application.name.clone(), terminal_sender.clone())?;
+
+        match pid {
+            Some(pid) => {
+                // Handles sending system stats like CPU and memory usage to the terminal.
+                stats_handler(pid, terminal_sender.clone());
+
+                // Handles sending commands to the application and reading/writing them to the history.
+                stdin_handler(application, terminal_sender, stdin_receiver)?;
+            }
+            None => {
+                attach.stats = String::from("Unable to query stats");
+            }
+        }
 
         if cfg!(test) {
             return Ok(());
@@ -103,17 +124,17 @@ impl AttachArgs {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
-        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+        terminal.draw(|f| ui(f, &mut attach))?;
 
         let mut history_pos: i16 = -1;
 
-        while app.running {
-            match receiver.recv()? {
+        while attach.running {
+            match terminal_receiver.recv()? {
                 TerminalEvent::CrosstermEvent(event) => match event {
                     Event::Key(key) => {
                         match key.code {
                             KeyCode::Enter => {
-                                let mut input = app.input.lock().unwrap();
+                                let mut input = attach.input.lock().unwrap();
                                 let content = input.value().to_string();
 
                                 if content.trim().is_empty() {
@@ -122,90 +143,83 @@ impl AttachArgs {
 
                                 input.reset();
 
-                                app.history.insert(0, content.clone());
+                                attach.history.insert(0, content.clone());
                                 history_pos = -1;
-                                socket_sender.send(SocketEvent::WriteStdin(content))?;
-                                app.logger.transition(TuiWidgetEvent::EscapeKey);
+                                stdin_sender.send(content)?;
+                                attach.logger.transition(TuiWidgetEvent::EscapeKey);
                             }
                             KeyCode::PageUp => {
-                                app.logger.transition(TuiWidgetEvent::PrevPageKey);
+                                attach.logger.transition(TuiWidgetEvent::PrevPageKey);
                             }
                             KeyCode::PageDown => {
-                                app.logger.transition(TuiWidgetEvent::NextPageKey);
+                                attach.logger.transition(TuiWidgetEvent::NextPageKey);
                             }
                             KeyCode::Up => {
-                                if history_pos < app.history.len() as i16 - 1 {
+                                if history_pos < attach.history.len() as i16 - 1 {
                                     history_pos += 1;
-                                    let mut input = app.input.lock().unwrap();
+                                    let mut input = attach.input.lock().unwrap();
                                     let input_clone = input.clone();
-                                    *input = input_clone
-                                        .with_value(app.history[history_pos as usize].to_string());
+                                    *input = input_clone.with_value(
+                                        attach.history[history_pos as usize].to_string(),
+                                    );
                                 }
                             }
                             KeyCode::Down => {
-                                if history_pos > 0 && history_pos < app.history.len() as i16 {
+                                if history_pos > 0 && history_pos < attach.history.len() as i16 {
                                     history_pos -= 1;
-                                    let mut input = app.input.lock().unwrap();
+                                    let mut input = attach.input.lock().unwrap();
                                     let input_clone = input.clone();
-                                    *input = input_clone
-                                        .with_value(app.history[history_pos as usize].to_string());
+                                    *input = input_clone.with_value(
+                                        attach.history[history_pos as usize].to_string(),
+                                    );
                                 }
                             }
                             KeyCode::Esc => break,
                             _ => {
                                 tui_input::backend::crossterm::EventHandler::handle_event(
-                                    &mut *app.input.lock().unwrap(),
+                                    &mut *attach.input.lock().unwrap(),
                                     &event,
                                 );
                             }
                         };
 
-                        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                        terminal.draw(|f| ui(f, &mut attach))?;
                     }
                     Event::Mouse(mouse) => {
                         match mouse.kind {
                             MouseEventKind::ScrollDown => {
-                                app.logger.transition(TuiWidgetEvent::NextPageKey);
+                                attach.logger.transition(TuiWidgetEvent::NextPageKey);
                             }
                             MouseEventKind::ScrollUp => {
-                                app.logger.transition(TuiWidgetEvent::PrevPageKey);
+                                attach.logger.transition(TuiWidgetEvent::PrevPageKey);
                             }
                             _ => {}
                         };
 
-                        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                        terminal.draw(|f| ui(f, &mut attach))?;
                     }
                     Event::Resize(_, _) => {
-                        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                        terminal.draw(|f| ui(f, &mut attach))?;
                     }
                     _ => {
-                        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                        terminal.draw(|f| ui(f, &mut attach))?;
                     }
                 },
-                TerminalEvent::Log(lines) => {
-                    if lines.is_empty() {
+                TerminalEvent::Log(line) => {
+                    if line.is_empty() {
                         continue;
                     }
 
-                    for line in lines {
-                        if line.is_empty() {
-                            continue;
-                        }
+                    debug!("{line}");
 
-                        let strip = strip_ansi_escapes::strip_str(line);
-                        eprintln!("{strip}");
-                    }
-
-                    terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                    terminal.draw(|f| ui(f, &mut attach))?;
                 }
                 TerminalEvent::Stats(stats) => {
-                    stats_list = stats;
-                    terminal.draw(|f| ui(f, &mut app, &stats_list))?;
+                    attach.stats = stats;
+                    terminal.draw(|f| ui(f, &mut attach))?;
                 }
-                TerminalEvent::SocketEvent(message) => {
-                    if let SocketEvent::CommandHistory(history) = message {
-                        app.history = history
-                    }
+                TerminalEvent::Stdin => {
+                    terminal.draw(|f| ui(f, &mut attach))?;
                 }
             }
         }
@@ -228,137 +242,112 @@ fn event_read_handler(input: Sender<TerminalEvent>) {
     thread::spawn(move || loop {
         input
             .send(TerminalEvent::CrosstermEvent(
-                crossterm::event::read().unwrap(),
+                crossterm::event::read().expect("Error reading a crossterm event"),
             ))
             .unwrap()
     });
 }
 
-fn socket_handler(
-    socket_dir: PathBuf,
-    sender: Sender<TerminalEvent>,
-    socket_receiver: Receiver<SocketEvent>,
+fn stdin_handler(
+    application: Application,
+    terminal_sender: Sender<TerminalEvent>,
+    stdin_receiver: Receiver<String>,
 ) -> Result<(), anyhow::Error> {
-    if !socket_dir.exists() {
-        return Err(anyhow!("Socket file does not exist."));
-    }
+    let stdin = application.stdin_path()?;
+    let mut stdin = OpenOptions::new().write(true).open(stdin)?;
 
-    let mut stream = UnixStream::connect(socket_dir)?;
-    let mut s = stream.try_clone()?;
-
-    thread::spawn(move || {
-        for received in socket_receiver {
-            let json = match received {
-                SocketEvent::CommandHistory(_content) => {
-                    Some(serde_json::to_vec(&SocketEvent::CommandHistory(_content)))
-                }
-                SocketEvent::WriteStdin(command) => {
-                    Some(serde_json::to_vec(&SocketEvent::WriteStdin(command)))
-                }
-                _ => None,
-            };
-
-            if let Some(event) = json {
-                match event {
-                    Ok(event) => {
-                        s.write_all(&event).unwrap();
-                    }
-                    Err(err) => {
-                        eprintln!("Error serializing event: {err}")
-                    }
-                }
-            }
-        }
-    });
-
-    let mut received = vec![0u8; 1024];
-    let mut read: usize = 0;
+    let history = application.history_path()?;
+    let mut history = OpenOptions::new().append(true).open(history)?;
 
     thread::spawn(move || {
-        while subprocess::read_socket_stream(&mut stream, &mut received, &mut read) > 0 {
-            match serde_json::from_slice::<SocketEvent>(&received[..read]) {
-                Ok(message) => {
-                    sender.send(TerminalEvent::SocketEvent(message)).unwrap();
-                }
-                Err(err) => {
-                    eprintln!("Error converting socket message to struct: {err}")
-                }
-            };
+        for mut received in stdin_receiver {
+            debug!("> {received}");
+
+            received += "\n";
+            let bytes = received.as_bytes();
+
+            stdin.write_all(bytes).expect("Failed to write to stdin");
+
+            terminal_sender
+                .send(TerminalEvent::Stdin)
+                .expect("Failed to send stdin to terminal");
+
+            history
+                .write_all(bytes)
+                .expect("Failed to write to history");
         }
     });
 
     Ok(())
 }
 
-fn log_handler(
-    log_dir: PathBuf,
-    sender: Sender<TerminalEvent>,
-    log_sender: Sender<String>,
-    log_receiver: Receiver<String>,
-) -> Result<(), anyhow::Error> {
-    /*   let mut log = tail::Tail::new(log_dir)?;
-
-    let lines = log.read_lines(200)?;
-
-    sender.send(TerminalEvent::Log(lines))?;
-
-    thread::spawn(move || log.watch(&log_sender));
-
+fn log_handler(name: String, terminal_sender: Sender<TerminalEvent>) -> Result<()> {
     thread::spawn(move || {
-        for line in log_receiver {
-            sender.send(TerminalEvent::Log([line].to_vec())).unwrap();
+        let logger = Logger::get(name);
+
+        let process = logger.follow().expect("Failed to start logger process");
+        let stdout = process.stdout.expect("Failed to capture stdout");
+
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines().flatten() {
+            terminal_sender
+                .send(TerminalEvent::Log(line))
+                .expect("Failed to send log line to terminal");
         }
-    }); */
+    });
 
     Ok(())
 }
 
-fn stats_handler(pid: Pid, sender: Sender<TerminalEvent>) {
-    let ticker = tick(Duration::from_secs(2));
-
+fn stats_handler(pid: u32, sender: Sender<TerminalEvent>) {
     let mut system = System::new();
     system.refresh_processes();
     system.refresh_memory();
 
     let cpu_count = system.physical_core_count().unwrap() as f32;
 
-    thread::spawn(move || {
-        while ticker.recv().is_ok() {
-            system.refresh_processes();
-            system.refresh_memory();
+    thread::spawn(move || loop {
+        thread::sleep(Duration::from_secs(2));
 
-            let process = match system.process(pid) {
-                Some(process) => process,
-                None => {
-                    sender
-                        .send(TerminalEvent::Stats(String::from(
-                            "Error retrieving process information.",
-                        )))
-                        .unwrap();
-                    break;
-                }
-            };
+        system.refresh_processes();
+        system.refresh_memory();
 
-            let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
+        let pid = Pid::from_u32(pid);
 
-            let load = sysinfo::System::load_average();
+        let process = match system.process(pid) {
+            Some(process) => process,
+            None => {
+                sender
+                    .send(TerminalEvent::Stats(String::from(
+                        "Error retrieving process information.",
+                    )))
+                    .unwrap();
+                break;
+            }
+        };
 
-            let info = format!(
-                "cpu: {:.2}% | mem: {:.2}% ({} Mb) | system load: {}, {}, {}",
-                process.cpu_usage() / cpu_count,
-                memory,
-                process.memory() / 1024 / 1024,
-                load.one,
-                load.five,
-                load.fifteen,
-            );
+        let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
 
-            sender.send(TerminalEvent::Stats(info)).unwrap();
-        }
+        let load = sysinfo::System::load_average();
+
+        let info = format!(
+            "cpu: {:.2}% | mem: {:.2}% ({} Mb) | system load: {}, {}, {}",
+            process.cpu_usage() / cpu_count,
+            memory,
+            process.memory() / 1024 / 1024,
+            load.one,
+            load.five,
+            load.fifteen,
+        );
+
+        sender
+            .send(TerminalEvent::Stats(info))
+            .expect("Failed to send stats TerminalEvent");
     });
 }
 
-fn ui(f: &mut Frame, app: &mut AttachTerminal, stats_list: &String) {
+fn ui(f: &mut Frame, attach: &mut AttachTerminal) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Max(3), Constraint::Max(3)].as_ref())
@@ -368,7 +357,7 @@ fn ui(f: &mut Frame, app: &mut AttachTerminal, stats_list: &String) {
         .add_modifier(Modifier::BOLD)
         .fg(Color::LightCyan);
 
-    let app_name = Span::styled(app.app_name.as_str(), text_style);
+    let app_name = Span::styled(attach.app_name.as_str(), text_style);
 
     let tui_logger = TuiLoggerWidget::default()
         .block(
@@ -382,20 +371,20 @@ fn ui(f: &mut Frame, app: &mut AttachTerminal, stats_list: &String) {
         .output_target(false)
         .output_file(false)
         .output_line(false)
-        .state(&app.logger);
+        .state(&attach.logger);
 
     f.render_widget(tui_logger, chunks[0]);
 
     let stats_text = Span::styled("Stats", text_style);
 
-    let stats = Paragraph::new(stats_list.to_owned())
+    let stats = Paragraph::new(attach.stats.to_owned())
         .block(Block::default().borders(Borders::ALL).title(stats_text));
 
     f.render_widget(stats, chunks[1]);
 
     let input_text = Span::styled("Input", text_style);
 
-    let input = app.input.lock().unwrap();
+    let input = attach.input.lock().unwrap();
 
     let tui_input = Paragraph::new(input.value())
         .style(Style::default())
@@ -407,90 +396,4 @@ fn ui(f: &mut Frame, app: &mut AttachTerminal, stats_list: &String) {
         chunks[2].x + input.visual_cursor() as u16 + 1,
         chunks[2].y + 1,
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    extern crate test_utils;
-    use ratatui::backend::TestBackend;
-    use std::{
-        env::temp_dir,
-        fs::{remove_file, File},
-        io::Write,
-        os::unix::net::UnixListener,
-    };
-
-    #[test]
-    fn unit_attach_run() -> Result<()> {
-        let name = "unit_attach_run".to_string();
-        test_utils::start_long_running_service(&name)?;
-        assert!(test_utils::check_app_is_running(&name)?);
-
-        let command_args = AttachArgs { name: name.clone() };
-
-        command_args.run()?;
-
-        test_utils::shutdown_long_running_service(&name)?;
-        test_utils::delete_app_folder(&name)?;
-        Ok(())
-    }
-
-    #[test]
-    fn unit_attach_handlers() -> Result<()> {
-        let temp_dir = temp_dir();
-        let socket_dir = temp_dir.join("crescent_temp_attach_socket_handler.sock");
-        let log_dir = temp_dir.join("crescent_temp_attach_log_handler.log");
-
-        if socket_dir.exists() {
-            remove_file(&socket_dir)?;
-        }
-
-        if log_dir.exists() {
-            remove_file(&log_dir)?;
-        }
-
-        File::create(&log_dir)?.write_all(b"data")?;
-
-        let _socket = UnixListener::bind(&socket_dir)?;
-
-        let (sender, receiver) = unbounded();
-        let (socket_sender, socket_receiver): (Sender<SocketEvent>, Receiver<SocketEvent>) =
-            unbounded();
-        let (log_sender, log_receiver): (Sender<String>, Receiver<String>) = unbounded();
-        let pid = Pid::from(std::process::id() as usize);
-
-        event_read_handler(sender.clone());
-        log_handler(log_dir, sender.clone(), log_sender.clone(), log_receiver)?;
-        stats_handler(pid, sender.clone());
-        socket_handler(socket_dir, sender, socket_receiver)?;
-
-        if let TerminalEvent::Stats(a) = receiver.recv_timeout(Duration::from_secs(3))? {
-            assert!(a.contains("load"));
-        }
-
-        log_sender.send("log".to_string())?;
-        socket_sender.send(SocketEvent::WriteStdin("".to_string()))?;
-
-        Ok(())
-    }
-
-    #[test]
-    fn unit_attach_draw_ui() -> Result<()> {
-        let name = "attach_draw_ui";
-        test_utils::start_long_running_service(name)?;
-        assert!(test_utils::check_app_is_running(name)?);
-
-        let mut app = AttachTerminal::new(name.to_string());
-        let stats_list = String::from("Waiting for stats.");
-
-        let backend = TestBackend::new(16, 16);
-        let mut terminal = Terminal::new(backend)?;
-
-        terminal.draw(|f| ui(f, &mut app, &stats_list))?;
-
-        test_utils::shutdown_long_running_service(name)?;
-        test_utils::delete_app_folder(name)?;
-        Ok(())
-    }
 }

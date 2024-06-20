@@ -27,22 +27,23 @@ pub struct Systemd {
 }
 
 impl Systemd {
-    pub fn new() -> Self {
+    pub fn new(application_name: Option<&str>) -> Self {
+        let name = application_name.unwrap_or_default();
+
         Self {
-            name: String::new(),
-            service_name: String::new(),
-            socket_name: String::new(),
+            name: name.to_string(),
+            service_name: format!("cres.{name}.service"),
+            socket_name: format!("cres.{name}.socket"),
         }
     }
 
     /// Run a `systemctl` command as the user.
     fn run_command(&self, args: Vec<&str>) -> Result<Output> {
-        let cmd = Command::new("systemctl")
+        Ok(Command::new("systemctl")
             .arg("--user")
             .arg("--no-pager")
             .args(args)
-            .output()?;
-        Ok(cmd)
+            .output()?)
     }
 
     fn write_service_unit(&self, path: PathBuf, cmd: &str) -> Result<()> {
@@ -98,7 +99,7 @@ impl Systemd {
 }
 
 impl InitSystem for Systemd {
-    fn set_service_name(&mut self, name: &str) {
+    fn update_application_name(&mut self, name: &str) {
         self.name = name.to_string();
         self.service_name = format!("cres.{name}.service");
         self.socket_name = format!("cres.{name}.socket");

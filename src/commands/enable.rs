@@ -1,11 +1,9 @@
-use std::path::PathBuf;
-
 use crate::{
+    application::Application,
     service::{InitSystem, Service},
-    APPS_DIR,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::Args;
 
 #[derive(Args)]
@@ -17,20 +15,15 @@ pub struct EnableArgs {
 
 impl EnableArgs {
     pub fn run(self) -> Result<()> {
-        let path = PathBuf::from(APPS_DIR).join(&self.name);
-        if !path.exists() {
-            return Err(anyhow!("Application '{}' does not exist", self.name));
-        }
+        let application = Application::from(&self.name);
+        application.exists()?;
 
-        let mut init_system = Service::get();
-        init_system.set_service_name(&self.name);
+        let init_system = Service::get(Some(&self.name));
 
-        let service_name = format!("cres.{}.service", self.name);
-
-        eprintln!("Enabling '{service_name}'");
+        eprintln!("Enabling '{}'", application.service_name);
         init_system.enable()?;
 
-        println!("Sent enable command to '{service_name}'");
+        println!("Sent enable command to '{}'", application.service_name);
         Ok(())
     }
 }
@@ -44,20 +37,15 @@ pub struct DisableArgs {
 
 impl DisableArgs {
     pub fn run(self) -> Result<()> {
-        let path = PathBuf::from(APPS_DIR).join(&self.name);
-        if !path.exists() {
-            return Err(anyhow!("Application '{}' does not exist", self.name));
-        }
+        let application = Application::from(&self.name);
+        application.exists()?;
 
-        let mut init_system = Service::get();
-        init_system.set_service_name(&self.name);
+        let init_system = Service::get(Some(&application.name));
 
-        let service_name = format!("cres.{}.service", self.name);
-
-        eprintln!("Disabling '{service_name}'");
+        eprintln!("Disabling '{}'", application.service_name);
         init_system.disable()?;
 
-        println!("Sent disable command to '{service_name}'");
+        println!("Sent disable command to '{}'", application.service_name);
         Ok(())
     }
 }

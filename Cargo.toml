@@ -4,8 +4,8 @@ version = "0.5.1"
 edition = "2021"
 exclude = [".github", "tests", "tools"]
 categories = ["command-line-utilities"]
-description = "🌙 process manager for game servers and services."
-keywords = ["process-manager", "minecraft", "socket", "tui"]
+description = "🌙 wrapper for init systems to help quickly create and manage services."
+keywords = ["process-manager", "tui"]
 repository = "https://github.com/Kyagara/crescent"
 homepage = "https://github.com/Kyagara/crescent"
 license = "Apache-2.0"
@@ -14,29 +14,27 @@ rust-version = "1.70"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
-strip = true
 lto = true
-codegen-units = 1
 
 [[bin]]
 name = "cres"
 path = "src/main.rs"
 
-[workspace.dependencies]
+[dependencies]
 anyhow = "1.0.86"
 
-[dependencies]
-anyhow.workspace = true
 clap = { version = "4.5.7", features = ["derive"] }
 clap_complete = "4.5.5"
-ratatui = "0.26.3"
-crossterm = "0.27.0"
-tui-input = "0.8.0"
-tui-logger = { version = "0.11.1", features = ["crossterm"] }
-chrono = { version = "0.4.38", default-features = false }
-crossbeam = "0.8.4"
-tabled = { version = "0.15.0", features = ["std"], default-features = false }
 sysinfo = { version = "0.30.12", default-features = false }
+tabled = { version = "0.15.0", features = ["std"], default-features = false }
 
-[build-dependencies]
-anyhow.workspace = true
+# Terminal UI for attach command
+ratatui = { version = "0.26.3", features = [
+    "crossterm",
+], default-features = false }
+crossterm = { version = "0.27.0", default-features = false }
+
+tui-input = "0.8.0"
+
+log = "0.4.21"
+tui-logger = { version = "0.11.1", features = ["crossterm"] }

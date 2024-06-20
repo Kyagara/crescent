@@ -1,4 +1,9 @@
-use crate::logger::{LogSystem, Logger};
+use std::io::{BufRead, BufReader};
+
+use crate::{
+    application::Application,
+    logger::{LogSystem, Logger},
+};
 
 use anyhow::Result;
 use clap::Args;
@@ -18,13 +23,21 @@ pub struct LogArgs {
 
 impl LogArgs {
     pub fn run(self) -> Result<()> {
-        // Not checking if a service exists/is_running for log commands is probably better
+        let application = Application::from(&self.name);
+        application.exists()?;
 
-        let mut logger = Logger::get_log_system();
-        logger.set_service_name(&self.name);
+        let logger = Logger::get(application.name);
 
         if self.follow {
-            logger.follow()?;
+            let process = logger.follow()?;
+            let stdout = process.stdout.expect("Failed to capture stdout");
+
+            let reader = BufReader::new(stdout);
+
+            for line in reader.lines().flatten() {
+                println!("{line}");
+            }
+
             return Ok(());
         }
 
