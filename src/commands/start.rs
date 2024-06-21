@@ -91,7 +91,11 @@ impl StartArgs {
         // If name is not provided, use the file name.
         let name = match name {
             Some(name) => name,
-            None => file_path.file_stem().unwrap().to_str().unwrap(),
+            None => file_path
+                .file_stem()
+                .expect("File name not found.")
+                .to_str()
+                .expect("Failed converting OsStr."),
         };
 
         if name.contains(char::is_whitespace) {
@@ -128,14 +132,14 @@ impl StartArgs {
     }
 
     fn overwrite_args(self, loaded_args: Self) -> Self {
-        let service_name = util::overwrite_value(self.name, loaded_args.name);
-        let exec_path = util::overwrite_value(self.exec_path, loaded_args.exec_path).unwrap();
+        let name = util::overwrite_value(self.name, loaded_args.name);
+        let exec_path = util::overwrite_value(self.exec_path, loaded_args.exec_path);
         let interpreter = util::overwrite_value(self.interpreter, loaded_args.interpreter);
         let arguments = util::overwrite_value(self.arguments, loaded_args.arguments);
 
         Self {
-            exec_path: Some(exec_path),
-            name: service_name,
+            exec_path,
+            name,
             interpreter,
             arguments,
 

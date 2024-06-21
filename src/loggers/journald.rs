@@ -41,6 +41,7 @@ impl LogSystem for Journald {
             .arg(&self.service_name)
             .arg("--no-pager")
             .arg("--follow")
+            .arg("--lines=200")
             .stdout(Stdio::piped())
             .spawn()?)
     }

@@ -68,7 +68,8 @@ impl StatusArgs {
                             .output()
                             .expect("Failed to execute command");
 
-                        let started = String::from_utf8(output.stdout).unwrap();
+                        let started =
+                            String::from_utf8(output.stdout).expect("Failed to parse output");
 
                         util::println_field_white("Started", started);
 
@@ -78,7 +79,10 @@ impl StatusArgs {
                         );
 
                         let memory = process.memory() as f64 / system.total_memory() as f64 * 100.0;
-                        let cpu_count = system.physical_core_count().unwrap() as f32;
+                        let cpu_count = system
+                            .physical_core_count()
+                            .expect("Failed to get cpu count")
+                            as f32;
 
                         util::println_field_white(
                             "CPU",
