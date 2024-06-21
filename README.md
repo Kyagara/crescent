@@ -30,6 +30,7 @@ Reimplementation of features already in `crescent`:
 
 New features:
 
+- Custom implementation of a logger widget.
 - Turn the python test program to a rust binary.
 - Improve service scripts, also allow for more customization.
 - Might look for another TUI library.
