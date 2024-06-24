@@ -1,15 +1,16 @@
 use crossterm::style::Stylize;
 
-pub fn overwrite_value<T>(set: Option<T>, loaded: Option<T>) -> Option<T> {
-    match set {
-        Some(field) => Some(field),
-        None => match loaded {
-            Some(path) => Some(path),
-            None => set,
-        },
-    }
+/// Use crossterm's styling to print a string in bold and cyan.
+pub fn println_bold_cyan(title: &str) {
+    println!("{}", title.bold().cyan());
 }
 
+/// Use crossterm's styling to print a field and its value, value will be in white.
+pub fn println_field_value<T: std::fmt::Display>(name: &str, value: T) {
+    println!("{}: {value}", name.white());
+}
+
+/// Format uptime in a human-readable format.
 pub fn get_uptime_from_seconds(secs: u64) -> String {
     // Laughing while writing this
     // It works at least
@@ -39,14 +40,6 @@ pub fn get_uptime_from_seconds(secs: u64) -> String {
     let days = hours / 24;
 
     format!("{days} {}", check_plural(days, "day"))
-}
-
-pub fn print_title_cyan(title: &str) {
-    println!("{}", title.bold().cyan());
-}
-
-pub fn println_field_white<T: std::fmt::Display>(name: &str, value: T) {
-    println!("{}: {value}", name.white());
 }
 
 #[cfg(test)]

@@ -44,19 +44,19 @@ impl StatusArgs {
 
                 let enabled = init_system.is_enabled()?;
 
-                util::print_title_cyan("Application information");
+                util::println_bold_cyan("Application information");
 
-                util::println_field_white("Name", application.name);
-                util::println_field_white("Status", status.active);
-                util::println_field_white("Script", status.script);
-                util::println_field_white("Stdin", status.stdin);
-                util::println_field_white("Enabled", enabled);
+                util::println_field_value("Name", application.name);
+                util::println_field_value("Status", status.active);
+                util::println_field_value("Script", status.script);
+                util::println_field_value("Stdin", status.stdin);
+                util::println_field_value("Enabled", enabled);
 
                 println!();
 
-                util::print_title_cyan("Service information");
-                util::println_field_white("PID", pid);
-                util::println_field_white("CMD", status.cmd);
+                util::println_bold_cyan("Service information");
+                util::println_field_value("PID", pid);
+                util::println_field_value("CMD", status.cmd);
 
                 match system.process(pid) {
                     Some(process) => {
@@ -71,9 +71,9 @@ impl StatusArgs {
                         let started =
                             String::from_utf8(output.stdout).expect("Failed to parse output");
 
-                        util::println_field_white("Started", started);
+                        util::println_field_value("Started", started);
 
-                        util::println_field_white(
+                        util::println_field_value(
                             "Uptime",
                             util::get_uptime_from_seconds(process.run_time()),
                         );
@@ -84,19 +84,19 @@ impl StatusArgs {
                             .expect("Failed to get cpu count")
                             as f32;
 
-                        util::println_field_white(
+                        util::println_field_value(
                             "CPU",
                             format!("{:.2}", process.cpu_usage() / cpu_count),
                         );
 
-                        util::println_field_white(
+                        util::println_field_value(
                             "Memory",
                             format!("{:.2}% ({} Mb)", memory, process.memory() / 1024 / 1024),
                         );
                     }
                     None => {
                         return Err(anyhow!(
-                            "Error retrieving subprocess information, process does not exist."
+                            "Error retrieving service stats, process does not exist."
                         ))
                     }
                 }

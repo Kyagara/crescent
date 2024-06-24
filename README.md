@@ -23,21 +23,20 @@ cargo install --git https://github.com/Kyagara/crescent
 
 ## Todo
 
-Reimplementation of features already in `crescent`:
+Reimplementation of features already in the main branch:
 
 - Reimplement tests.
 - `stop` field on profiles and `start` command, a command to be sent when triggering a shutdown.
 
 New features:
 
-- Custom implementation of a logger widget.
-- Turn the python test program to a rust binary.
-- Improve service scripts, also allow for more customization.
+- Turn the python test program into a rust binary.
+- Custom implementation of a logger widget. No need to use `tui-logger`.
 - Might look for another TUI library.
-- Detection method for `init` systems and logging systems.
-- Add `delete` service/profile command.
+- Improve service scripts, also allow customization.
+- Detection method for `Service` and `Logger` at startup, return an error if the supported logging and init systems were not found.
 - Finish implementing `Logger`, theres no logic of selecting a logging system and setting it for a service.
-- Add more arguments/commands to `log`.
+- Add more arguments/commands to `log`, commands to manage the logs for that service for example.
+- Add `delete` service/profile command.
 - Maybe use more enums on returns.
 - Decrease amount of crates.
-- Improve code, looks horrible.

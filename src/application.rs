@@ -1,8 +1,8 @@
 use std::{fs::OpenOptions, io::Read, path::PathBuf};
 
-use anyhow::{anyhow, Result};
-
 use crate::APPS_DIR;
+
+use anyhow::{anyhow, Result};
 
 pub struct Application {
     pub name: String,

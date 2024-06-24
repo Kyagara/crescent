@@ -54,7 +54,7 @@ impl Profiles {
         Ok(())
     }
 
-    // Write all default profiles to `$HOME/.crescent/profiles/<name>.toml`
+    /// Write all default profiles to `$HOME/.crescent/profiles/<name>.toml`
     pub fn install_default_profiles(&self) -> Result<()> {
         let profiles_dir = PathBuf::from(PROFILES_DIR);
 
@@ -70,7 +70,7 @@ impl Profiles {
 
 #[derive(Clone, Debug)]
 pub struct Profile {
-    pub exec_path: Option<PathBuf>,
+    pub exec_path: Option<String>,
     pub name: Option<String>,
     pub interpreter: Option<String>,
     pub arguments: Option<String>,
@@ -100,7 +100,7 @@ impl Profile {
 
                 if !value.is_empty() {
                     match key {
-                        "exec_path" => self.exec_path = Some(PathBuf::from(value)),
+                        "exec_path" => self.exec_path = Some(value),
                         "name" => self.name = Some(value),
                         "interpreter" => self.interpreter = Some(value),
                         "arguments" => self.arguments = Some(value),
