@@ -6,7 +6,7 @@ use std::{
 use crate::{
     profile::{Profile, Profiles},
     service::{InitSystem, Service},
-    util, APPS_DIR,
+    APPS_DIR,
 };
 
 use anyhow::{anyhow, Result};
@@ -16,7 +16,7 @@ use clap::{Args, ValueHint};
 #[command(about = "Starts an executable as a background service")]
 pub struct StartArgs {
     #[arg(help = "Path to the executable", value_hint = ValueHint::AnyPath)]
-    pub exec_path: Option<PathBuf>,
+    pub exec_path: Option<String>,
 
     #[arg(
         help = "Defaults to the executable name. Service will be named \"cres.*.service\"",
@@ -55,7 +55,7 @@ impl From<Profile> for StartArgs {
             interpreter: profile.interpreter,
             arguments: profile.arguments,
 
-            // Ignored.
+            // These fields will be ignored.
             force: false,
             profile: None,
         }
@@ -131,24 +131,6 @@ impl StartArgs {
         Ok(())
     }
 
-    fn overwrite_args(self, loaded_args: Self) -> Self {
-        let name = util::overwrite_value(self.name, loaded_args.name);
-        let exec_path = util::overwrite_value(self.exec_path, loaded_args.exec_path);
-        let interpreter = util::overwrite_value(self.interpreter, loaded_args.interpreter);
-        let arguments = util::overwrite_value(self.arguments, loaded_args.arguments);
-
-        Self {
-            exec_path,
-            name,
-            interpreter,
-            arguments,
-
-            // Ignored.
-            force: false,
-            profile: None,
-        }
-    }
-
     fn format_exec_cmd(self, file_path: &Path) -> String {
         let mut exec_cmd = Vec::new();
 
@@ -163,5 +145,33 @@ impl StartArgs {
         }
 
         exec_cmd.join(" ")
+    }
+
+    fn overwrite_args(self, loaded_args: Self) -> Self {
+        let overwrite_value = |set: Option<String>, loaded: Option<String>| match set {
+            // If the field is set, it takes precedence over the loaded field.
+            // This is useful when the loaded field is None and we want to keep it that way.
+            Some(field) => Some(field),
+            None => match loaded {
+                Some(path) => Some(path),
+                None => set,
+            },
+        };
+
+        let name = overwrite_value(self.name, loaded_args.name);
+        let exec_path = overwrite_value(self.exec_path, loaded_args.exec_path);
+        let interpreter = overwrite_value(self.interpreter, loaded_args.interpreter);
+        let arguments = overwrite_value(self.arguments, loaded_args.arguments);
+
+        Self {
+            exec_path,
+            name,
+            interpreter,
+            arguments,
+
+            // These fields will be ignored.
+            force: false,
+            profile: None,
+        }
     }
 }

@@ -195,7 +195,7 @@ impl InitSystem for Systemd {
         }
 
         let result: Vec<&str> = stdout.lines().collect();
-        let mut iter = result.iter();
+        let mut iter = result.iter().map(|line| line.trim());
 
         let script = iter
             .find(|line| line.contains("Loaded:"))
@@ -239,17 +239,19 @@ impl InitSystem for Systemd {
             .to_string()
             .parse()?;
 
-        let cgroup_index = iter
-            .position(|line| line.contains("CGroup:"))
+        let cgroup = iter
+            .clone()
+            .skip_while(|line| !line.starts_with("CGroup:"))
+            .skip(1)
+            .next()
             .context("Error parsing CGroup.")?;
 
-        let cmd = result
-            .get(cgroup_index + 1)
-            .context("Error parsing CGroup.")?
-            .split_whitespace()
-            .skip(1)
-            .collect::<Vec<&str>>()
-            .join(" ");
+        let cmd = cgroup
+            .splitn(2, |c| c == ' ')
+            .nth(1)
+            .unwrap_or("")
+            .trim()
+            .to_string();
 
         Ok(StatusOutput::Pretty(Status {
             script,

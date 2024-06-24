@@ -24,13 +24,20 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
+/// User's home directory.
 pub const HOME_DIR: &str = env!("HOME", "Error retrieving HOME directory.");
 
+/// Profile directory in the user's home directory.
+///
+/// All profiles are stored in this folder in the `toml` format.
 pub const PROFILES_DIR: &str = concat!(
     env!("HOME", "Error retrieving HOME directory."),
     "/.crescent/profiles/"
 );
 
+/// Application directory in the user's home directory.
+///
+/// Command history and stdin for each application are stored in this folder inside one named after the application. Example: `$HOME/.crescent/apps/<name>/stdin`.
 pub const APPS_DIR: &str = concat!(
     env!("HOME", "Error retrieving HOME directory."),
     "/.crescent/apps/"
@@ -55,19 +62,24 @@ struct Crescent {
 #[derive(Subcommand)]
 enum Commands {
     Attach(AttachArgs),
+
     Start(StartArgs),
     Stop(StopArgs),
     Kill(KillArgs),
     Restart(RestartArgs),
     Send(SendArgs),
+
     Log(LogArgs),
-    Status(StatusArgs),
-    List,
+
     Profile(ProfileArgs),
     Edit(EditArgs),
+
     Reload,
+    List,
+    Status(StatusArgs),
     Enable(EnableArgs),
     Disable(DisableArgs),
+
     #[command(about = "Print a completions file for the specified shell")]
     Complete {
         shell: Shell,

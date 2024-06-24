@@ -31,22 +31,22 @@ impl ProfileArgs {
 
         let profile = profiles.get_profile(&profile_name)?;
 
-        util::print_title_cyan(&format!("Profile: {profile_name}"));
+        util::println_bold_cyan(&format!("Profile: {profile_name}"));
 
         if let Some(exec_path) = profile.exec_path {
-            util::println_field_white("exec_path", exec_path.to_string_lossy());
+            util::println_field_value("exec_path", exec_path);
         }
 
         if let Some(name) = profile.name {
-            util::println_field_white("name", name);
+            util::println_field_value("name", name);
         }
 
         if let Some(interpreter) = profile.interpreter {
-            util::println_field_white("interpreter", interpreter);
+            util::println_field_value("interpreter", interpreter);
         }
 
         if let Some(arguments) = profile.arguments {
-            util::println_field_white("arguments", arguments);
+            util::println_field_value("arguments", arguments);
         }
 
         Ok(())
