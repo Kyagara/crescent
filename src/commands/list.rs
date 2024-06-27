@@ -8,7 +8,6 @@ use crate::{
 use anyhow::Result;
 use clap::Args;
 use sysinfo::{Pid, System};
-use tabled::builder::Builder;
 
 #[derive(Args)]
 #[command(about = "List services created with basic information")]
@@ -22,10 +21,8 @@ impl ListArgs {
         let mut system = System::new();
         system.refresh_processes();
 
-        let mut builder = Builder::default();
-        builder.push_record(["Name", "PID", "Status", "Uptime", "Enabled"]);
+        let mut services = vec![];
 
-        let mut index = 0;
         for service in list {
             let service = service
                 .trim_start_matches("cres.")
@@ -58,18 +55,48 @@ impl ListArgs {
             }
 
             row[4] = init_system.is_enabled()?.to_string();
-
-            builder.push_record(row);
-            index += 1;
+            services.push(row);
         }
 
-        if index == 0 {
+        if services.is_empty() {
             println!("No services found.");
             return Ok(());
         }
 
-        let table = builder.build();
-        println!("{table}");
+        let headers = ["Name", "PID", "Status", "Uptime", "Enabled"];
+        let mut max_widths: Vec<usize> = vec![4, 3, 6, 6, 7];
+
+        // Get the max width for each column
+        for service in &services {
+            for (i, value) in service.iter().enumerate() {
+                if value.len() > max_widths[i] {
+                    max_widths[i] = value.len();
+                }
+            }
+        }
+
+        // Print the headers
+        for (i, header) in headers.iter().enumerate() {
+            print!("{:<width$}   ", header, width = max_widths[i]);
+        }
+
+        println!();
+
+        // Print the separator
+        for max_width in &max_widths {
+            print!("{:-<width$} | ", "", width = max_width);
+        }
+
+        println!();
+
+        // Print the rows
+        for service in services {
+            for (i, value) in service.iter().enumerate() {
+                print!("{:<width$}   ", value, width = max_widths[i]);
+            }
+            println!();
+        }
+
         Ok(())
     }
 }

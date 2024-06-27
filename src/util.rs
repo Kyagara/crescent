@@ -44,26 +44,36 @@ pub fn get_uptime_from_seconds(secs: u64) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::get_uptime_from_seconds;
+    use crate::util;
 
     #[test]
     fn unit_get_uptime_from_seconds() {
         let mut secs: u64 = 1;
 
-        assert_eq!(get_uptime_from_seconds(secs), "1 second");
+        assert_eq!(util::get_uptime_from_seconds(secs), "1 second");
         secs = 30;
-        assert_eq!(get_uptime_from_seconds(secs), "30 seconds");
+        assert_eq!(util::get_uptime_from_seconds(secs), "30 seconds");
         secs = 60;
-        assert_eq!(get_uptime_from_seconds(secs), "1 minute");
+        assert_eq!(util::get_uptime_from_seconds(secs), "1 minute");
         secs = 1800;
-        assert_eq!(get_uptime_from_seconds(secs), "30 minutes");
+        assert_eq!(util::get_uptime_from_seconds(secs), "30 minutes");
         secs = 3600;
-        assert_eq!(get_uptime_from_seconds(secs), "1 hour");
+        assert_eq!(util::get_uptime_from_seconds(secs), "1 hour");
         secs = 43200;
-        assert_eq!(get_uptime_from_seconds(secs), "12 hours");
+        assert_eq!(util::get_uptime_from_seconds(secs), "12 hours");
         secs = 86400;
-        assert_eq!(get_uptime_from_seconds(secs), "1 day");
+        assert_eq!(util::get_uptime_from_seconds(secs), "1 day");
         secs = 604_800;
-        assert_eq!(get_uptime_from_seconds(secs), "7 days");
+        assert_eq!(util::get_uptime_from_seconds(secs), "7 days");
+    }
+
+    #[test]
+    fn println_field_value() {
+        util::println_field_value("field", "value");
+    }
+
+    #[test]
+    fn println_bold_cyan2() {
+        util::println_bold_cyan("title");
     }
 }

@@ -212,10 +212,9 @@ enum TerminalEvent {
 
 fn crossterm_event_handler(terminal_sender: Sender<TerminalEvent>) {
     thread::spawn(move || loop {
+        let event = crossterm::event::read().expect("Error reading a crossterm event");
         terminal_sender
-            .send(TerminalEvent::CrosstermEvent(
-                crossterm::event::read().expect("Error reading a crossterm event"),
-            ))
+            .send(TerminalEvent::CrosstermEvent(event))
             .expect("Failed to send crossterm event to terminal");
     });
 }
@@ -229,7 +228,7 @@ fn log_handler(application_name: String, terminal_sender: Sender<TerminalEvent>)
 
         let reader = BufReader::new(stdout);
 
-        for line in reader.lines().flatten() {
+        for line in reader.lines().map_while(Result::ok) {
             debug!("{line}");
 
             terminal_sender

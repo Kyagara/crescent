@@ -14,7 +14,10 @@ rust-version = "1.74"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
+# These options result in a smaller binary.
 lto = true
+codegen-units = 1
+opt-level = "z"
 
 [[bin]]
 name = "cres"
@@ -26,15 +29,16 @@ anyhow = "1.0.86"
 clap = { version = "4.5.7", features = ["derive"] }
 clap_complete = "4.5.5"
 sysinfo = { version = "0.30.12", default-features = false }
-tabled = { version = "0.15.0", features = ["std"], default-features = false }
 
-# Terminal UI for attach command
+# For tui-logger
+log = "0.4.21"
+
+crossterm = { version = "0.27.0", default-features = false }
 ratatui = { version = "0.26.3", features = [
     "crossterm",
 ], default-features = false }
-crossterm = { version = "0.27.0", default-features = false }
-
 tui-input = "0.8.0"
 
-log = "0.4.21"
-tui-logger = { version = "0.11.1", features = ["crossterm"] }
+tui-logger = { version = "0.11.1", features = [
+    "crossterm",
+], default-features = false }

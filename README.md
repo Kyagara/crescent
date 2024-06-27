@@ -18,7 +18,7 @@
 ```bash
 cargo install crescent-cli
 ## or
-cargo install --git https://github.com/Kyagara/crescent
+cargo install --git https://github.com/Kyagara/crescent --branch rewrite
 ```
 
 ## Todo
@@ -26,17 +26,15 @@ cargo install --git https://github.com/Kyagara/crescent
 Reimplementation of features already in the main branch:
 
 - Reimplement tests.
+- Send a `start` command to the init system if an application already exists.
 - `stop` field on profiles and `start` command, a command to be sent when triggering a shutdown.
 
 New features:
 
-- Turn the python test program into a rust binary.
-- Custom implementation of a logger widget. No need to use `tui-logger`.
-- Might look for another TUI library.
+- Custom implementation of a logger widget, don't think its necessary to use `tui-logger`.
 - Improve service scripts, also allow customization.
 - Detection method for `Service` and `Logger` at startup, return an error if the supported logging and init systems were not found.
 - Finish implementing `Logger`, theres no logic of selecting a logging system and setting it for a service.
 - Add more arguments/commands to `log`, commands to manage the logs for that service for example.
 - Add `delete` service/profile command.
 - Maybe use more enums on returns.
-- Decrease amount of crates.
