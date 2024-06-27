@@ -124,7 +124,8 @@ const EXAMPLE_PROFILE: &str = r#"# Example profile that executes a long running 
 name = "example"
 # Provide the interpreter if necessary and optionally pass arguments to it
 interpreter = "python3 -O"
-exec_path = "./tools/long_running_service.py"
+# Path to the executable
+#exec_path = "./tools/long_running_service.py"
 # Arguments passed to the executable
 arguments = "--log=info -a b
 "#;

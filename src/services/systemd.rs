@@ -242,16 +242,10 @@ impl InitSystem for Systemd {
         let cgroup = iter
             .clone()
             .skip_while(|line| !line.starts_with("CGroup:"))
-            .skip(1)
-            .next()
+            .nth(1)
             .context("Error parsing CGroup.")?;
 
-        let cmd = cgroup
-            .splitn(2, |c| c == ' ')
-            .nth(1)
-            .unwrap_or("")
-            .trim()
-            .to_string();
+        let cmd = cgroup.split_once(' ').unwrap().1.to_string();
 
         Ok(StatusOutput::Pretty(Status {
             script,

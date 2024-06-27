@@ -77,11 +77,11 @@ impl StartArgs {
             return Err(anyhow!("Executable path not provided."));
         };
 
-        let file_path = match fs::canonicalize(path) {
+        let exec_path = match fs::canonicalize(path) {
             Ok(path) => path,
             Err(err) => {
                 return Err(anyhow!(
-                    "Error retrieving absolute file path of executable: {err}."
+                    "Error retrieving absolute file path of executable: {err}. Path: '{path}'."
                 ))
             }
         };
@@ -91,7 +91,7 @@ impl StartArgs {
         // If name is not provided, use the file name.
         let name = match name {
             Some(name) => name,
-            None => file_path
+            None => exec_path
                 .file_stem()
                 .expect("File name not found.")
                 .to_str()
@@ -119,7 +119,7 @@ impl StartArgs {
         let script = init_system.get_scripts_paths();
         let script_path = Path::new(&script[0]);
         if !script_path.exists() || self.force {
-            let exec_cmd = self.format_exec_cmd(&file_path);
+            let exec_cmd = self.format_exec_cmd(&exec_path);
             eprintln!("CMD: '{exec_cmd}'");
 
             init_system.create(&exec_cmd)?;
@@ -131,14 +131,14 @@ impl StartArgs {
         Ok(())
     }
 
-    fn format_exec_cmd(self, file_path: &Path) -> String {
+    fn format_exec_cmd(self, exec_path: &Path) -> String {
         let mut exec_cmd = Vec::new();
 
         if let Some(interpreter) = self.interpreter {
             exec_cmd.push(interpreter);
         };
 
-        exec_cmd.push(file_path.to_string_lossy().to_string());
+        exec_cmd.push(exec_path.to_string_lossy().to_string());
 
         if let Some(arguments) = self.arguments {
             exec_cmd.push(arguments);
