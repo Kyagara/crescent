@@ -1,4 +1,4 @@
-use crossterm::style::Stylize;
+use ratatui::crossterm::style::Stylize;
 
 /// Use crossterm's styling to print a string in bold and cyan.
 pub fn println_bold_cyan(title: &str) {

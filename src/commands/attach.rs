@@ -14,14 +14,14 @@ use crate::{
 
 use anyhow::Result;
 use clap::Args;
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind},
-    execute,
-    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
-};
 use log::{debug, LevelFilter};
 use ratatui::{
     backend::CrosstermBackend,
+    crossterm::{
+        event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind},
+        execute,
+        terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
+    },
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::Span,
@@ -212,7 +212,7 @@ enum TerminalEvent {
 
 fn crossterm_event_handler(terminal_sender: Sender<TerminalEvent>) {
     thread::spawn(move || loop {
-        let event = crossterm::event::read().expect("Error reading a crossterm event");
+        let event = event::read().expect("Error reading a crossterm event");
         terminal_sender
             .send(TerminalEvent::CrosstermEvent(event))
             .expect("Failed to send crossterm event to terminal");
