@@ -25,9 +25,8 @@ cargo install --git https://github.com/Kyagara/crescent --branch rewrite
 
 Reimplementation of features already in the main branch:
 
-- Reimplement tests.
-- Send a `start` command to the init system if an application already exists.
-- `stop` field on profiles and `start` command, a command to be sent when triggering a shutdown.
+- Tests.
+- `stop` field on profiles and `start` command, a command to be sent to trigger a shutdown of the application.
 
 New features:
 
@@ -37,4 +36,6 @@ New features:
 - Finish implementing `Logger`, theres no logic of selecting a logging system and setting it for a service.
 - Add more arguments/commands to `log`, commands to manage the logs for that service for example.
 - Add `delete` service/profile command.
+- The use of `application` and `service` feels unnecessary, maybe remove the `application` logic, making the `application` folder accessible through the `Service` struct.
+- Though I want to keep the use of `start` for starting and/or creating new services in a single command, it might be better to move creation of services to another command.
 - Maybe use more enums on returns.

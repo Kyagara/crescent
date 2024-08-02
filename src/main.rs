@@ -1,23 +1,25 @@
 use std::{fs, io, path::PathBuf};
 
-use crate::commands::{
-    attach::AttachArgs,
-    edit::EditArgs,
-    enable::{DisableArgs, EnableArgs},
-    kill::KillArgs,
-    list::ListArgs,
-    log::LogArgs,
-    profile::ProfileArgs,
-    reload::ReloadArgs,
-    restart::RestartArgs,
-    send::SendArgs,
-    start::StartArgs,
-    status::StatusArgs,
-    stop::StopArgs,
-};
-use crate::Commands::{
-    Attach, Complete, Disable, Edit, Enable, Kill, List, Log, Profile, Reload, Restart, Send,
-    Start, Status, Stop,
+use crate::{
+    commands::{
+        attach::AttachArgs,
+        edit::EditArgs,
+        enable::{DisableArgs, EnableArgs},
+        kill::KillArgs,
+        list::ListArgs,
+        log::LogArgs,
+        profile::ProfileArgs,
+        reload::ReloadArgs,
+        restart::RestartArgs,
+        send::SendArgs,
+        start::StartArgs,
+        status::StatusArgs,
+        stop::StopArgs,
+    },
+    Commands::{
+        Attach, Complete, Disable, Edit, Enable, Kill, List, Log, Profile, Reload, Restart, Send,
+        Start, Status, Stop,
+    },
 };
 
 use anyhow::Result;
@@ -62,12 +64,14 @@ struct Crescent {
 #[derive(Subcommand)]
 enum Commands {
     Attach(AttachArgs),
-
     Start(StartArgs),
     Stop(StopArgs),
     Kill(KillArgs),
     Restart(RestartArgs),
     Send(SendArgs),
+    Status(StatusArgs),
+    Enable(EnableArgs),
+    Disable(DisableArgs),
 
     Log(LogArgs),
 
@@ -76,9 +80,6 @@ enum Commands {
 
     Reload,
     List,
-    Status(StatusArgs),
-    Enable(EnableArgs),
-    Disable(DisableArgs),
 
     #[command(about = "Print a completions file for the specified shell")]
     Complete {
@@ -96,18 +97,18 @@ fn main() -> Result<()> {
     match cli.commands {
         Attach(args) => AttachArgs::run(args),
         Start(args) => StartArgs::run(args),
-        List => ListArgs::run(),
         Stop(args) => StopArgs::run(args),
         Kill(args) => KillArgs::run(args),
         Restart(args) => RestartArgs::run(args),
         Send(args) => SendArgs::run(args),
-        Log(args) => LogArgs::run(args),
         Status(args) => StatusArgs::run(args),
+        Enable(args) => EnableArgs::run(args),
+        Disable(args) => DisableArgs::run(args),
+        Log(args) => LogArgs::run(args),
         Profile(args) => ProfileArgs::run(args),
         Edit(args) => EditArgs::run(args),
         Reload => ReloadArgs::run(),
-        Enable(args) => EnableArgs::run(args),
-        Disable(args) => DisableArgs::run(args),
+        List => ListArgs::run(),
         Complete { shell } => {
             clap_complete::generate(shell, &mut Crescent::command(), "cres", &mut io::stdout());
             Ok(())

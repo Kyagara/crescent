@@ -146,10 +146,6 @@ impl InitSystem for Systemd {
     }
 
     fn start(&self) -> Result<()> {
-        eprintln!("Reloading systemd daemon");
-        self.reload()?;
-
-        eprintln!("Starting '{}'", self.service_name);
         self.run_command(vec!["start", &self.service_name])?;
         Ok(())
     }
