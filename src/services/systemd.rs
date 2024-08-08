@@ -76,10 +76,7 @@ impl Systemd {
     }
 
     fn write_socket_unit(&self, path: PathBuf) -> Result<()> {
-        let listen_fifo = format!(
-            "ListenFIFO={}/stdin",
-            APPS_DIR.to_string() + "/" + &self.name
-        );
+        let listen_fifo = format!("ListenFIFO={}/stdin", APPS_DIR.to_string() + &self.name);
 
         let socket = [
             "[Socket]",

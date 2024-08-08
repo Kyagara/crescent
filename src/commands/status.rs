@@ -71,7 +71,7 @@ impl StatusArgs {
                         let started =
                             String::from_utf8(output.stdout).expect("Failed to parse output");
 
-                        util::println_field_value("Started", started);
+                        util::println_field_value("Started", started.trim());
 
                         util::println_field_value(
                             "Uptime",
