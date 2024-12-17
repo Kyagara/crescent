@@ -6,7 +6,8 @@
         <a href="https://codecov.io/gh/Kyagara/crescent"><img src="https://img.shields.io/codecov/c/github/Kyagara/crescent?style=flat-square"></a></p>
 </div>
 
-> [!WARNING] This branch is still in development and may be unstable. Only `systemd` and `journald` is supported at the moment.
+> [!WARNING]
+> This branch is still in development and may be unstable. Only `systemd` and `journald` is supported at the moment.
 
 # Install:
 
