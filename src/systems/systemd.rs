@@ -4,12 +4,12 @@ use std::{
     process::{Command, Output},
 };
 
+use anyhow::{Context, Result};
+
 use crate::{
-    service::{InitSystem, Status, StatusOutput},
+    system::{InitSystem, Status, StatusOutput},
     APPS_DIR, HOME_DIR,
 };
-
-use anyhow::{Context, Result};
 
 const SCRIPTS_DIR: &str = concat!(
     env!("HOME", "Error retrieving HOME directory."),
@@ -96,7 +96,7 @@ impl Systemd {
 }
 
 impl InitSystem for Systemd {
-    fn update_application_name(&mut self, name: &str) {
+    fn set_name(&mut self, name: &str) {
         self.name = name.to_string();
         self.service_name = format!("cres.{name}.service");
         self.socket_name = format!("cres.{name}.socket");

@@ -1,7 +1,7 @@
-use crate::{profile::Profiles, util};
-
 use anyhow::{anyhow, Result};
 use clap::Args;
+
+use crate::{profile::Profiles, util};
 
 #[derive(Args)]
 #[command(about = "Manage profiles")]

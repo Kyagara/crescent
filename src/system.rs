@@ -1,37 +1,9 @@
-use crate::services::systemd::Systemd;
-
 use anyhow::Result;
 
-/// Init system implementation.
-pub struct Service;
-
-impl Service {
-    /// Get the current `init` system.
-    pub fn get(application_name: Option<&str>) -> impl InitSystem {
-        Systemd::new(application_name)
-    }
-}
-
-/// Service status.
-pub struct Status {
-    pub script: String,
-    pub stdin: String,
-    pub pid: u32,
-    pub active: String,
-    pub cmd: String,
-}
-
-pub enum StatusOutput {
-    Pretty(Status),
-    Raw(String),
-}
-
 /// Init system interface.
-///
-/// For now, only [`Systemd`] is supported.
 pub trait InitSystem {
-    /// Updates the service name being queried.
-    fn update_application_name(&mut self, name: &str);
+    /// Updates the name of the service being queried. Don't include the prefix or suffix.
+    fn set_name(&mut self, name: &str);
 
     /// Returns the absolute paths of all generated scripts.
     ///
@@ -79,4 +51,18 @@ pub trait InitSystem {
 
     /// List basic infomation of all services.
     fn list(&self) -> Result<Vec<String>>;
+}
+
+pub enum StatusOutput {
+    Pretty(Status),
+    Raw(String),
+}
+
+/// Shared struct for the status command from multiple init systems.
+pub struct Status {
+    pub script: String,
+    pub stdin: String,
+    pub pid: u32,
+    pub active: String,
+    pub cmd: String,
 }

@@ -10,7 +10,7 @@ while not STOP:
     command = input("")
     print("Received '{}'".format(command))
 
-    # This is just to show some CPU usage when using attach
+    # This is just to show some CPU usage when using the attach command.
     if command == "work":
         index = 0
         for x in range(0, 10000000):

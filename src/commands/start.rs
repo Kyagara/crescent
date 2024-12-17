@@ -1,13 +1,9 @@
 use std::path::Path;
 
-use crate::{
-    application::Application,
-    profile::Profiles,
-    service::{InitSystem, Service},
-};
-
 use anyhow::{anyhow, Result};
 use clap::{Args, ValueHint};
+
+use crate::{application::Application, profile::Profiles, system::InitSystem};
 
 #[derive(Args)]
 #[command(about = "Starts an executable as a background service")]
@@ -77,13 +73,13 @@ impl StartArgs {
         let exec_path = exec_path.unwrap();
 
         // First, check if `exec_path` provided is the name of an application.
-        let application = Application::from(&exec_path);
+        let service = Application::from(Some(&exec_path));
 
         // If `force` is not set, check if an application with the same name already exists.
-        if !self.force && application.exists().is_ok() {
+        if !self.force && service.exists().is_ok() {
             let name = exec_path;
 
-            let init_system = Service::get(Some(&name));
+            let init_system = service.init_system();
             if init_system.is_running()? {
                 return Err(anyhow!(
                     "A service with the name '{name}' is already running."
@@ -120,9 +116,8 @@ impl StartArgs {
             return Err(anyhow!("A name for the service could not be determined."));
         }
 
-        let init_system = Service::get(Some(&name));
-        let application = Application::from(&name);
-        let exists = application.exists();
+        let service = Application::from(Some(&name));
+        let init_system = service.init_system();
 
         if init_system.is_running()? {
             return Err(anyhow!(
@@ -131,7 +126,7 @@ impl StartArgs {
         }
 
         // If the application does not exist or force is set, create the application and scripts.
-        if exists.is_err() || self.force {
+        if service.exists().is_err() || self.force {
             let exec_cmd = self.format_exec_cmd(exec_path.to_string());
             eprintln!("CMD: '{exec_cmd}'");
 

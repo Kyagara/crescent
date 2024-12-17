@@ -1,8 +1,8 @@
 use std::process::{Child, Command, Output, Stdio};
 
-use crate::logger::LogSystem;
-
 use anyhow::Result;
+
+use crate::logger::LogSystem;
 
 /// `journald` implementation.
 pub struct Journald {

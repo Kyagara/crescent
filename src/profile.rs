@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fs, path::PathBuf};
 
-use crate::PROFILES_DIR;
-
 use anyhow::{anyhow, Result};
+
+use crate::PROFILES_DIR;
 
 pub struct Profiles {
     profiles: HashMap<String, Profile>,

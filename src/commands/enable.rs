@@ -1,10 +1,7 @@
-use crate::{
-    application::Application,
-    service::{InitSystem, Service},
-};
-
 use anyhow::Result;
 use clap::Args;
+
+use crate::{application::Application, system::InitSystem};
 
 #[derive(Args)]
 #[command(about = "Enable a service for startup")]
@@ -15,15 +12,15 @@ pub struct EnableArgs {
 
 impl EnableArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(&self.name);
-        application.exists()?;
+        let service = Application::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = Service::get(Some(&self.name));
+        let init_system = service.init_system();
 
-        eprintln!("Enabling '{}'", application.service_name);
+        eprintln!("Enabling '{}'", service.name);
         init_system.enable()?;
 
-        println!("Sent enable command to '{}'", application.service_name);
+        println!("Sent enable command to '{}'", service.name);
         Ok(())
     }
 }
@@ -37,15 +34,15 @@ pub struct DisableArgs {
 
 impl DisableArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(&self.name);
-        application.exists()?;
+        let service = Application::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = Service::get(Some(&application.name));
+        let init_system = service.init_system();
 
-        eprintln!("Disabling '{}'", application.service_name);
+        eprintln!("Disabling '{}'", service.name);
         init_system.disable()?;
 
-        println!("Sent disable command to '{}'", application.service_name);
+        println!("Sent disable command to '{}'", service.name);
         Ok(())
     }
 }

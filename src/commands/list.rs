@@ -1,13 +1,14 @@
 use std::vec;
 
-use crate::{
-    service::{InitSystem, Service, StatusOutput},
-    util,
-};
-
 use anyhow::Result;
 use clap::Args;
 use sysinfo::{Pid, System};
+
+use crate::{
+    application::Application,
+    system::{InitSystem, StatusOutput},
+    util,
+};
 
 #[derive(Args)]
 #[command(about = "List services created with basic information")]
@@ -15,7 +16,8 @@ pub struct ListArgs;
 
 impl ListArgs {
     pub fn run() -> Result<()> {
-        let mut init_system = Service::get(None);
+        let service = Application::from(None);
+        let mut init_system = service.init_system();
         let list = init_system.list()?;
 
         let mut system = System::new();
@@ -37,7 +39,7 @@ impl ListArgs {
                 String::from("N/A"),
             ];
 
-            init_system.update_application_name(&service);
+            init_system.set_name(&service);
             let status = init_system.status(false)?;
 
             // No need to check other types of output.

@@ -1,5 +1,9 @@
 use std::{fs, io, path::PathBuf};
 
+use anyhow::Result;
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
+
 use crate::{
     commands::{
         attach::AttachArgs,
@@ -21,10 +25,6 @@ use crate::{
         Start, Status, Stop,
     },
 };
-
-use anyhow::Result;
-use clap::{CommandFactory, Parser, Subcommand};
-use clap_complete::Shell;
 
 /// User's home directory.
 pub const HOME_DIR: &str = env!("HOME", "Error retrieving HOME directory.");
@@ -50,8 +50,8 @@ mod commands;
 mod logger;
 mod loggers;
 mod profile;
-mod service;
-mod services;
+mod system;
+mod systems;
 mod util;
 
 #[derive(Parser)]

@@ -1,10 +1,7 @@
-use crate::{
-    application::Application,
-    service::{InitSystem, Service},
-};
-
 use anyhow::{anyhow, Result};
 use clap::Args;
+
+use crate::{application::Application, system::InitSystem};
 
 #[derive(Args)]
 #[command(about = "Stop a service")]
@@ -15,22 +12,19 @@ pub struct StopArgs {
 
 impl StopArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(&self.name);
-        application.exists()?;
+        let service = Application::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = Service::get(Some(&application.name));
+        let init_system = service.init_system();
 
         if !init_system.is_running()? {
-            return Err(anyhow!(
-                "Service '{}' is not running",
-                application.service_name
-            ));
+            return Err(anyhow!("Service '{}' is not running", service.name));
         }
 
-        eprintln!("Stopping '{}'", application.service_name);
+        eprintln!("Stopping '{}'", service.name);
         init_system.stop()?;
 
-        println!("Sent stop command to '{}'", application.service_name);
+        println!("Sent stop command to '{}'", service.name);
         Ok(())
     }
 }

@@ -1,14 +1,14 @@
 use std::process::Command;
 
-use crate::{
-    application::Application,
-    service::{InitSystem, Service, StatusOutput},
-    util,
-};
-
 use anyhow::{anyhow, Result};
 use clap::Args;
 use sysinfo::{Pid, System};
+
+use crate::{
+    application::Application,
+    system::{InitSystem, StatusOutput},
+    util,
+};
 
 #[derive(Args)]
 #[command(about = "Get information about a service")]
@@ -26,10 +26,10 @@ pub struct StatusArgs {
 
 impl StatusArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(&self.name);
-        application.exists()?;
+        let service = Application::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = Service::get(Some(&application.name));
+        let init_system = service.init_system();
 
         let status = init_system.status(self.raw)?;
 
@@ -46,7 +46,7 @@ impl StatusArgs {
 
                 util::println_bold_cyan("Application information");
 
-                util::println_field_value("Name", application.name);
+                util::println_field_value("Name", service.name);
                 util::println_field_value("Status", status.active);
                 util::println_field_value("Script", status.script);
                 util::println_field_value("Stdin", status.stdin);

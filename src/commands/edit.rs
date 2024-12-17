@@ -1,13 +1,9 @@
 use std::{path::PathBuf, process::Command};
 
-use crate::{
-    application::Application,
-    service::{InitSystem, Service},
-    PROFILES_DIR,
-};
-
 use anyhow::Result;
 use clap::{Args, ValueEnum};
+
+use crate::{application::Application, system::InitSystem, PROFILES_DIR};
 
 #[derive(Args)]
 #[command(about = "Edit service scripts or a profile. Creates a new profile if it does not exist")]
@@ -38,10 +34,10 @@ impl EditArgs {
             return Ok(());
         }
 
-        let application = Application::from(&self.name);
-        application.exists()?;
+        let service = Application::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = Service::get(Some(&self.name));
+        let init_system = service.init_system();
 
         let scripts = init_system.get_scripts_paths();
 

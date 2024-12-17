@@ -1,9 +1,9 @@
 use std::{fs::OpenOptions, io::Write};
 
-use crate::application::Application;
-
 use anyhow::{anyhow, Result};
 use clap::Args;
+
+use crate::application::Application;
 
 #[derive(Args)]
 #[command(about = "Send a command to a service")]
@@ -17,10 +17,10 @@ pub struct SendArgs {
 
 impl SendArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(&self.name);
-        application.exists()?;
+        let service = Application::from(Some(&self.name));
+        service.exists()?;
 
-        let stdin = application.stdin_path()?;
+        let stdin = service.stdin_path()?;
         let mut stdin = OpenOptions::new().append(true).open(stdin)?;
 
         if self.command.join(" ").trim().is_empty() {
@@ -28,7 +28,7 @@ impl SendArgs {
         }
 
         let mut cmd = self.command.join(" ");
-        eprintln!("Sending command to '{}'", application.service_name);
+        eprintln!("Sending command to '{}'", service.name);
         eprintln!("Command: {cmd}");
 
         cmd += "\n";

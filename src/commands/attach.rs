@@ -6,12 +6,6 @@ use std::{
     time::Duration,
 };
 
-use crate::{
-    application::Application,
-    logger::{LogSystem, Logger},
-    service::{InitSystem, Service, StatusOutput},
-};
-
 use anyhow::Result;
 use clap::Args;
 use log::{debug, LevelFilter};
@@ -22,7 +16,7 @@ use ratatui::{
         execute,
         terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     },
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Position},
     style::{Color, Modifier, Style},
     text::Span,
     widgets::{Block, Borders, Paragraph},
@@ -31,6 +25,12 @@ use ratatui::{
 use sysinfo::{Pid, System};
 use tui_input::Input;
 use tui_logger::{TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
+
+use crate::{
+    application::Application,
+    logger::{LogSystem, Logger},
+    system::{InitSystem, StatusOutput},
+};
 
 #[derive(Args)]
 #[command(about = "Attach to an application.")]
@@ -41,7 +41,7 @@ pub struct AttachArgs {
 
 impl AttachArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(&self.name);
+        let application = Application::from(Some(&self.name));
         application.exists()?;
 
         if !cfg!(test) {
@@ -55,7 +55,7 @@ impl AttachArgs {
         let mut attach = AttachTerminal::new(application.name.clone());
         attach.history = application.read_command_history()?;
 
-        let init_system = Service::get(Some(&self.name));
+        let init_system = application.init_system();
         let pid = match init_system.status(false)? {
             StatusOutput::Pretty(status) => Some(status.pid),
             StatusOutput::Raw(_) => None,
@@ -223,10 +223,14 @@ fn log_handler(application_name: String, terminal_sender: Sender<TerminalEvent>)
     thread::spawn(move || {
         let logger = Logger::get(application_name);
 
-        let process = logger.follow().expect("Failed to start logger process");
-        let stdout = process.stdout.expect("Failed to capture stdout");
+        let mut process = logger.follow().expect("Failed to start logger process");
+        let stdout = process.stdout.take().expect("Failed to capture stdout");
 
         let reader = BufReader::new(stdout);
+
+        let wait_handle = thread::spawn(move || {
+            process.wait().expect("Failed to wait on process");
+        });
 
         for line in reader.lines().map_while(Result::ok) {
             debug!("{line}");
@@ -235,6 +239,10 @@ fn log_handler(application_name: String, terminal_sender: Sender<TerminalEvent>)
                 .send(TerminalEvent::Redraw)
                 .expect("Failed to send log to terminal");
         }
+
+        wait_handle
+            .join()
+            .expect("Failed to join process wait thread");
     });
 }
 
@@ -323,7 +331,7 @@ fn ui(f: &mut Frame, attach: &mut AttachTerminal) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Max(3), Constraint::Max(3)].as_ref())
-        .split(f.size());
+        .split(f.area());
 
     let text_style = Style::default()
         .add_modifier(Modifier::BOLD)
@@ -362,8 +370,8 @@ fn ui(f: &mut Frame, attach: &mut AttachTerminal) {
 
     f.render_widget(tui_input, chunks[2]);
 
-    f.set_cursor(
+    f.set_cursor_position(Position::new(
         chunks[2].x + attach.input.visual_cursor() as u16 + 1,
         chunks[2].y + 1,
-    )
+    ))
 }

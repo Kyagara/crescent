@@ -1,25 +1,44 @@
 use std::{fs::OpenOptions, io::Read, path::PathBuf};
 
-use crate::APPS_DIR;
-
 use anyhow::{anyhow, Result};
 
+use crate::{system::InitSystem, systems::systemd::Systemd, APPS_DIR};
+
+/// Represents an application.
 pub struct Application {
+    /// The short name of the application.
     pub name: String,
-    pub service_name: String,
 }
 
 impl Application {
-    pub fn from(name: &str) -> Self {
-        let service_name = format!("cres.{}.service", name);
-        Self {
-            name: name.to_string(),
-            service_name,
+    pub fn from(name: Option<&str>) -> Self {
+        match name {
+            Some(name) => {
+                let name = name.to_string();
+                Self { name }
+            }
+            None => {
+                let name = String::new();
+                Self { name }
+            }
+        }
+    }
+
+    /// Returns an [`InitSystem`] interface for the current `init` system.
+    // TODO: Add logic to check which init system is being used.
+    pub fn init_system(&self) -> impl InitSystem {
+        match self.name.is_empty() {
+            true => Systemd::new(None),
+            false => Systemd::new(Some(&self.name)),
         }
     }
 
     /// Check if application exists, return an error if it doesn't.
     pub fn exists(&self) -> Result<()> {
+        if self.name.is_empty() {
+            return Err(anyhow!("Service name is not set"));
+        }
+
         match PathBuf::from(APPS_DIR).join(&self.name).exists() {
             true => Ok(()),
             false => Err(anyhow!("Application '{}' does not exist", self.name)),
@@ -28,19 +47,25 @@ impl Application {
 
     /// Get the path to the application's stdin file.
     pub fn stdin_path(&self) -> Result<String> {
-        let stdin = format!("{}/{}/stdin", APPS_DIR, self.name);
+        if self.name.is_empty() {
+            return Err(anyhow!("Service name is not set"));
+        }
+        let stdin = format!("{APPS_DIR}/{}/stdin", self.name);
         Ok(stdin)
     }
 
     /// Get the path to the application's history file.
     pub fn history_path(&self) -> Result<String> {
-        let history = format!("{}/{}/history", APPS_DIR, self.name);
+        if self.name.is_empty() {
+            return Err(anyhow!("Service name is not set"));
+        }
+        let history = format!("{APPS_DIR}/{}/history", self.name);
         Ok(history)
     }
 
     /// Read all lines inside the command history file for the application.
     pub fn read_command_history(&self) -> Result<Vec<String>> {
-        let path = format!("{}/{}/history", APPS_DIR, self.name);
+        let path = self.history_path()?;
 
         let mut history_file = OpenOptions::new()
             .read(true)
