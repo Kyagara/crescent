@@ -1,29 +1,34 @@
 use anyhow::Result;
 
 /// Init system interface.
+///
+/// For now, only [`Systemd`][`crate::systems::systemd::Systemd`] is supported.
 pub trait InitSystem {
-    /// Updates the name of the service being queried. Don't include the prefix or suffix.
+    /// Updates the name of the service being queried.
     fn set_name(&mut self, name: &str);
 
     /// Returns the absolute paths of all generated scripts.
     ///
-    /// - [`Systemd`]: "$HOME/.config/systemd/user/cres.<name>.service" and "$HOME/.config/systemd/user/cres.<name>.socket"
+    /// - [`Systemd`][`crate::systems::systemd::Systemd`]:
+    ///     - `/etc/systemd/system/cres.<name>.service` and `/etc/systemd/system/cres.<name>.socket`
+    ///     - If using --user flag:
+    ///     - `$HOME/.config/systemd/user/cres.<name>.service` and `$HOME/.config/systemd/user/cres.<name>.socket`
     fn get_scripts_paths(&self) -> Vec<String>;
 
     /// Reload the init system.
     ///
-    /// - [`Systemd`]: runs `daemon-reload`.
+    /// - [`Systemd`][`crate::systems::systemd::Systemd`]: runs `daemon-reload`.
     fn reload(&self) -> Result<()>;
 
-    /// Checks if the service is running.
+    /// Check if the service is currently running.
     fn is_running(&self) -> Result<bool>;
 
-    /// Checks if the service is enabled for startup.
+    /// Check if the service is enabled to start at boot.
     fn is_enabled(&self) -> Result<bool>;
 
-    /// Create necessary file(s) for the service.
+    /// Create the necessary file(s) for a new service.
     ///
-    /// - [`Systemd`]: generates the service and socket units.
+    /// - [`Systemd`][`crate::systems::systemd::Systemd`]: generates the service and socket units.
     fn create(&self, cmd: &str) -> Result<()>;
 
     /// Start the service.
@@ -31,7 +36,7 @@ pub trait InitSystem {
 
     /// Stop the service.
     ///
-    /// - [`Systemd`]: sends `stop` to the socket.
+    /// - [`Systemd`][`crate::systems::systemd::Systemd`]: sends `stop` to the *socket*.
     fn stop(&self) -> Result<()>;
 
     /// Send a signal to the service.
@@ -40,25 +45,26 @@ pub trait InitSystem {
     /// Restart the service.
     fn restart(&self) -> Result<()>;
 
-    /// Enable the service for startup.
+    /// Enable starting the service at boot.
     fn enable(&self) -> Result<()>;
 
-    /// Disable the service for startup.
+    /// Disable starting the service at boot.
     fn disable(&self) -> Result<()>;
 
-    /// Request the status of the service.
+    /// Request the status an service.
     fn status(&self, raw: bool) -> Result<StatusOutput>;
 
     /// List basic infomation of all services.
     fn list(&self) -> Result<Vec<String>>;
 }
 
+/// Types of status output.
 pub enum StatusOutput {
     Pretty(Status),
     Raw(String),
 }
 
-/// Shared struct for the status command from multiple init systems.
+/// Struct for the status command from multiple init systems. Multiple commands might be used to retrieve these values.
 pub struct Status {
     pub script: String,
     pub stdin: String,

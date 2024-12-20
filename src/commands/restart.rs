@@ -12,19 +12,19 @@ pub struct RestartArgs {
 
 impl RestartArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let init_system = service.init_system();
+        let init_system = application.init_system();
 
         if !init_system.is_running()? {
-            return Err(anyhow!("Service '{}' is not running", service.name));
+            return Err(anyhow!("Service '{}' is not running", application.name));
         }
 
-        eprintln!("Restarting '{}'", service.name);
+        eprintln!("Restarting '{}'", application.name);
         init_system.restart()?;
 
-        println!("Sent restart command to '{}'", service.name);
+        println!("Sent restart command to '{}'", application.name);
         Ok(())
     }
 }

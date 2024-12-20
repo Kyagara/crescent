@@ -2,9 +2,12 @@ use std::{fs::OpenOptions, io::Read, path::PathBuf};
 
 use anyhow::{anyhow, Result};
 
-use crate::{system::InitSystem, systems::systemd::Systemd, APPS_DIR};
+use crate::{
+    logger::Logger, loggers::journald::Journald, system::InitSystem, systems::systemd::Systemd,
+    APPS_DIR,
+};
 
-/// Represents an application.
+/// Represents a crescent application.
 pub struct Application {
     /// The short name of the application.
     pub name: String,
@@ -25,12 +28,16 @@ impl Application {
     }
 
     /// Returns an [`InitSystem`] interface for the current `init` system.
-    // TODO: Add logic to check which init system is being used.
     pub fn init_system(&self) -> impl InitSystem {
         match self.name.is_empty() {
             true => Systemd::new(None),
             false => Systemd::new(Some(&self.name)),
         }
+    }
+
+    /// Returns a [`Logger`] interface.
+    pub fn logger(&self) -> impl Logger {
+        Journald::new(&self.name)
     }
 
     /// Check if application exists, return an error if it doesn't.

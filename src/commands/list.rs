@@ -15,7 +15,7 @@ use crate::{
 pub struct ListArgs;
 
 impl ListArgs {
-    pub fn run() -> Result<()> {
+    pub fn run(self) -> Result<()> {
         let service = Application::from(None);
         let mut init_system = service.init_system();
         let list = init_system.list()?;

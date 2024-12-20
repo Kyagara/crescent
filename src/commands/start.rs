@@ -116,7 +116,7 @@ impl StartArgs {
             return Err(anyhow!("A name for the service could not be determined."));
         }
 
-        let service = Application::from(Some(&name));
+        let application = Application::from(Some(&name));
         let init_system = service.init_system();
 
         if init_system.is_running()? {
@@ -126,7 +126,7 @@ impl StartArgs {
         }
 
         // If the application does not exist or force is set, create the application and scripts.
-        if service.exists().is_err() || self.force {
+        if application.exists().is_err() || self.force {
             let exec_cmd = self.format_exec_cmd(exec_path.to_string());
             eprintln!("CMD: '{exec_cmd}'");
 

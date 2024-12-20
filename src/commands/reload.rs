@@ -8,7 +8,7 @@ use crate::{application::Application, system::InitSystem};
 pub struct ReloadArgs;
 
 impl ReloadArgs {
-    pub fn run() -> Result<()> {
+    pub fn run(self) -> Result<()> {
         let service = Application::from(None);
 
         service.init_system().reload()?;

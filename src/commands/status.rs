@@ -26,10 +26,10 @@ pub struct StatusArgs {
 
 impl StatusArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let init_system = service.init_system();
+        let init_system = application.init_system();
 
         let status = init_system.status(self.raw)?;
 
@@ -46,7 +46,7 @@ impl StatusArgs {
 
                 util::println_bold_cyan("Application information");
 
-                util::println_field_value("Name", service.name);
+                util::println_field_value("Name", application.name);
                 util::println_field_value("Status", status.active);
                 util::println_field_value("Script", status.script);
                 util::println_field_value("Stdin", status.stdin);

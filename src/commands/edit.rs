@@ -34,10 +34,10 @@ impl EditArgs {
             return Ok(());
         }
 
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let init_system = service.init_system();
+        let init_system = application.init_system();
 
         let scripts = init_system.get_scripts_paths();
 

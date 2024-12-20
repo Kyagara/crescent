@@ -17,10 +17,10 @@ pub struct SendArgs {
 
 impl SendArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let stdin = service.stdin_path()?;
+        let stdin = application.stdin_path()?;
         let mut stdin = OpenOptions::new().append(true).open(stdin)?;
 
         if self.command.join(" ").trim().is_empty() {
@@ -28,7 +28,7 @@ impl SendArgs {
         }
 
         let mut cmd = self.command.join(" ");
-        eprintln!("Sending command to '{}'", service.name);
+        eprintln!("Sending command to '{}'", application.name);
         eprintln!("Command: {cmd}");
 
         cmd += "\n";

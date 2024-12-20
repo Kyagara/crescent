@@ -12,15 +12,15 @@ pub struct EnableArgs {
 
 impl EnableArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let init_system = service.init_system();
+        let init_system = application.init_system();
 
-        eprintln!("Enabling '{}'", service.name);
+        eprintln!("Enabling '{}'", application.name);
         init_system.enable()?;
 
-        println!("Sent enable command to '{}'", service.name);
+        println!("Sent enable command to '{}'", application.name);
         Ok(())
     }
 }
@@ -34,15 +34,15 @@ pub struct DisableArgs {
 
 impl DisableArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let init_system = service.init_system();
+        let init_system = application.init_system();
 
-        eprintln!("Disabling '{}'", service.name);
+        eprintln!("Disabling '{}'", application.name);
         init_system.disable()?;
 
-        println!("Sent disable command to '{}'", service.name);
+        println!("Sent disable command to '{}'", application.name);
         Ok(())
     }
 }

@@ -54,7 +54,7 @@ impl Profiles {
         Ok(())
     }
 
-    /// Write all default profiles to `$HOME/.crescent/profiles/<name>.toml`
+    /// Write all default profiles to the profiles directory.
     pub fn install_default_profiles(&self) -> Result<()> {
         let profiles_dir = PathBuf::from(PROFILES_DIR);
 

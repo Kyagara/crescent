@@ -28,7 +28,7 @@ use tui_logger::{TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
 
 use crate::{
     application::Application,
-    logger::{LogSystem, Logger},
+    logger::Logger,
     system::{InitSystem, StatusOutput},
 };
 
@@ -65,7 +65,7 @@ impl AttachArgs {
         crossterm_event_handler(terminal_sender.clone());
 
         // Handles notifying the main loop to redraw when there is a new log.
-        log_handler(application.name.clone(), terminal_sender.clone());
+        log_handler(application.logger(), terminal_sender.clone());
 
         match pid {
             Some(pid) => {
@@ -219,10 +219,11 @@ fn crossterm_event_handler(terminal_sender: Sender<TerminalEvent>) {
     });
 }
 
-fn log_handler(application_name: String, terminal_sender: Sender<TerminalEvent>) {
+fn log_handler(
+    logger: impl Logger + std::marker::Send + 'static,
+    terminal_sender: Sender<TerminalEvent>,
+) {
     thread::spawn(move || {
-        let logger = Logger::get(application_name);
-
         let mut process = logger.follow().expect("Failed to start logger process");
         let stdout = process.stdout.take().expect("Failed to capture stdout");
 
@@ -256,7 +257,7 @@ fn stats_handler(pid: u32, terminal_sender: Sender<TerminalEvent>) {
         .expect("Failed to get cpu count") as f32;
 
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(1500));
+        thread::sleep(Duration::from_millis(1000));
 
         system.refresh_processes();
         system.refresh_memory();

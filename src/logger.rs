@@ -2,22 +2,10 @@ use std::process::Child;
 
 use anyhow::Result;
 
-use crate::loggers::journald::Journald;
-
-/// Log system implementation.
-pub struct Logger;
-
-impl Logger {
-    /// Get the log system.
-    pub fn get(application_name: String) -> impl LogSystem {
-        Journald::new(application_name)
-    }
-}
-
 /// Log system interface.
 ///
-/// For now, only [`Journald`] is supported and few methods supported.
-pub trait LogSystem {
+/// For now, only [`Journald`](crate::loggers::journald::Journald) is supported and few methods supported.
+pub trait Logger {
     /// Log `n` lines from the service.
     fn log(&self, n: u64) -> Result<String>;
 

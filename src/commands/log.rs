@@ -3,10 +3,7 @@ use std::io::{BufRead, BufReader};
 use anyhow::Result;
 use clap::Args;
 
-use crate::{
-    application::Application,
-    logger::{LogSystem, Logger},
-};
+use crate::{application::Application, logger::Logger};
 
 #[derive(Args)]
 #[command(about = "Print or follow the logs from a service")]
@@ -23,10 +20,10 @@ pub struct LogArgs {
 
 impl LogArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let logger = Logger::get(service.name);
+        let logger = application.logger();
 
         if self.follow {
             let process = logger.follow()?;

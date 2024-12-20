@@ -29,7 +29,7 @@ use crate::{
 /// User's home directory.
 pub const HOME_DIR: &str = env!("HOME", "Error retrieving HOME directory.");
 
-/// Profile directory in the user's home directory.
+/// Profile directory inside crescent's directory.
 ///
 /// All profiles are stored in this folder in the `toml` format.
 pub const PROFILES_DIR: &str = concat!(
@@ -37,9 +37,9 @@ pub const PROFILES_DIR: &str = concat!(
     "/.crescent/profiles/"
 );
 
-/// Application directory in the user's home directory.
+/// Application directory inside crescent's directory.
 ///
-/// Command history and stdin for each application are stored in this folder inside one named after the application. Example: `$HOME/.crescent/apps/<name>/stdin`.
+/// Command history and stdin for an application are stored inside a folder named after the application. Example: `$HOME/.crescent/apps/<name>/stdin`.
 pub const APPS_DIR: &str = concat!(
     env!("HOME", "Error retrieving HOME directory."),
     "/.crescent/apps/"
@@ -64,22 +64,24 @@ struct Crescent {
 #[derive(Subcommand)]
 enum Commands {
     Attach(AttachArgs),
+
     Start(StartArgs),
     Stop(StopArgs),
     Kill(KillArgs),
     Restart(RestartArgs),
     Send(SendArgs),
-    Status(StatusArgs),
+
     Enable(EnableArgs),
     Disable(DisableArgs),
 
+    Status(StatusArgs),
     Log(LogArgs),
 
     Profile(ProfileArgs),
     Edit(EditArgs),
 
-    Reload,
-    List,
+    Reload(ReloadArgs),
+    List(ListArgs),
 
     #[command(about = "Print a completions file for the specified shell")]
     Complete {
@@ -101,14 +103,14 @@ fn main() -> Result<()> {
         Kill(args) => KillArgs::run(args),
         Restart(args) => RestartArgs::run(args),
         Send(args) => SendArgs::run(args),
-        Status(args) => StatusArgs::run(args),
         Enable(args) => EnableArgs::run(args),
         Disable(args) => DisableArgs::run(args),
+        Status(args) => StatusArgs::run(args),
         Log(args) => LogArgs::run(args),
         Profile(args) => ProfileArgs::run(args),
         Edit(args) => EditArgs::run(args),
-        Reload => ReloadArgs::run(),
-        List => ListArgs::run(),
+        Reload(args) => ReloadArgs::run(args),
+        List(args) => ListArgs::run(args),
         Complete { shell } => {
             clap_complete::generate(shell, &mut Crescent::command(), "cres", &mut io::stdout());
             Ok(())

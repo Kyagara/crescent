@@ -2,7 +2,7 @@ use std::process::{Child, Command, Output, Stdio};
 
 use anyhow::Result;
 
-use crate::logger::LogSystem;
+use crate::logger::Logger;
 
 /// `journald` implementation.
 pub struct Journald {
@@ -10,12 +10,12 @@ pub struct Journald {
 }
 
 impl Journald {
-    pub fn new(service_name: String) -> Self {
+    pub fn new(service_name: &str) -> Self {
         let service_name = format!("cres.{}.service", service_name);
         Self { service_name }
     }
 
-    /// Run a journald command as the user.
+    /// Run a `journald` command as the user.
     fn run_command(&self, args: Vec<&str>) -> Result<Output> {
         Ok(Command::new("journalctl")
             .arg("--user")
@@ -27,7 +27,7 @@ impl Journald {
     }
 }
 
-impl LogSystem for Journald {
+impl Logger for Journald {
     fn log(&self, n: u64) -> Result<String> {
         let output = self.run_command(vec!["--lines", &format!("{n}")])?;
         let stdout = String::from_utf8(output.stdout)?;

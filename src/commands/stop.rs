@@ -12,19 +12,19 @@ pub struct StopArgs {
 
 impl StopArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(Some(&self.name));
-        service.exists()?;
+        let application = Application::from(Some(&self.name));
+        application.exists()?;
 
-        let init_system = service.init_system();
+        let init_system = application.init_system();
 
         if !init_system.is_running()? {
-            return Err(anyhow!("Service '{}' is not running", service.name));
+            return Err(anyhow!("Service '{}' is not running", application.name));
         }
 
-        eprintln!("Stopping '{}'", service.name);
+        eprintln!("Stopping '{}'", application.name);
         init_system.stop()?;
 
-        println!("Sent stop command to '{}'", service.name);
+        println!("Sent stop command to '{}'", application.name);
         Ok(())
     }
 }
