@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    env, fs,
     path::PathBuf,
     process::{Command, Output},
 };
@@ -7,11 +7,11 @@ use std::{
 use anyhow::{Context, Result};
 
 use crate::{
-    system::{InitSystem, Status, StatusOutput},
-    APPS_DIR, HOME_DIR,
+    init_system::{InitSystem, Status, StatusOutput},
+    APPS_DIR,
 };
 
-const SCRIPTS_DIR: &str = concat!(
+const USER_DIR: &str = concat!(
     env!("HOME", "Error retrieving HOME directory."),
     "/.config/systemd/user/"
 );
@@ -27,8 +27,8 @@ pub struct Systemd {
 }
 
 impl Systemd {
-    pub fn new(application_name: Option<&str>) -> Self {
-        let name = application_name.unwrap_or_default();
+    pub fn new(name: Option<&str>) -> Self {
+        let name = name.unwrap_or_default();
 
         Self {
             name: name.to_string(),
@@ -104,8 +104,8 @@ impl InitSystem for Systemd {
 
     fn get_scripts_paths(&self) -> Vec<String> {
         vec![
-            SCRIPTS_DIR.to_string() + &self.service_name,
-            SCRIPTS_DIR.to_string() + &self.socket_name,
+            USER_DIR.to_string() + &self.service_name,
+            USER_DIR.to_string() + &self.socket_name,
         ]
     }
 
@@ -129,7 +129,8 @@ impl InitSystem for Systemd {
     }
 
     fn create(&self, cmd: &str) -> Result<()> {
-        let path_str = HOME_DIR.to_string() + "/.config/systemd/user/";
+        let path_str =
+            env::var("HOME").expect("Error retrieving HOME directory.") + "/.config/systemd/user/";
         let path = PathBuf::from(path_str);
 
         eprintln!("Writing '{}' unit", self.service_name);

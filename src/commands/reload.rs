@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 
-use crate::{application::Application, system::InitSystem};
+use crate::{init_system::InitSystem, service::Service};
 
 #[derive(Args)]
 #[command(about = "Reload the init system to apply changes to scripts")]
@@ -9,7 +9,7 @@ pub struct ReloadArgs;
 
 impl ReloadArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(None);
+        let service = Service::from(None);
 
         service.init_system().reload()?;
 

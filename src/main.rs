@@ -1,8 +1,9 @@
-use std::{fs, io, path::PathBuf};
+use std::{env, fs, io, path::PathBuf};
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
+use once_cell::sync::Lazy;
 
 use crate::{
     commands::{
@@ -12,46 +13,45 @@ use crate::{
         kill::KillArgs,
         list::ListArgs,
         log::LogArgs,
+        new::NewArgs,
         profile::ProfileArgs,
         reload::ReloadArgs,
         restart::RestartArgs,
         send::SendArgs,
-        start::StartArgs,
+        start::{StartArgs, StopArgs},
         status::StatusArgs,
-        stop::StopArgs,
     },
     Commands::{
-        Attach, Complete, Disable, Edit, Enable, Kill, List, Log, Profile, Reload, Restart, Send,
-        Start, Status, Stop,
+        Attach, Complete, Disable, Edit, Enable, Kill, List, Log, New, Profile, Reload, Restart,
+        Send, Start, Status, Stop,
     },
 };
 
-/// User's home directory.
-pub const HOME_DIR: &str = env!("HOME", "Error retrieving HOME directory.");
-
-/// Profile directory inside crescent's directory.
+/// Profile folder inside crescent's directory.
 ///
 /// All profiles are stored in this folder in the `toml` format.
-pub const PROFILES_DIR: &str = concat!(
-    env!("HOME", "Error retrieving HOME directory."),
-    "/.crescent/profiles/"
-);
+static PROFILES_DIR: Lazy<String> = Lazy::new(|| {
+    let mut path = env::var("HOME").expect("Error retrieving HOME directory.");
+    path.push_str("/.crescent/profiles/");
+    path
+});
 
-/// Application directory inside crescent's directory.
+/// Service folder inside crescent's directory.
 ///
-/// Command history and stdin for an application are stored inside a folder named after the application. Example: `$HOME/.crescent/apps/<name>/stdin`.
-pub const APPS_DIR: &str = concat!(
-    env!("HOME", "Error retrieving HOME directory."),
-    "/.crescent/apps/"
-);
+/// Command history and stdin of a service are stored inside a named folder. Example: `$HOME/.crescent/apps/<name>/stdin`.
+static APPS_DIR: Lazy<String> = Lazy::new(|| {
+    let mut path = env::var("HOME").expect("Error retrieving HOME directory.");
+    path.push_str("/.crescent/apps/");
+    path
+});
 
-mod application;
 mod commands;
+mod init_system;
+mod init_systems;
 mod logger;
 mod loggers;
 mod profile;
-mod system;
-mod systems;
+mod service;
 mod util;
 
 #[derive(Parser)]
@@ -64,6 +64,7 @@ struct Crescent {
 #[derive(Subcommand)]
 enum Commands {
     Attach(AttachArgs),
+    New(NewArgs),
 
     Start(StartArgs),
     Stop(StopArgs),
@@ -91,13 +92,14 @@ enum Commands {
 
 fn main() -> Result<()> {
     // Create directories if they don't exist
-    fs::create_dir_all(PathBuf::from(APPS_DIR))?;
-    fs::create_dir_all(PathBuf::from(PROFILES_DIR))?;
+    fs::create_dir_all(PathBuf::from(APPS_DIR.to_owned()))?;
+    fs::create_dir_all(PathBuf::from(PROFILES_DIR.to_owned()))?;
 
     let cli = Crescent::parse();
 
     match cli.commands {
         Attach(args) => AttachArgs::run(args),
+        New(args) => NewArgs::run(args),
         Start(args) => StartArgs::run(args),
         Stop(args) => StopArgs::run(args),
         Kill(args) => KillArgs::run(args),

@@ -11,7 +11,7 @@
 
 # Install:
 
-> The main directory for profiles and applications is `$HOME/.crescent/`.
+> The main directory for profiles and services is `$HOME/.crescent/`.
 
 ```bash
 cargo install crescent-cli
@@ -26,11 +26,10 @@ Reimplementation of features already in the main branch:
 - Tests.
 - `stop` field on profiles and `start` command, a command to be sent to trigger a shutdown of the application.
 
-New features:
+Planned:
 
-- Improve service scripts, also allow customization.
-- Detection method for `Service` and `Logger` at startup, return an error if the supported logging and init systems were not found.
+- Save information about the service in a file inside the service folder.
+- Detection method for `Service` and `Logger` at startup, return an error if they are not found. 
 - Add more arguments/commands to `log`, commands to manage the logs for that service for example.
 - Add `delete` service/profile command.
-- Though I want to keep the use of `start` for starting and/or creating new services in a single command, it might be better to move creation of services to another command.
 - Maybe use more enums on returns.

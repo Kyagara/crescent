@@ -27,22 +27,22 @@ use tui_input::Input;
 use tui_logger::{TuiLoggerWidget, TuiWidgetEvent, TuiWidgetState};
 
 use crate::{
-    application::Application,
+    init_system::{InitSystem, StatusOutput},
     logger::Logger,
-    system::{InitSystem, StatusOutput},
+    service::Service,
 };
 
 #[derive(Args)]
-#[command(about = "Attach to an application.")]
+#[command(about = "Attach to a service, send commands, monitor logs and stats")]
 pub struct AttachArgs {
-    #[arg(help = "Service name.")]
+    #[arg(help = "Service name")]
     pub name: String,
 }
 
 impl AttachArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(Some(&self.name));
-        application.exists()?;
+        let service = Service::from(Some(&self.name));
+        service.exists()?;
 
         if !cfg!(test) {
             tui_logger::init_logger(LevelFilter::Debug).expect("Failed to initialize logger");
@@ -52,10 +52,10 @@ impl AttachArgs {
         let (terminal_sender, terminal_receiver) = mpsc::channel();
         let (stdin_sender, stdin_receiver) = mpsc::channel();
 
-        let mut attach = AttachTerminal::new(application.name.clone());
-        attach.history = application.read_command_history()?;
+        let mut attach = AttachTerminal::new(service.name.clone());
+        attach.history = service.read_command_history()?;
 
-        let init_system = application.init_system();
+        let init_system = service.init_system();
         let pid = match init_system.status(false)? {
             StatusOutput::Pretty(status) => Some(status.pid),
             StatusOutput::Raw(_) => None,
@@ -65,7 +65,7 @@ impl AttachArgs {
         crossterm_event_handler(terminal_sender.clone());
 
         // Handles notifying the main loop to redraw when there is a new log.
-        log_handler(application.logger(), terminal_sender.clone());
+        log_handler(service.logger(), terminal_sender.clone());
 
         match pid {
             Some(pid) => {
@@ -73,7 +73,7 @@ impl AttachArgs {
                 stats_handler(pid, terminal_sender.clone());
 
                 // Handles sending commands to the service and writing to the history.
-                stdin_handler(application, stdin_receiver, terminal_sender)?;
+                stdin_handler(service, stdin_receiver, terminal_sender)?;
             }
             None => {
                 attach.stats = String::from("PID not found, unable to query stats");
@@ -181,7 +181,7 @@ impl AttachArgs {
 }
 
 struct AttachTerminal {
-    application_name: String,
+    service_name: String,
     running: bool,
 
     stats: String,
@@ -192,9 +192,9 @@ struct AttachTerminal {
 }
 
 impl AttachTerminal {
-    fn new(application_name: String) -> AttachTerminal {
+    fn new(service_name: String) -> AttachTerminal {
         AttachTerminal {
-            application_name,
+            service_name,
             logger: TuiWidgetState::new(),
             stats: String::from("Waiting for stats."),
             running: true,
@@ -296,14 +296,14 @@ fn stats_handler(pid: u32, terminal_sender: Sender<TerminalEvent>) {
 }
 
 fn stdin_handler(
-    application: Application,
+    service: Service,
     stdin_receiver: Receiver<String>,
     terminal_sender: Sender<TerminalEvent>,
 ) -> Result<()> {
-    let stdin = application.stdin_path()?;
+    let stdin = service.stdin_path()?;
     let mut stdin = OpenOptions::new().write(true).open(stdin)?;
 
-    let history = application.history_path()?;
+    let history = service.history_path()?;
     let mut history = OpenOptions::new().append(true).open(history)?;
 
     thread::spawn(move || {
@@ -338,12 +338,12 @@ fn ui(f: &mut Frame, attach: &mut AttachTerminal) {
         .add_modifier(Modifier::BOLD)
         .fg(Color::LightCyan);
 
-    let application_name = Span::styled(attach.application_name.as_str(), text_style);
+    let service_name = Span::styled(attach.service_name.as_str(), text_style);
 
     let tui_logger = TuiLoggerWidget::default()
         .block(
             Block::default()
-                .title(application_name)
+                .title(service_name)
                 .title_alignment(Alignment::Left)
                 .borders(Borders::ALL),
         )

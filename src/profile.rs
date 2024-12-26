@@ -31,7 +31,7 @@ impl Profiles {
     }
 
     fn load_profiles(&mut self) -> Result<()> {
-        let profiles_dir = PathBuf::from(PROFILES_DIR);
+        let profiles_dir = PathBuf::from(PROFILES_DIR.to_owned());
         let files = fs::read_dir(profiles_dir)?;
 
         for file in files {
@@ -56,7 +56,7 @@ impl Profiles {
 
     /// Write all default profiles to the profiles directory.
     pub fn install_default_profiles(&self) -> Result<()> {
-        let profiles_dir = PathBuf::from(PROFILES_DIR);
+        let profiles_dir = PathBuf::from(PROFILES_DIR.to_owned());
 
         for (name, profile) in DEFAULT_PROFILES {
             let profile_path = profiles_dir.join(format!("{name}.toml"));

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
 
-use crate::{application::Application, system::InitSystem};
+use crate::{service::Service, init_system::InitSystem};
 
 #[derive(Args)]
 #[command(about = "Send a signal to a service. Defaults to SIGTERM (15)")]
@@ -15,20 +15,20 @@ pub struct KillArgs {
 
 impl KillArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(Some(&self.name));
-        application.exists()?;
+        let service = Service::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = application.init_system();
+        let init_system = service.init_system();
 
         if !init_system.is_running()? {
-            return Err(anyhow!("Service '{}' is not running", application.name));
+            return Err(anyhow!("Service '{}' is not running", service.name));
         }
 
-        eprintln!("Sending signal '{}'", application.name);
+        eprintln!("Sending signal '{}'", service.name);
         eprintln!("Signal: '{}'", self.signal);
         init_system.kill(self.signal)?;
 
-        println!("Sent signal to '{}'", application.name);
+        println!("Sent signal to '{}'", service.name);
         Ok(())
     }
 }

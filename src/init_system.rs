@@ -45,10 +45,10 @@ pub trait InitSystem {
     /// Restart the service.
     fn restart(&self) -> Result<()>;
 
-    /// Enable starting the service at boot.
+    /// Enable a service to start at boot.
     fn enable(&self) -> Result<()>;
 
-    /// Disable starting the service at boot.
+    /// Disable a service from starting at boot.
     fn disable(&self) -> Result<()>;
 
     /// Request the status an service.

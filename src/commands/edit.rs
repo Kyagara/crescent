@@ -1,43 +1,23 @@
-use std::{path::PathBuf, process::Command};
+use std::process::Command;
 
 use anyhow::Result;
-use clap::{Args, ValueEnum};
+use clap::Args;
 
-use crate::{application::Application, system::InitSystem, PROFILES_DIR};
+use crate::{service::Service, init_system::InitSystem};
 
 #[derive(Args)]
-#[command(about = "Edit service scripts or a profile. Creates a new profile if it does not exist")]
+#[command(about = "Edit service scripts")]
 pub struct EditArgs {
-    #[arg(help = "Edit service or profile", value_enum)]
-    pub kind: EditKind,
-
-    #[arg(help = "Service/Profile name")]
+    #[arg(help = "Service name")]
     pub name: String,
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum EditKind {
-    Service,
-    Profile,
 }
 
 impl EditArgs {
     pub fn run(self) -> Result<()> {
-        if self.kind == EditKind::Profile {
-            // If the profile does not exist, let the user create one.
+        let service = Service::from(Some(&self.name));
+        service.exists()?;
 
-            let path = PathBuf::from(PROFILES_DIR).join(self.name.clone() + ".toml");
-            let mut editor = Command::new("nano").arg(&path).spawn()?;
-            let _ = editor.wait();
-
-            println!("Opened '{}' using nano", path.display());
-            return Ok(());
-        }
-
-        let application = Application::from(Some(&self.name));
-        application.exists()?;
-
-        let init_system = application.init_system();
+        let init_system = service.init_system();
 
         let scripts = init_system.get_scripts_paths();
 

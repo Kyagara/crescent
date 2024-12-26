@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
 
-use crate::{application::Application, system::InitSystem};
+use crate::{service::Service, init_system::InitSystem};
 
 #[derive(Args)]
 #[command(about = "Restart a service")]
@@ -12,19 +12,19 @@ pub struct RestartArgs {
 
 impl RestartArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(Some(&self.name));
-        application.exists()?;
+        let service = Service::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = application.init_system();
+        let init_system = service.init_system();
 
         if !init_system.is_running()? {
-            return Err(anyhow!("Service '{}' is not running", application.name));
+            return Err(anyhow!("Service '{}' is not running", service.name));
         }
 
-        eprintln!("Restarting '{}'", application.name);
+        eprintln!("Restarting '{}'", service.name);
         init_system.restart()?;
 
-        println!("Sent restart command to '{}'", application.name);
+        println!("Sent restart command to '{}'", service.name);
         Ok(())
     }
 }

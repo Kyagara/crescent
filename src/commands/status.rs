@@ -5,8 +5,8 @@ use clap::Args;
 use sysinfo::{Pid, System};
 
 use crate::{
-    application::Application,
-    system::{InitSystem, StatusOutput},
+    service::Service,
+    init_system::{InitSystem, StatusOutput},
     util,
 };
 
@@ -17,7 +17,7 @@ pub struct StatusArgs {
     pub name: String,
 
     #[arg(
-        help = "Prints the output of the `status` command without any modification",
+        help = "Prints the output of the `status` command without any modification, might comprise of multiple commands",
         short,
         long
     )]
@@ -26,10 +26,10 @@ pub struct StatusArgs {
 
 impl StatusArgs {
     pub fn run(self) -> Result<()> {
-        let application = Application::from(Some(&self.name));
-        application.exists()?;
+        let service = Service::from(Some(&self.name));
+        service.exists()?;
 
-        let init_system = application.init_system();
+        let init_system = service.init_system();
 
         let status = init_system.status(self.raw)?;
 
@@ -44,9 +44,9 @@ impl StatusArgs {
 
                 let enabled = init_system.is_enabled()?;
 
-                util::println_bold_cyan("Application information");
+                util::println_bold_cyan("service information");
 
-                util::println_field_value("Name", application.name);
+                util::println_field_value("Name", service.name);
                 util::println_field_value("Status", status.active);
                 util::println_field_value("Script", status.script);
                 util::println_field_value("Stdin", status.stdin);

@@ -5,18 +5,18 @@ use clap::Args;
 use sysinfo::{Pid, System};
 
 use crate::{
-    application::Application,
-    system::{InitSystem, StatusOutput},
+    service::Service,
+    init_system::{InitSystem, StatusOutput},
     util,
 };
 
 #[derive(Args)]
-#[command(about = "List services created with basic information")]
+#[command(about = "List services with basic information")]
 pub struct ListArgs;
 
 impl ListArgs {
     pub fn run(self) -> Result<()> {
-        let service = Application::from(None);
+        let service = Service::from(None);
         let mut init_system = service.init_system();
         let list = init_system.list()?;
 
