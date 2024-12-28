@@ -5,8 +5,8 @@ use clap::Args;
 use sysinfo::{Pid, System};
 
 use crate::{
-    service::Service,
     init_system::{InitSystem, StatusOutput},
+    service::Service,
     util,
 };
 

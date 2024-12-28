@@ -2,14 +2,14 @@ use anyhow::Result;
 
 /// Init system interface.
 ///
-/// For now, only [`Systemd`][`crate::systems::systemd::Systemd`] is supported.
+/// For now, only [`Systemd`][`crate::init_systems::systemd::Systemd`] is supported.
 pub trait InitSystem {
     /// Updates the name of the service being queried.
     fn set_name(&mut self, name: &str);
 
     /// Returns the absolute paths of all generated scripts.
     ///
-    /// - [`Systemd`][`crate::systems::systemd::Systemd`]:
+    /// - [`Systemd`][`crate::init_systems::systemd::Systemd`]:
     ///     - `/etc/systemd/system/cres.<name>.service` and `/etc/systemd/system/cres.<name>.socket`
     ///     - If using --user flag:
     ///     - `$HOME/.config/systemd/user/cres.<name>.service` and `$HOME/.config/systemd/user/cres.<name>.socket`
@@ -17,7 +17,7 @@ pub trait InitSystem {
 
     /// Reload the init system.
     ///
-    /// - [`Systemd`][`crate::systems::systemd::Systemd`]: runs `daemon-reload`.
+    /// - [`Systemd`][`crate::init_systems::systemd::Systemd`]: runs `daemon-reload`.
     fn reload(&self) -> Result<()>;
 
     /// Check if the service is currently running.
@@ -28,7 +28,7 @@ pub trait InitSystem {
 
     /// Create the necessary file(s) for a new service.
     ///
-    /// - [`Systemd`][`crate::systems::systemd::Systemd`]: generates the service and socket units.
+    /// - [`Systemd`][`crate::init_systems::systemd::Systemd`]: generates the service and socket units.
     fn create(&self, cmd: &str) -> Result<()>;
 
     /// Start the service.
@@ -36,7 +36,7 @@ pub trait InitSystem {
 
     /// Stop the service.
     ///
-    /// - [`Systemd`][`crate::systems::systemd::Systemd`]: sends `stop` to the *socket*.
+    /// - [`Systemd`][`crate::init_systems::systemd::Systemd`]: sends `stop` to the *socket*.
     fn stop(&self) -> Result<()>;
 
     /// Send a signal to the service.
@@ -51,7 +51,7 @@ pub trait InitSystem {
     /// Disable a service from starting at boot.
     fn disable(&self) -> Result<()>;
 
-    /// Request the status an service.
+    /// Request the status of a service. Returns [`StatusOutput::Raw`][`crate::init_system::StatusOutput::Raw`] if the service is not running.
     fn status(&self, raw: bool) -> Result<StatusOutput>;
 
     /// List basic infomation of all services.

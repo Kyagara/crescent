@@ -8,8 +8,8 @@ use crate::{init_system::InitSystem, profile::Profiles, service::Service};
 #[derive(Args)]
 #[command(about = "Create and start a new background service")]
 pub struct NewArgs {
-    #[arg(help = "Path to the executable", value_hint = ValueHint::FilePath, required_unless_present = "profile")]
-    pub exec_path: String,
+    #[arg(help = "Path to the executable", value_hint = ValueHint::FilePath)]
+    pub exec_path: Option<String>,
 
     #[arg(
         help = "Arguments for the executable",
@@ -51,21 +51,24 @@ impl NewArgs {
                 },
             };
 
-            self.exec_path = match profile.exec_path {
-                Some(path) => path,
-                None => self.exec_path.clone(),
-            };
+            self.exec_path = overwrite_value(self.exec_path, profile.exec_path);
             self.name = overwrite_value(self.name, profile.name);
             self.interpreter = overwrite_value(self.interpreter, profile.interpreter);
             self.arguments = overwrite_value(self.arguments, profile.arguments);
         }
 
-        let exec_path = self.exec_path.clone();
-
         // Check if after overwriting arguments `exec_path` is not empty and exists.
-        if self.exec_path.is_empty() || !Path::new(&self.exec_path).exists() {
-            return Err(anyhow!("Executable path is empty."));
-        }
+        let exec_path = match self.exec_path {
+            Some(ref str) => {
+                let path = Path::new(str);
+                if !path.exists() {
+                    return Err(anyhow!("Executable path does not exist."));
+                }
+                let path = path.canonicalize()?;
+                path.to_string_lossy().to_string()
+            }
+            None => return Err(anyhow!("Executable path is empty.")),
+        };
 
         let path = Path::new(&exec_path);
 
@@ -91,7 +94,7 @@ impl NewArgs {
             ));
         }
 
-        let exec_cmd = self.format_exec_cmd(exec_path.to_string());
+        let exec_cmd = self.format_exec_cmd(&exec_path);
         eprintln!("CMD: '{exec_cmd}'");
 
         init_system.create(&exec_cmd)?;
@@ -112,7 +115,7 @@ impl NewArgs {
     /// - Lowercase
     /// - Max length of 16 characters
     fn sanitize_name(&self) -> Result<String> {
-        let name = self.name.clone().unwrap_or_default();
+        let name = &self.name.clone().unwrap_or_default();
         let name = name.to_lowercase();
 
         if name.len() > 16 {
@@ -133,7 +136,7 @@ impl NewArgs {
         Ok(name)
     }
 
-    fn format_exec_cmd(&self, exec_path: String) -> String {
+    fn format_exec_cmd(&self, exec_path: &String) -> String {
         let mut exec_cmd = Vec::new();
 
         if let Some(interpreter) = &self.interpreter {

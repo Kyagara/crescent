@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::Args;
 
-use crate::{service::Service, init_system::InitSystem};
+use crate::{init_system::InitSystem, service::Service};
 
 #[derive(Args)]
 #[command(about = "Restart a service")]
