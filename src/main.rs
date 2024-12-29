@@ -1,4 +1,4 @@
-use std::{env, fs, io, path::PathBuf};
+use std::{env, io};
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
@@ -91,10 +91,6 @@ enum Commands {
 }
 
 fn main() -> Result<()> {
-    // Create directories if they don't exist
-    fs::create_dir_all(PathBuf::from(APPS_DIR.to_owned()))?;
-    fs::create_dir_all(PathBuf::from(PROFILES_DIR.to_owned()))?;
-
     let cli = Crescent::parse();
 
     match cli.commands {

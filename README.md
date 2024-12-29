@@ -29,7 +29,6 @@ Reimplementation of features already in the main branch:
 Planned:
 
 - Save information about the service in a file inside the service folder.
-- Detection method for `Service` and `Logger` at startup, return an error if they are not found. 
 - Add more arguments/commands to `log`, commands to manage the logs for that service for example.
 - Add `delete` service/profile command.
 - Maybe use more enums on returns.
