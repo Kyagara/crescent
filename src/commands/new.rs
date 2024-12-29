@@ -1,9 +1,9 @@
 use std::path::Path;
 
 use anyhow::{anyhow, Result};
-use clap::{Args, ValueHint};
+use clap::{Args, Parser, ValueHint};
 
-use crate::{init_system::InitSystem, profile::Profiles, service::Service, util};
+use crate::{init_system::InitSystem, profile::Profiles, service::Service, util, Crescent};
 
 #[derive(Args)]
 #[command(about = "Create and start a new background service")]
@@ -106,6 +106,7 @@ impl NewArgs {
         init_system.get_scripts_paths().iter().for_each(|path| {
             println!("{path}");
         });
+        util::println_field_value("System wide:", Crescent::parse().system_wide);
 
         util::confirm("Create this service?")?;
 

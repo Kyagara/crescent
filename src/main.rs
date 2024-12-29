@@ -57,6 +57,15 @@ mod util;
 #[derive(Parser)]
 #[command(name = "crescent", version, about)]
 struct Crescent {
+    #[clap(
+        help = "Talk to the init and logging systems of the current user instead of the system",
+        short = 'u',
+        long = "user",
+        global = true,
+        action = clap::ArgAction::SetFalse
+    )]
+    pub system_wide: bool,
+
     #[command(subcommand)]
     pub commands: Commands,
 }

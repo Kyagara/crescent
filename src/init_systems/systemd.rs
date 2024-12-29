@@ -5,16 +5,21 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use clap::Parser;
+use once_cell::sync::Lazy;
 
 use crate::{
     init_system::{InitSystem, Status, StatusOutput},
-    APPS_DIR,
+    Crescent, APPS_DIR,
 };
 
-const USER_DIR: &str = concat!(
-    env!("HOME", "Error retrieving HOME directory."),
-    "/.config/systemd/user/"
-);
+static USER_DIR: Lazy<String> = Lazy::new(|| {
+    let mut path = env::var("HOME").expect("Error retrieving HOME directory.");
+    path.push_str("/.config/systemd/user/");
+    path
+});
+
+const SYSTEM_DIR: &str = concat!("/etc/systemd/system/");
 
 /// `systemd` implementation.
 pub struct Systemd {
@@ -24,6 +29,7 @@ pub struct Systemd {
     service_name: String,
     /// `cres.<name>.socket`
     socket_name: String,
+    system_wide: bool,
 }
 
 impl Systemd {
@@ -34,6 +40,7 @@ impl Systemd {
             name: name.to_string(),
             service_name: format!("cres.{name}.service"),
             socket_name: format!("cres.{name}.socket"),
+            system_wide: Crescent::parse().system_wide,
         }
     }
 
@@ -103,10 +110,17 @@ impl InitSystem for Systemd {
     }
 
     fn get_scripts_paths(&self) -> Vec<String> {
-        vec![
-            USER_DIR.to_string() + &self.service_name,
-            USER_DIR.to_string() + &self.socket_name,
-        ]
+        if self.system_wide {
+            vec![
+                SYSTEM_DIR.to_string() + &self.service_name,
+                SYSTEM_DIR.to_string() + &self.socket_name,
+            ]
+        } else {
+            vec![
+                USER_DIR.to_string() + &self.service_name,
+                USER_DIR.to_string() + &self.socket_name,
+            ]
+        }
     }
 
     fn is_running(&self) -> Result<bool> {
