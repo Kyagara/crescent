@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, Write};
 
 use anyhow::{anyhow, Result};
 use ratatui::crossterm::style::Stylize;
@@ -6,7 +6,8 @@ use ratatui::crossterm::style::Stylize;
 /// Ask the user for confirmation.
 pub fn confirm(question: &str) -> Result<()> {
     let mut input = String::new();
-    println!("{} [y/n]:", question.bold().green());
+    print!("{} [y/n]: ", question.bold().green());
+    io::stdout().flush()?;
     io::stdin().read_line(&mut input)?;
     input = input.trim().to_lowercase();
 
@@ -17,12 +18,17 @@ pub fn confirm(question: &str) -> Result<()> {
     Err(anyhow!("Aborted"))
 }
 
-/// Use crossterm's styling to print a string in bold and cyan.
-pub fn println_bold_cyan(title: &str) {
-    println!("{}", title.bold().cyan());
+/// Use crossterm's styling to print a message in white.
+pub fn println_white(message: &str) {
+    println!("{}", message.white());
 }
 
-/// Use crossterm's styling to print a field and its value, value will be in white.
+/// Use crossterm's styling to print a message in bold and cyan.
+pub fn println_bold_cyan(message: &str) {
+    println!("{}", message.bold().cyan());
+}
+
+/// Use crossterm's styling to print a field and its value, field will be in white.
 pub fn println_field_value<T: std::fmt::Display>(name: &str, value: T) {
     println!("{}: {value}", name.white());
 }
@@ -87,10 +93,5 @@ mod tests {
     #[test]
     fn println_field_value() {
         util::println_field_value("field", "value");
-    }
-
-    #[test]
-    fn println_bold_cyan2() {
-        util::println_bold_cyan("title");
     }
 }

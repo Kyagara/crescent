@@ -102,6 +102,10 @@ impl NewArgs {
         util::println_field_value("Interpreter", self.interpreter.clone().unwrap_or_default());
         util::println_field_value("Arguments", self.arguments.clone().unwrap_or_default());
         util::println_field_value("CMD", &exec_cmd);
+        util::println_white("Scripts paths:");
+        init_system.get_scripts_paths().iter().for_each(|path| {
+            println!("{path}");
+        });
 
         util::confirm("Create this service?")?;
 

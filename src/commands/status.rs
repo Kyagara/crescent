@@ -44,7 +44,7 @@ impl StatusArgs {
 
                 let enabled = init_system.is_enabled()?;
 
-                util::println_bold_cyan("service information");
+                util::println_bold_cyan("Service information:");
 
                 util::println_field_value("Name", service.name);
                 util::println_field_value("Status", status.active);
@@ -54,7 +54,7 @@ impl StatusArgs {
 
                 println!();
 
-                util::println_bold_cyan("Service information");
+                util::println_bold_cyan("Process information:");
                 util::println_field_value("PID", pid);
                 util::println_field_value("CMD", status.cmd);
 
