@@ -1,4 +1,21 @@
+use std::io;
+
+use anyhow::{anyhow, Result};
 use ratatui::crossterm::style::Stylize;
+
+/// Ask the user for confirmation.
+pub fn confirm(question: &str) -> Result<()> {
+    let mut input = String::new();
+    println!("{} [y/n]:", question.bold().green());
+    io::stdin().read_line(&mut input)?;
+    input = input.trim().to_lowercase();
+
+    if input.starts_with("y") || input.is_empty() {
+        return Ok(());
+    }
+
+    Err(anyhow!("Aborted"))
+}
 
 /// Use crossterm's styling to print a string in bold and cyan.
 pub fn println_bold_cyan(title: &str) {

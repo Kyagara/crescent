@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::{anyhow, Result};
 use clap::{Args, ValueHint};
 
-use crate::{init_system::InitSystem, profile::Profiles, service::Service};
+use crate::{init_system::InitSystem, profile::Profiles, service::Service, util};
 
 #[derive(Args)]
 #[command(about = "Create and start a new background service")]
@@ -95,7 +95,15 @@ impl NewArgs {
         }
 
         let exec_cmd = self.format_exec_cmd(&exec_path);
-        eprintln!("CMD: '{exec_cmd}'");
+
+        util::println_field_value("Service name", &name);
+        util::println_field_value("Profile", self.profile.clone().unwrap_or_default());
+        util::println_field_value("Exec path", exec_path);
+        util::println_field_value("Interpreter", self.interpreter.clone().unwrap_or_default());
+        util::println_field_value("Arguments", self.arguments.clone().unwrap_or_default());
+        util::println_field_value("CMD", &exec_cmd);
+
+        util::confirm("Create this service?")?;
 
         init_system.create(&exec_cmd)?;
         eprintln!("Service '{name}' created");
