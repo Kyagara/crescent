@@ -29,7 +29,8 @@ pub struct Systemd {
     service_name: String,
     /// `cres.<name>.socket`
     socket_name: String,
-    system_wide: bool,
+    /// Use the user's service directory instead of the system's, requires root if false.
+    user_service: bool,
 }
 
 impl Systemd {
@@ -40,14 +41,17 @@ impl Systemd {
             name: name.to_string(),
             service_name: format!("cres.{name}.service"),
             socket_name: format!("cres.{name}.socket"),
-            system_wide: Crescent::parse().system_wide,
+            user_service: Crescent::parse().user_service,
         }
     }
 
-    /// Run a `systemctl` command as the user.
-    fn run_command(&self, args: Vec<&str>) -> Result<Output> {
+    /// Run a `systemctl` command.
+    fn run_command(&self, mut args: Vec<&str>) -> Result<Output> {
+        if self.user_service {
+            args.push("--user");
+        }
+
         Ok(Command::new("systemctl")
-            .arg("--user")
             .arg("--no-pager")
             .args(args)
             .output()?)
@@ -57,6 +61,10 @@ impl Systemd {
         let requires = format!("Requires={}", self.socket_name);
         let after = format!("After=network.target {}", self.socket_name);
         let exec_start = format!("ExecStart={cmd}");
+        let wanted_by = match self.user_service {
+            true => "WantedBy=default.target",
+            false => "WantedBy=multi-user.target",
+        };
 
         let service = [
             "[Unit]",
@@ -71,13 +79,10 @@ impl Systemd {
             "StandardError=journal",
             "",
             "[Install]",
-            "WantedBy=default.target",
+            wanted_by,
             "",
         ];
 
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
         fs::write(path, service.join("\n"))?;
         Ok(())
     }
@@ -94,9 +99,6 @@ impl Systemd {
             "",
         ];
 
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
         fs::write(path, socket.join("\n"))?;
         Ok(())
     }
@@ -110,15 +112,15 @@ impl InitSystem for Systemd {
     }
 
     fn get_scripts_paths(&self) -> Vec<String> {
-        if self.system_wide {
-            vec![
-                SYSTEM_DIR.to_string() + &self.service_name,
-                SYSTEM_DIR.to_string() + &self.socket_name,
-            ]
-        } else {
+        if self.user_service {
             vec![
                 USER_DIR.to_string() + &self.service_name,
                 USER_DIR.to_string() + &self.socket_name,
+            ]
+        } else {
+            vec![
+                SYSTEM_DIR.to_string() + &self.service_name,
+                SYSTEM_DIR.to_string() + &self.socket_name,
             ]
         }
     }
@@ -143,8 +145,11 @@ impl InitSystem for Systemd {
     }
 
     fn create(&self, cmd: &str) -> Result<()> {
-        let path_str =
-            env::var("HOME").expect("Error retrieving HOME directory.") + "/.config/systemd/user/";
+        let path_str = match self.user_service {
+            true => USER_DIR.to_string(),
+            false => SYSTEM_DIR.to_string(),
+        };
+
         let path = PathBuf::from(path_str);
 
         eprintln!("Writing '{}' unit", self.service_name);
@@ -265,12 +270,12 @@ impl InitSystem for Systemd {
     }
 
     fn list(&self) -> Result<Vec<String>> {
-        let output = self.run_command(vec!["list-unit-files"])?;
+        let output = self.run_command(vec!["list-unit-files", "cres.*.service"])?;
         let out = String::from_utf8(output.stdout)?;
         let output_lines = out.lines().collect::<Vec<&str>>();
         let names: Vec<String> = output_lines
             .iter()
-            .filter(|line| line.contains("cres.") && line.contains(".service"))
+            .filter(|line| line.starts_with("cres."))
             .map(|s| s.split_whitespace().next().unwrap_or("").to_string())
             .collect();
         Ok(names)

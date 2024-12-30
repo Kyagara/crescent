@@ -61,10 +61,9 @@ struct Crescent {
         help = "Talk to the init and logging systems of the current user instead of the system",
         short = 'u',
         long = "user",
-        global = true,
-        action = clap::ArgAction::SetFalse
+        global = true
     )]
-    pub system_wide: bool,
+    pub user_service: bool,
 
     #[command(subcommand)]
     pub commands: Commands,

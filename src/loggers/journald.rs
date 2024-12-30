@@ -1,24 +1,32 @@
 use std::process::{Child, Command, Output, Stdio};
 
 use anyhow::Result;
+use clap::Parser;
 
-use crate::logger::Logger;
+use crate::{logger::Logger, Crescent};
 
 /// `journald` implementation.
 pub struct Journald {
     service_name: String,
+    user_service: bool,
 }
 
 impl Journald {
     pub fn new(service_name: &str) -> Self {
         let service_name = format!("cres.{}.service", service_name);
-        Self { service_name }
+        Self {
+            service_name,
+            user_service: Crescent::parse().user_service,
+        }
     }
 
     /// Run a `journald` command as the user.
-    fn run_command(&self, args: Vec<&str>) -> Result<Output> {
+    fn run_command(&self, mut args: Vec<&str>) -> Result<Output> {
+        if self.user_service {
+            args.push("--user");
+        }
+
         Ok(Command::new("journalctl")
-            .arg("--user")
             .arg("--unit")
             .arg(&self.service_name)
             .arg("--no-pager")
@@ -35,13 +43,20 @@ impl Logger for Journald {
     }
 
     fn follow(&self) -> Result<Child> {
+        let mut args = vec![
+            "--unit",
+            &self.service_name,
+            "--no-pager",
+            "--follow",
+            "--lines=200",
+        ];
+
+        if self.user_service {
+            args.push("--user");
+        }
+
         Ok(Command::new("journalctl")
-            .arg("--user")
-            .arg("--unit")
-            .arg(&self.service_name)
-            .arg("--no-pager")
-            .arg("--follow")
-            .arg("--lines=200")
+            .args(args)
             .stdout(Stdio::piped())
             .spawn()?)
     }

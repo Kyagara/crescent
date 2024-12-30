@@ -95,6 +95,7 @@ impl NewArgs {
         }
 
         let exec_cmd = self.format_exec_cmd(&exec_path);
+        let user_service = Crescent::parse().user_service;
 
         util::println_field_value("Service name", &name);
         util::println_field_value("Profile", self.profile.clone().unwrap_or_default());
@@ -106,18 +107,28 @@ impl NewArgs {
         init_system.get_scripts_paths().iter().for_each(|path| {
             println!("{path}");
         });
-        util::println_field_value("System wide:", Crescent::parse().system_wide);
+        util::println_field_value("System wide:", user_service);
 
         util::confirm("Create this service?")?;
 
-        init_system.create(&exec_cmd)?;
-        eprintln!("Service '{name}' created");
+        // To write system wide files we need to be root.
+        if let Err(err) = init_system.create(&exec_cmd) {
+            if !user_service && err.to_string().contains("Permission denied") {
+                return Err(anyhow!("You must be root to create system wide services."));
+            }
+        }
 
         init_system.reload()?;
 
+        let event = if user_service { "user login" } else { "boot" };
+        let question = format!("Enable this service to start on {event}?");
+        if util::confirm(&question).is_ok() {
+            eprintln!("Enabling '{name}'");
+            init_system.enable()?;
+        }
+
         eprintln!("Starting '{name}'");
         init_system.start()?;
-        println!("Service '{name}' started");
         Ok(())
     }
 
@@ -132,7 +143,10 @@ impl NewArgs {
         let name = name.to_lowercase();
 
         if name.len() > 16 {
-            return Err(anyhow!("Name is too long. Max length is 16 characters."));
+            return Err(anyhow!(
+                "Name is too long. Max length is 16 characters: {}",
+                name
+            ));
         }
 
         let valid_chars = ['_', '-', '.'];

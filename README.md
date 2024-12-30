@@ -28,6 +28,9 @@ Reimplementation of features already in the main branch:
 
 Planned:
 
+- Flag in main to always confirm prompts.
+- Maybe add environment variable for the main crescent directory, retrieving the user's home directory while in root returns "/root".
+- Fix some commands not erroring when failing to send commands to a system service.
 - Save information about the service in a file inside the service folder.
 - Add more arguments/commands to `log`, commands to manage the logs for that service for example.
 - Add `delete` service/profile command.
