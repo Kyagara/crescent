@@ -7,7 +7,7 @@
 </div>
 
 > [!WARNING]
-> This branch is still in development and may be unstable. Only `systemd` and `journald` is supported at the moment.
+> This project is still in development and may be unstable. Only `systemd` and `journald` is supported.
 
 # Install:
 
@@ -16,12 +16,12 @@
 ```bash
 cargo install crescent-cli
 ## or
-cargo install --git https://github.com/Kyagara/crescent --branch rewrite
+cargo install --git https://github.com/Kyagara/crescent
 ```
 
 # Todo
 
-Reimplementation of features already in the main branch:
+Reimplementation of old features:
 
 - Tests.
 - `stop` field on profiles and `start` command, a command to be sent to trigger a shutdown of the application.

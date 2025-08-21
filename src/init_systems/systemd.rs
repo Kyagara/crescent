@@ -19,7 +19,7 @@ static USER_DIR: Lazy<String> = Lazy::new(|| {
     path
 });
 
-const SYSTEM_DIR: &str = concat!("/etc/systemd/system/");
+const SYSTEM_DIR: &str = "/etc/systemd/system/";
 
 /// `systemd` implementation.
 pub struct Systemd {
@@ -197,10 +197,7 @@ impl InitSystem for Systemd {
     }
 
     fn status(&self, raw: bool) -> Result<StatusOutput> {
-        let output = match self.run_command(vec!["status", &self.service_name]) {
-            Ok(output) => output,
-            Err(err) => return Err(err),
-        };
+        let output = self.run_command(vec!["status", &self.service_name])?;
 
         let stdout = String::from_utf8(output.stdout)?;
         if raw {
